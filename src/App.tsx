@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-
+import PianoKeyboard from "./components/PianoKeyboard";
 import ChordSelector from "./components/ChordSelector";
 import ChordDisplay from "./components/ChordDisplay";
 
@@ -29,14 +29,20 @@ function App() {
   const selectedChord =
     chordTypes[selectedChordIndex];
 
+  const displayedRootNote = convertRootNote(
+    rootNote,
+    accidentalPreference
+  );
+
   const chordNotes = calculateChordNotes(
     rootNote,
     selectedChord.intervals,
-    selectedChord.intervalNames
+    selectedChord.intervalNames,
+    accidentalPreference
   );
 
   const chordName =
-    `${formatNoteForDisplay(rootNote)}${selectedChord.symbol}`;
+    `${formatNoteForDisplay(displayedRootNote)}${selectedChord.symbol}`;
 
   const handleAccidentalPreferenceChange = (
     preference: AccidentalPreference
@@ -82,8 +88,13 @@ function App() {
         intervalNames={selectedChord.intervalNames}
         intervals={selectedChord.intervals}
       />
+
+      <PianoKeyboard
+  chordNotes={chordNotes}
+/>
     </main>
   );
 }
+
 
 export default App;

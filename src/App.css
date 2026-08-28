@@ -108,3 +108,94 @@
 .structure-intervals {
   line-height: 1.6;
 }
+
+.piano-section {
+  margin-top: 3rem;
+  text-align: center;
+}
+
+.piano-section h2 {
+  margin-bottom: 0.5rem;
+}
+
+.piano-description {
+  margin-bottom: 1.5rem;
+  opacity: 0.75;
+}
+
+.piano-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.piano-keyboard {
+  position: relative;
+  display: flex;
+  min-width: 900px;
+  height: 260px;
+  margin: 0 auto;
+}
+
+.piano-key {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.piano-key.white {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  background: white;
+  border: 1px solid #222;
+  color: #222;
+  padding-bottom: 12px;
+}
+
+.piano-key.black {
+  position: absolute;
+  top: 0;
+  width: 3.8%;
+  height: 62%;
+  background: #222;
+  color: white;
+  z-index: 2;
+  padding-bottom: 10px;
+  border-radius: 0 0 6px 6px;
+}
+
+.piano-key.active.white {
+  background: #d8e9ff;
+}
+
+.piano-key.active.black {
+  background: #4a90e2;
+}
+
+.key-label {
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.piano-key.black .key-label {
+  font-size: 0.8rem;
+}
+
+.octave-label {
+  position: absolute;
+  bottom: 38px;
+  font-size: 0.7rem;
+  opacity: 0.55;
+}
+
+@media (max-width: 700px) {
+  .piano-keyboard {
+    min-width: 720px;
+    height: 220px;
+  }
+}

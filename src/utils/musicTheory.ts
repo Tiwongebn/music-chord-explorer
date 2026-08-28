@@ -183,9 +183,17 @@ export function formatNoteForDisplay(note: string): string {
 export function calculateChordNotes(
   rootNote: string,
   intervals: number[],
-  intervalNames: string[]
+  intervalNames: string[],
+  preference: AccidentalPreference
 ): string[] {
+
+   const preferredRootNote = convertRootNote(
+    rootNote,
+    preference
+  );
+
   const rootLetter = getRootLetter(rootNote);
+
   const rootAccidental = getAccidentalOffset(rootNote);
 
   const rootNaturalValue = naturalNoteValues[rootLetter];
@@ -203,8 +211,8 @@ export function calculateChordNotes(
     );
 
     if (parsedInterval.degree === 1) {
-      return rootNote;
-    }
+  return preferredRootNote;
+}
 
     const targetPitch =
       (rootNaturalValue +
@@ -284,18 +292,20 @@ export function convertRootNote(
   preference: AccidentalPreference
 ): string {
   const sharpIndex = sharpNotes.indexOf(note);
-  const flatIndex = flatNotes.indexOf(note);
 
-  const noteIndex =
-    sharpIndex !== -1
-      ? sharpIndex
-      : flatIndex;
-
-  if (noteIndex === -1) {
-    return note;
+  if (sharpIndex !== -1) {
+    return preference === "sharps"
+      ? sharpNotes[sharpIndex]
+      : flatNotes[sharpIndex];
   }
 
-  return preference === "sharps"
-    ? sharpNotes[noteIndex]
-    : flatNotes[noteIndex];
+  const flatIndex = flatNotes.indexOf(note);
+
+  if (flatIndex !== -1) {
+    return preference === "sharps"
+      ? sharpNotes[flatIndex]
+      : flatNotes[flatIndex];
+  }
+
+  return note;
 }
