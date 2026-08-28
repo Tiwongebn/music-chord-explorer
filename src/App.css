@@ -170,11 +170,11 @@
 }
 
 .piano-key.active.white {
-  background: #d8e9ff;
+  background: #e24a4a;
 }
 
 .piano-key.active.black {
-  background: #4a90e2;
+  background: #870202;
 }
 
 .key-label {
