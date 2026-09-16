@@ -6,6 +6,8 @@ import {
 interface PianoKeyboardProps {
   chordNotes: string[];
   accidentalPreference: AccidentalPreference;
+  selectedNotes: string[];
+  onNoteToggle: (note: string) => void;
 }
 
 interface PianoKey {
@@ -60,6 +62,10 @@ const flatNoteNames: Record<string, string> = {
   "A#": "Bb",
 };
 
+function removeOctave(note: string): string {
+  return note.replace(/\d+$/, "");
+}
+
 function normalizeNote(note: string): string {
   const noteMap: Record<string, string> = {
     Db: "C#",
@@ -106,10 +112,15 @@ function getDisplayNote(
 function PianoKeyboard({
   chordNotes,
   accidentalPreference,
+  selectedNotes,
+  onNoteToggle,
 }: PianoKeyboardProps) {
   const normalizedChordNotes = chordNotes.map(
     normalizeNote
   );
+
+  const normalizedSelectedNotes =
+  selectedNotes.map(removeOctave).map(normalizeNote);
 
   const octaves = [3, 4, 5];
 
@@ -118,24 +129,30 @@ function PianoKeyboard({
       <h2>Interactive Piano</h2>
 
       <p className="piano-description">
-        The highlighted keys show the notes in the
-        selected chord.
+        Click the keys to build your own chord.
       </p>
 
       <div className="piano-wrapper">
         <div className="piano-keyboard">
-          {octaves.map((octave) =>
+
+          {/* WHITE KEYS */}
+          {octaves.map((octave, octaveIndex) =>
             whiteKeys.map((note, index) => {
-              const isActive =
+              const isChordNote =
                 normalizedChordNotes.includes(note);
 
+              const isSelected =
+                normalizedSelectedNotes.includes(note);
+
               return (
-                <div
-                  key={`${note}${octave}`}
+                <button
+                    key={`${note}${octave}`}
                   className={`piano-key white ${
-                    isActive ? "active" : ""
-                  }`}
-                >
+                isChordNote ? "active" : ""
+                } ${isSelected ? "selected" : ""}`}
+                onClick={() => onNoteToggle(`${note}${octave}`)}
+                type="button"
+               >
                   <span className="key-label">
                     {getDisplayNote(
                       note,
@@ -148,18 +165,25 @@ function PianoKeyboard({
                       C{octave}
                     </span>
                   )}
-                </div>
+                </button>
               );
             })
           )}
 
+          {/* BLACK KEYS */}
           {octaves.flatMap((octave, octaveIndex) =>
             blackKeys.map((key) => {
-              const isActive =
+              const isChordNote =
                 normalizedChordNotes.includes(key.note);
 
+              const isSelected =
+                normalizedSelectedNotes.includes(
+                  key.note
+                );
+
               const whiteKeyWidth =
-                100 / (whiteKeys.length * octaves.length);
+                100 /
+                (whiteKeys.length * octaves.length);
 
               const leftPosition =
                 (octaveIndex * 7 +
@@ -168,14 +192,20 @@ function PianoKeyboard({
                 whiteKeyWidth;
 
               return (
-                <div
+                <button
                   key={`${key.note}${octave}`}
                   className={`piano-key black ${
-                    isActive ? "active" : ""
+                    isChordNote ? "active" : ""
+                  } ${
+                    isSelected ? "selected" : ""
                   }`}
                   style={{
                     left: `${leftPosition}%`,
                   }}
+                  onClick={() =>
+                    onNoteToggle(`${key.note}${octave}`)
+                  }
+                  type="button"
                 >
                   <span className="key-label">
                     {getDisplayNote(
@@ -183,10 +213,11 @@ function PianoKeyboard({
                       accidentalPreference
                     )}
                   </span>
-                </div>
+                </button>
               );
             })
           )}
+
         </div>
       </div>
     </section>

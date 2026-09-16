@@ -138,6 +138,9 @@
 }
 
 .piano-key {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
   box-sizing: border-box;
   display: flex;
   align-items: flex-end;
@@ -145,6 +148,20 @@
   transition:
     transform 0.15s ease,
     background-color 0.15s ease;
+}
+
+.piano-key:hover {
+  transform: translateY(-2px);
+}
+
+.piano-key.selected.white {
+  background: #f5c542;
+  color: #222;
+}
+
+.piano-key.selected.black {
+  background: #d99a00;
+  color: white;
 }
 
 .piano-key.white {
@@ -191,6 +208,204 @@
   bottom: 38px;
   font-size: 0.7rem;
   opacity: 0.55;
+}
+
+.selected-notes {
+  margin-top: 2rem;
+}
+
+.selected-notes h3 {
+  margin-bottom: 1rem;
+}
+
+.selected-note-list {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.selected-note {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  background: #f5c542;
+  color: #222;
+  font-weight: 600;
+}
+
+.clear-selection {
+  margin-top: 1.25rem;
+  padding: 0.7rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.chord-analyzer {
+  margin-top: 2rem;
+  padding: 2rem;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+}
+
+.chord-analyzer h2 {
+  margin-bottom: 1rem;
+}
+
+.detected-chord {
+  margin-top: 1rem;
+}
+
+.detected-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.detected-chord h3 {
+  margin: 0.5rem 0;
+  font-size: 2.5rem;
+}
+
+.detected-chord p:last-child {
+  opacity: 0.75;
+}
+
+.unknown-chord {
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.inversion {
+  margin-top: 0.75rem;
+  font-weight: 600;
+}
+
+.chord-type {
+  margin-top: 0.5rem;
+  opacity: 0.75;
+}
+
+.analyzed-notes {
+  margin-top: 1.5rem;
+}
+
+.analyzed-notes h4 {
+  margin-bottom: 0.75rem;
+}
+
+.analyzed-note-list {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.analyzed-note {
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  background: #eee;
+  font-weight: 600;
+}
+
+.use-detected-chord {
+  margin-top: 1.25rem;
+  padding: 0.7rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.use-detected-chord:hover {
+  opacity: 0.85;
+}
+
+.chord-builder {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+}
+
+.builder-header {
+  margin-bottom: 1.5rem;
+}
+
+.builder-header h2 {
+  margin: 0.25rem 0;
+}
+
+.builder-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.builder-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.builder-control label {
+  font-weight: 600;
+}
+
+.builder-control select {
+  padding: 0.7rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.builder-group {
+  margin-top: 1.5rem;
+}
+
+.builder-group h3 {
+  margin-bottom: 0.75rem;
+}
+
+.builder-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.builder-option {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.builder-option input {
+  cursor: pointer;
+}
+
+.builder-result {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.builder-result p {
+  margin: 0.4rem 0;
+}
+
+@media (max-width: 700px) {
+  .builder-controls {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 700px) {
