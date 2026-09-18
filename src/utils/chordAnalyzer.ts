@@ -3,10 +3,6 @@ import {
   flatNotes,
 } from "./musicTheory";
 
-import {
-  detectInversion,
-} from "../utils/inversionAnalyzer";
-
 export interface DetectedChord {
   root: string;
   name: string;

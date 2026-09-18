@@ -15,7 +15,7 @@ interface BuiltChord {
 interface ChordBuilderProps {
   rootNote: string;
   onRootChange: (root: string) => void;
-  onChordBuild: (chord: BuiltChord) => void;
+  onChordBuild?: (chord: BuiltChord) => void;
 }
 
 function ChordBuilder({
@@ -133,6 +133,12 @@ return {
     selectedExtensions,
     selectedAlterations,
   ]);
+
+  // Let the parent component know whenever the
+  // built chord changes.
+  useEffect(() => {
+    onChordBuild?.(builtChord);
+  }, [builtChord, onChordBuild]);
 
   return (
     <section className="chord-builder">

@@ -16,6 +16,8 @@ import {
   type AccidentalPreference,
 } from "./utils/musicTheory";
 
+
+
 function App() {
   const [rootNote, setRootNote] = useState("C");
 

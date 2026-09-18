@@ -18,21 +18,6 @@ const naturalNoteValues: Record<string, number> = {
   B: 11,
 };
 
-const chromaticScale = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
-
 interface ParsedInterval {
   degree: number;
   semitones: number;

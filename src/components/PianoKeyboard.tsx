@@ -136,7 +136,7 @@ function PianoKeyboard({
         <div className="piano-keyboard">
 
           {/* WHITE KEYS */}
-          {octaves.map((octave, octaveIndex) =>
+          {octaves.map((octave) =>
             whiteKeys.map((note, index) => {
               const isChordNote =
                 normalizedChordNotes.includes(note);
