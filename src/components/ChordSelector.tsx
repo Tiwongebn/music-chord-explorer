@@ -1,5 +1,6 @@
 import { chordTypes } from "../data/chords";
 import {
+  formatNoteForDisplay,
   getNotesByPreference,
   type AccidentalPreference,
 } from "../utils/musicTheory";
@@ -40,53 +41,42 @@ function ChordSelector({
   return (
     <div className="chord-selector">
 
-      <div className="selector-group">
-        <label htmlFor="root-note">
-          Root Note
-        </label>
+      {/* ROOT NOTE — tap-friendly pills */}
+      <div className="selector-group root-group">
+        <span className="selector-label" id="root-label">
+          Root note
+        </span>
 
-        <select
-          id="root-note"
-          value={rootNote}
-          onChange={(event) =>
-            onRootChange(event.target.value)
-          }
+        <div
+          className="root-pills"
+          role="group"
+          aria-labelledby="root-label"
         >
           {notes.map((note) => (
-            <option key={note} value={note}>
-              {note}
-            </option>
+            <button
+              key={note}
+              type="button"
+              className={
+                rootNote === note
+                  ? "root-pill active"
+                  : "root-pill"
+              }
+              onClick={() => onRootChange(note)}
+            >
+              {formatNoteForDisplay(note)}
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
-      <div className="selector-group">
-        <label htmlFor="notation">
-          Note Spelling
-        </label>
 
-        <select
-          id="notation"
-          value={accidentalPreference}
-          onChange={(event) =>
-            onAccidentalPreferenceChange(
-              event.target.value as AccidentalPreference
-            )
-          }
+      {/* CHORD TYPE */}
+      <div className="selector-group">
+        <label
+          className="selector-label"
+          htmlFor="chord-type"
         >
-          <option value="sharps">
-            Sharps
-          </option>
-
-          <option value="flats">
-            Flats
-          </option>
-        </select>
-      </div>
-
-      <div className="selector-group">
-        <label htmlFor="chord-type">
-          Chord Type
+          Chord type
         </label>
 
         <select
@@ -128,6 +118,51 @@ function ChordSelector({
             );
           })}
         </select>
+      </div>
+
+
+      {/* SPELLING — segmented toggle */}
+      <div className="selector-group">
+        <span
+          className="selector-label"
+          id="notation-label"
+        >
+          Spelling
+        </span>
+
+        <div
+          className="segmented"
+          role="group"
+          aria-labelledby="notation-label"
+        >
+          <button
+            type="button"
+            className={
+              accidentalPreference === "sharps"
+                ? "seg active"
+                : "seg"
+            }
+            onClick={() =>
+              onAccidentalPreferenceChange("sharps")
+            }
+          >
+            ♯ Sharps
+          </button>
+
+          <button
+            type="button"
+            className={
+              accidentalPreference === "flats"
+                ? "seg active"
+                : "seg"
+            }
+            onClick={() =>
+              onAccidentalPreferenceChange("flats")
+            }
+          >
+            ♭ Flats
+          </button>
+        </div>
       </div>
 
     </div>

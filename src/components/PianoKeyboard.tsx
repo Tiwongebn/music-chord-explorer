@@ -8,6 +8,7 @@ interface PianoKeyboardProps {
   accidentalPreference: AccidentalPreference;
   selectedNotes: string[];
   onNoteToggle: (note: string) => void;
+  onClearSelection?: () => void;
 }
 
 interface PianoKey {
@@ -114,22 +115,26 @@ function PianoKeyboard({
   accidentalPreference,
   selectedNotes,
   onNoteToggle,
+  onClearSelection,
 }: PianoKeyboardProps) {
   const normalizedChordNotes = chordNotes.map(
     normalizeNote
   );
 
   const normalizedSelectedNotes =
-  selectedNotes.map(removeOctave).map(normalizeNote);
+    selectedNotes
+      .map(removeOctave)
+      .map(normalizeNote);
 
   const octaves = [3, 4, 5];
 
   return (
     <section className="piano-section">
-      <h2>Interactive Piano</h2>
+      <h2>Tap the keys</h2>
 
       <p className="piano-description">
-        Click the keys to build your own chord.
+        Purple keys = the chord above · yellow keys =
+        your picks
       </p>
 
       <div className="piano-wrapper">
@@ -145,14 +150,16 @@ function PianoKeyboard({
                 normalizedSelectedNotes.includes(note);
 
               return (
-                <button
-                    key={`${note}${octave}`}
+               <button
+                  key={`${note}${octave}`}
                   className={`piano-key white ${
-                isChordNote ? "active" : ""
-                } ${isSelected ? "selected" : ""}`}
-                onClick={() => onNoteToggle(`${note}${octave}`)}
-                type="button"
-               >
+                    isChordNote ? "active" : ""
+                  } ${isSelected ? "selected" : ""}`}
+                  onClick={() =>
+                    onNoteToggle(`${note}${octave}`)
+                  }
+                  type="button"
+                >
                   <span className="key-label">
                     {getDisplayNote(
                       note,
@@ -174,7 +181,9 @@ function PianoKeyboard({
           {octaves.flatMap((octave, octaveIndex) =>
             blackKeys.map((key) => {
               const isChordNote =
-                normalizedChordNotes.includes(key.note);
+                normalizedChordNotes.includes(
+                  key.note
+                );
 
               const isSelected =
                 normalizedSelectedNotes.includes(
@@ -219,6 +228,40 @@ function PianoKeyboard({
           )}
 
         </div>
+      </div>
+
+      {/* SELECTED NOTES */}
+      <div className="selected-notes">
+
+        <h3>Your notes</h3>
+
+        {selectedNotes.length === 0 ? (
+          <p className="hint">
+            No notes yet — tap some keys!
+          </p>
+        ) : (
+          <div className="selected-note-list">
+            {selectedNotes.map((note) => (
+              <span
+                className="selected-note"
+                key={note}
+              >
+                {formatNoteForDisplay(note)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {selectedNotes.length > 0 && (
+          <button
+            className="clear-selection"
+            type="button"
+            onClick={onClearSelection}
+          >
+            Clear selection
+          </button>
+        )}
+
       </div>
     </section>
   );

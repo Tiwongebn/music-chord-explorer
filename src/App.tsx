@@ -8,7 +8,6 @@ import ChordAnalyzer from "./components/ChordAnalyzer";
 import ChordBuilder from "./components/ChordBuilder";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
-
 import {
   calculateChordNotes,
   convertRootNote,
@@ -16,44 +15,62 @@ import {
   type AccidentalPreference,
 } from "./utils/musicTheory";
 
+type Mode = "explore" | "build";
 
+// Find the catalog chord whose pitch-class pattern matches
+// the given interval pattern (compared mod 12, order-free).
+function findMatchingChordIndex(pattern: number[]): number {
+  const target = pattern
+    .map((interval) => interval % 12)
+    .sort((a, b) => a - b);
+
+  return chordTypes.findIndex((chord) => {
+    const chordPattern = chord.intervals
+      .map((interval) => interval % 12)
+      .sort((a, b) => a - b);
+
+    return (
+      chordPattern.length === target.length &&
+      chordPattern.every(
+        (interval, index) => interval === target[index]
+      )
+    );
+  });
+}
 
 function App() {
+  const [mode, setMode] = useState<Mode>("explore");
+
   const [rootNote, setRootNote] = useState("C");
-
-  const [
-    selectedChordIndex,
-    setSelectedChordIndex,
-  ] = useState(0);
-
-  const [
-    accidentalPreference,
-    setAccidentalPreference,
-  ] = useState<AccidentalPreference>("sharps");
+  const [selectedChordIndex, setSelectedChordIndex] =
+    useState(0);
+  const [accidentalPreference, setAccidentalPreference] =
+    useState<AccidentalPreference>("sharps");
 
   // Notes selected by clicking the piano
-  const [selectedNotes, setSelectedNotes] =
-    useState<string[]>([]);
+  const [selectedNotes, setSelectedNotes] = useState<
+    string[]
+  >([]);
 
-  const selectedChord =
-    chordTypes[selectedChordIndex];
+  // Result of the last Chord Lab build — used for the hint
+  // banner only. Never switches tabs on its own.
+  const [lastBuild, setLastBuild] = useState<{
+    matched: boolean;
+  } | null>(null);
 
-    const pitchClasses = selectedNotes.map(
-  (note) => note.replace(/\d+$/, "")
-);
+  const selectedChord = chordTypes[selectedChordIndex];
 
-const detectedChord =
-  analyzeChord(pitchClasses);
+  const pitchClasses = selectedNotes.map((note) =>
+    note.replace(/\d+$/, "")
+  );
 
-  // Convert the root note to the user's preferred
-  // sharp/flat notation
+  const detectedChord = analyzeChord(pitchClasses);
+
   const displayedRootNote = convertRootNote(
     rootNote,
     accidentalPreference
   );
 
-  // Calculate the notes that belong to the
-  // currently selected chord
   const chordNotes = calculateChordNotes(
     rootNote,
     selectedChord.intervals,
@@ -61,84 +78,69 @@ const detectedChord =
     accidentalPreference
   );
 
-  // Example: C + major triad = C Major
   const chordName =
     `${formatNoteForDisplay(displayedRootNote)}${selectedChord.symbol}`;
 
-  // Handle sharp/flat preference changes
   const handleAccidentalPreferenceChange = (
     preference: AccidentalPreference
   ) => {
-    const convertedRootNote = convertRootNote(
-      rootNote,
-      preference
-    );
-
-    setRootNote(convertedRootNote);
+    setRootNote(convertRootNote(rootNote, preference));
     setAccidentalPreference(preference);
   };
 
-  // Handle clicking a piano key
   const handleNoteToggle = (note: string) => {
-    setSelectedNotes((currentNotes) => {
-      // If the note is already selected,
-      // remove it
-      if (currentNotes.includes(note)) {
-        return currentNotes.filter(
-          (selectedNote) => selectedNote !== note
-        );
-      }
-
-      // Otherwise add it
-      return [...currentNotes, note];
-    });
+    setSelectedNotes((current) =>
+      current.includes(note)
+        ? current.filter((item) => item !== note)
+        : [...current, note]
+    );
   };
 
-  // Clear all manually selected notes
   const handleClearSelection = () => {
     setSelectedNotes([]);
   };
 
+  // Analyzer -> selector: apply the detected chord.
+  // The analyzer only exists inside Explore, so this never
+  // fights the user for tab control.
   const handleUseDetectedChord = () => {
-  if (!detectedChord) {
-    return;
-  }
+    if (!detectedChord) {
+      return;
+    }
 
-  const detectedPattern =
-    detectedChord.pattern
-      .map((interval) => interval % 12)
-      .sort((a, b) => a - b);
-
-  const matchingChordIndex =
-    chordTypes.findIndex((chord) => {
-      const chordPattern =
-        chord.intervals
-          .map((interval) => interval % 12)
-          .sort((a, b) => a - b);
-
-      return (
-        chordPattern.length ===
-          detectedPattern.length &&
-        chordPattern.every(
-          (interval, index) =>
-            interval === detectedPattern[index]
-        )
-      );
-    });
-
-  if (matchingChordIndex === -1) {
-    return;
-  }
-
-  const convertedRoot =
-    convertRootNote(
-      detectedChord.root,
-      accidentalPreference
+    const match = findMatchingChordIndex(
+      detectedChord.pattern
     );
 
-  setRootNote(convertedRoot);
-  setSelectedChordIndex(matchingChordIndex);
-};
+    if (match === -1) {
+      return;
+    }
+
+    setRootNote(
+      convertRootNote(
+        detectedChord.root,
+        accidentalPreference
+      )
+    );
+    setSelectedChordIndex(match);
+  };
+
+  // Chord Lab -> Explore: update the Explore chord silently
+  // in the background and show a hint banner. Important:
+  // ChordBuilder fires onChordBuild on mount AND on every
+  // toggle, so switching tabs here would instantly snap the
+  // user back to Explore — never call setMode() from this.
+  const handleChordBuild = (chord: {
+    intervals: number[];
+  }) => {
+    const match = findMatchingChordIndex(chord.intervals);
+
+    setLastBuild({ matched: match !== -1 });
+
+    if (match !== -1) {
+      setSelectedChordIndex(match);
+    }
+  };
 
   return (
     <main className="app">
@@ -153,91 +155,158 @@ const detectedChord =
 
         <h1>Music Chord Explorer</h1>
 
-        <p>
-          Explore how chords are built from notes
-          and musical intervals.
+        <p className="subtitle">
+          Pick a chord, tap the keys, and watch the
+          theory come alive.
         </p>
       </header>
 
 
       {/* =========================
-          CHORD SELECTOR
+          MODE TABS
       ========================== */}
-      <ChordSelector
-        rootNote={rootNote}
-        chordTypeIndex={selectedChordIndex}
-        accidentalPreference={accidentalPreference}
-        onRootChange={setRootNote}
-        onChordTypeChange={setSelectedChordIndex}
-        onAccidentalPreferenceChange={
-          handleAccidentalPreferenceChange
-        }
-      />
+      <nav className="mode-tabs" aria-label="App mode">
+        <button
+          type="button"
+          className={
+            mode === "explore" ? "tab active" : "tab"
+          }
+          onClick={() => setMode("explore")}
+        >
+          🎹 Explore
+        </button>
+
+        <button
+          type="button"
+          className={
+            mode === "build" ? "tab active" : "tab"
+          }
+          onClick={() => setMode("build")}
+        >
+          🧪 Chord Lab
+        </button>
+      </nav>
 
 
-      {/* =========================
-          CHORD INFORMATION
-      ========================== */}
-      <ChordDisplay
-        chordName={chordName}
-        notes={chordNotes}
-        intervalNames={selectedChord.intervalNames}
-        intervals={selectedChord.intervals}
-      />
+      {mode === "explore" ? (
+        <>
 
-    <ChordBuilder
-  rootNote={rootNote}
-  onRootChange={setRootNote}
-/>
+          {/* =========================
+              HERO: PICK + SEE THE CHORD
+          ========================== */}
+          <section className="panel hero-card">
+
+            <ChordSelector
+              rootNote={rootNote}
+              chordTypeIndex={selectedChordIndex}
+              accidentalPreference={accidentalPreference}
+              onRootChange={setRootNote}
+              onChordTypeChange={setSelectedChordIndex}
+              onAccidentalPreferenceChange={
+                handleAccidentalPreferenceChange
+              }
+            />
+
+            <ChordDisplay
+              chordName={chordName}
+              notes={chordNotes}
+              intervalNames={selectedChord.intervalNames}
+              intervals={selectedChord.intervals}
+            />
+
+          </section>
 
 
-      {/* =========================
-          INTERACTIVE PIANO
-      ========================== */}
-           <PianoKeyboard
-        chordNotes={chordNotes}
-        accidentalPreference={accidentalPreference}
-        selectedNotes={selectedNotes}
-        onNoteToggle={handleNoteToggle}
-      />
+          {/* =========================
+              PIANO STAGE
+          ========================== */}
+          <section className="panel piano-panel">
 
-      <ChordAnalyzer
-  selectedNotes={selectedNotes}
-  onUseDetectedChord={
-    handleUseDetectedChord
-  }
-/>
+            <PianoKeyboard
+              chordNotes={chordNotes}
+              accidentalPreference={accidentalPreference}
+              selectedNotes={selectedNotes}
+              onNoteToggle={handleNoteToggle}
+              onClearSelection={handleClearSelection}
+            />
 
-      <section className="selected-notes">
+          </section>
 
-        <h3>Selected Notes</h3>
 
-        {selectedNotes.length === 0 ? (
-          <p>No notes selected.</p>
-        ) : (
-          <div className="selected-note-list">
-            {selectedNotes.map((note) => (
-              <span
-                className="selected-note"
-                key={note}
-              >
-                {formatNoteForDisplay(note)}
-              </span>
-            ))}
+          {/* =========================
+              ANALYZER + THEORY BITES
+          ========================== */}
+          <div className="duo-grid">
+
+            <ChordAnalyzer
+              selectedNotes={selectedNotes}
+              onUseDetectedChord={
+                handleUseDetectedChord
+              }
+            />
+
+            <aside className="panel tips-card">
+              <h2>Quick theory bites</h2>
+
+              <ul className="tip-list">
+                <li>
+                  <strong>Major vs minor</strong> is a
+                  single semitone — the 3rd.
+                </li>
+
+                <li>
+                  A <strong>diminished</strong> triad
+                  stacks two minor 3rds (0–3–6).
+                </li>
+
+                <li>
+                  <strong>Sus chords</strong> replace the
+                  3rd with a 2nd or 4th.
+                </li>
+
+                <li>
+                  Same notes, different bottom key? That
+                  is an <strong>inversion</strong> — the
+                  analyzer spots it.
+                </li>
+              </ul>
+            </aside>
+
           </div>
-        )}
 
-        {selectedNotes.length > 0 && (
-          <button
-            className="clear-selection"
-            type="button"
-            onClick={handleClearSelection}
-          >
-            Clear Selection
-          </button>
-        )}
+        </>
+      ) : (
 
-      </section>
+        /* =========================
+            CHORD LAB (BUILDER)
+        ========================== */
+        <section className="panel lab-panel">
+
+          {lastBuild?.matched && (
+            <p className="lab-hint match">
+              🎉 That matches{" "}
+              <strong>{chordName}</strong> — flip to{" "}
+              <strong>🎹 Explore</strong> to see it
+              light up the piano.
+            </p>
+          )}
+
+          {lastBuild && !lastBuild.matched && (
+            <p className="lab-hint">
+              🧪 That combination is more exotic than
+              the catalog — the intervals below still
+              tell the story.
+            </p>
+          )}
+
+          <ChordBuilder
+            rootNote={rootNote}
+            onRootChange={setRootNote}
+            onChordBuild={handleChordBuild}
+          />
+
+        </section>
+      )}
 
     </main>
   );
