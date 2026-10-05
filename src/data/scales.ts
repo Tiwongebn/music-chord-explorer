@@ -22,10 +22,21 @@ export type TriadQuality =
   | "Minor"
   | "Diminished";
 
+// The seven qualities a diatonic 7th chord can take.
+export type SeventhQuality =
+  | "Major 7th"
+  | "Minor 7th"
+  | "Dominant 7th"
+  | "Half-Diminished 7th"
+  | "Diminished 7th"
+  | "Minor Major 7th";
+
 export interface ScaleDegree {
   degree: number;
   roman: string;
   quality: TriadQuality;
+  seventhQuality: SeventhQuality;
+  seventhRoman: string;
   function: ChordFunction;
 }
 
@@ -36,23 +47,23 @@ export const scaleIntervals: Record<ScaleType, number[]> = {
 };
 
 export const majorScaleDegrees: ScaleDegree[] = [
-  { degree: 1, roman: "I", quality: "Major", function: "Tonic" },
-  { degree: 2, roman: "ii", quality: "Minor", function: "Subdominant" },
-  { degree: 3, roman: "iii", quality: "Minor", function: "Tonic" },
-  { degree: 4, roman: "IV", quality: "Major", function: "Subdominant" },
-  { degree: 5, roman: "V", quality: "Major", function: "Dominant" },
-  { degree: 6, roman: "vi", quality: "Minor", function: "Tonic" },
-  { degree: 7, roman: "vii°", quality: "Diminished", function: "Dominant" },
+  { degree: 1, roman: "I", quality: "Major", seventhQuality: "Major 7th", seventhRoman: "Imaj7", function: "Tonic" },
+  { degree: 2, roman: "ii", quality: "Minor", seventhQuality: "Minor 7th", seventhRoman: "ii7", function: "Subdominant" },
+  { degree: 3, roman: "iii", quality: "Minor", seventhQuality: "Minor 7th", seventhRoman: "iii7", function: "Tonic" },
+  { degree: 4, roman: "IV", quality: "Major", seventhQuality: "Major 7th", seventhRoman: "IVmaj7", function: "Subdominant" },
+  { degree: 5, roman: "V", quality: "Major", seventhQuality: "Dominant 7th", seventhRoman: "V7", function: "Dominant" },
+  { degree: 6, roman: "vi", quality: "Minor", seventhQuality: "Minor 7th", seventhRoman: "vi7", function: "Tonic" },
+  { degree: 7, roman: "vii°", quality: "Diminished", seventhQuality: "Half-Diminished 7th", seventhRoman: "vii\u00f87", function: "Dominant" },
 ];
 
 export const minorScaleDegrees: ScaleDegree[] = [
-  { degree: 1, roman: "i", quality: "Minor", function: "Tonic" },
-  { degree: 2, roman: "ii°", quality: "Diminished", function: "Subdominant" },
-  { degree: 3, roman: "III", quality: "Major", function: "Tonic" },
-  { degree: 4, roman: "iv", quality: "Minor", function: "Subdominant" },
-  { degree: 5, roman: "v", quality: "Minor", function: "Dominant" },
-  { degree: 6, roman: "VI", quality: "Major", function: "Subdominant" },
-  { degree: 7, roman: "VII", quality: "Major", function: "Dominant" },
+  { degree: 1, roman: "i", quality: "Minor", seventhQuality: "Minor 7th", seventhRoman: "i7", function: "Tonic" },
+  { degree: 2, roman: "ii°", quality: "Diminished", seventhQuality: "Half-Diminished 7th", seventhRoman: "ii\u00f87", function: "Subdominant" },
+  { degree: 3, roman: "III", quality: "Major", seventhQuality: "Major 7th", seventhRoman: "IIImaj7", function: "Tonic" },
+  { degree: 4, roman: "iv", quality: "Minor", seventhQuality: "Minor 7th", seventhRoman: "iv7", function: "Subdominant" },
+  { degree: 5, roman: "v", quality: "Minor", seventhQuality: "Minor 7th", seventhRoman: "v7", function: "Dominant" },
+  { degree: 6, roman: "VI", quality: "Major", seventhQuality: "Major 7th", seventhRoman: "VImaj7", function: "Subdominant" },
+  { degree: 7, roman: "VII", quality: "Major", seventhQuality: "Dominant 7th", seventhRoman: "VII7", function: "Dominant" },
 ];
 
 export const scaleDegreesByType: Record<
