@@ -1,163 +1,131 @@
 // ============================================================
-// Builds the seven diatonic triads for a given key + scale,
-// so the Progressions section can show real chord names
-// (e.g. "Dm" for ii in C major) rather than just roman
-// numerals.
+// Builds the seven diatonic chords for a given key + scale,
+// voiced with whatever chord type the user picks (same full
+// catalog as the Explore tab — triads, 7ths, 9ths, sus
+// chords, etc.) so the Progressions section can show real
+// chord names (e.g. "Dm9" for ii in C major) instead of just
+// roman numerals.
+//
+// Spelling reuses calculateChordNotes() — the exact engine
+// Explore already uses — for both the scale's own degree
+// roots and the chord voiced on each one. That keeps this
+// section's sharps/flats behavior identical to Explore's: a
+// manual toggle, not an automatic key-signature guess.
 // ============================================================
 
 import {
+  calculateChordNotes,
   convertRootNote,
   formatNoteForDisplay,
-  getKeyAccidentalPreference,
-  getNotesByPreference,
   type AccidentalPreference,
 } from "./musicTheory";
+import { chordTypes } from "../data/chords";
+import type { ChordType } from "../types/music";
 import {
   scaleDegreesByType,
+  scaleIntervalNames,
   scaleIntervals,
   type ScaleDegree,
   type ScaleType,
-  type SeventhQuality,
-  type TriadQuality,
 } from "../data/scales";
-
-const triadIntervals: Record<TriadQuality, number[]> = {
-  Major: [0, 4, 7],
-  Minor: [0, 3, 7],
-  Diminished: [0, 3, 6],
-};
-
-const triadSymbol: Record<TriadQuality, string> = {
-  Major: "",
-  Minor: "m",
-  Diminished: "dim",
-};
-
-const seventhIntervals: Record<SeventhQuality, number[]> = {
-  "Major 7th": [0, 4, 7, 11],
-  "Minor 7th": [0, 3, 7, 10],
-  "Dominant 7th": [0, 4, 7, 10],
-  "Half-Diminished 7th": [0, 3, 6, 10],
-  "Diminished 7th": [0, 3, 6, 9],
-  "Minor Major 7th": [0, 3, 7, 11],
-};
-
-const seventhSymbol: Record<SeventhQuality, string> = {
-  "Major 7th": "maj7",
-  "Minor 7th": "m7",
-  "Dominant 7th": "7",
-  "Half-Diminished 7th": "m7\u266d5",
-  "Diminished 7th": "dim7",
-  "Minor Major 7th": "mMaj7",
-};
 
 export interface ScaleChord extends ScaleDegree {
   rootNote: string; // display-formatted, e.g. "D", "F♯"
-  symbol: string;
-  chordLabel: string; // e.g. "Dm", "G", "B°"
-  notes: string[]; // display-formatted triad notes
-  rawNotes: string[]; // ASCII (#/b) triad notes, for audio playback
-  seventhSymbol: string;
-  seventhChordLabel: string; // e.g. "Dm7", "Gmaj7"
-  seventhNotes: string[]; // display-formatted 4-note chord
-  seventhRawNotes: string[]; // ASCII, for audio playback
+  chordLabel: string; // e.g. "Dm9", "Gmaj7", "B°"
+  notes: string[]; // display-formatted chord notes
+  rawNotes: string[]; // ASCII (#/b) chord notes, for audio playback
 }
 
-// Builds the seven diatonic chords for a key, automatically
-// spelling notes with the sharps or flats that key's
-// signature actually uses (e.g. F major -> Bb, not A#) —
-// regardless of the app's global sharps/flats display toggle,
-// which only governs the root-note picker UI.
-export function buildScaleChords(
+// Picks the catalog chord type that matches a diatonic
+// degree's natural triad quality — used as the baseline
+// "Triads" voicing before the user picks something fancier.
+const defaultChordTypeByQuality: Record<string, ChordType> = {
+  Major: chordTypes.find((c) => c.name === "Major")!,
+  Minor: chordTypes.find((c) => c.name === "Minor")!,
+  Diminished: chordTypes.find(
+    (c) => c.name === "Diminished"
+  )!,
+};
+
+// Builds the seven diatonic roots for a key/scale, spelled
+// with the chosen sharps/flats preference — reusing
+// calculateChordNotes() by treating the scale itself as one
+// big "chord" stacked on the root.
+function buildScaleDegreeRoots(
   keyRoot: string,
   scaleType: ScaleType,
   preference: AccidentalPreference
-): ScaleChord[] {
-  // Resolve the key's pitch class from whatever spelling was
-  // passed in, then re-derive the *correct* accidental style
-  // for that key so diatonic chords read naturally.
-  const lookupNotes = getNotesByPreference(preference);
+): string[] {
   const preferredKeyRoot = convertRootNote(
     keyRoot,
     preference
   );
-  const keyIndex = lookupNotes.indexOf(preferredKeyRoot);
 
-  if (keyIndex === -1) {
-    return [];
-  }
-
-  const keyPreference = getKeyAccidentalPreference(
-    keyRoot,
-    scaleType
+  return calculateChordNotes(
+    preferredKeyRoot,
+    scaleIntervals[scaleType],
+    scaleIntervalNames[scaleType]
   );
-  const notes = getNotesByPreference(keyPreference);
+}
+
+// Builds the seven diatonic chords for a key, each voiced
+// using `chordType` (defaults to each degree's natural triad
+// when omitted) and spelled per `preference` — exactly like
+// Explore's root + chord-type + sharps/flats controls.
+export function buildScaleChords(
+  keyRoot: string,
+  scaleType: ScaleType,
+  preference: AccidentalPreference,
+  chordType?: ChordType
+): ScaleChord[] {
+  const degreeRoots = buildScaleDegreeRoots(
+    keyRoot,
+    scaleType,
+    preference
+  );
 
   const degrees = scaleDegreesByType[scaleType];
-  const intervals = scaleIntervals[scaleType];
 
   return degrees.map((degree, index) => {
-    const degreeOffset = intervals[index];
-    const degreeRootIndex =
-      (keyIndex + degreeOffset) % 12;
-    const degreeRoot = notes[degreeRootIndex];
+    const degreeRoot = degreeRoots[index];
 
-    const chordIntervals = triadIntervals[degree.quality];
-    const symbol = triadSymbol[degree.quality];
+    const voicing =
+      chordType ??
+      defaultChordTypeByQuality[degree.quality];
 
-    const chordNotes = chordIntervals.map(
-      (interval) =>
-        notes[(degreeRootIndex + interval) % 12]
+    const chordNotes = calculateChordNotes(
+      degreeRoot,
+      voicing.intervals,
+      voicing.intervalNames
     );
 
-    const seventhIntervalsForDegree =
-      seventhIntervals[degree.seventhQuality];
-    const seventhSymbolForDegree =
-      seventhSymbol[degree.seventhQuality];
-
-    const seventhChordNotes =
-      seventhIntervalsForDegree.map(
-        (interval) =>
-          notes[(degreeRootIndex + interval) % 12]
-      );
-
     const displayRoot = formatNoteForDisplay(degreeRoot);
+
+    const label =
+      !chordType && degree.quality === "Diminished"
+        ? `${displayRoot}°`
+        : `${displayRoot}${voicing.symbol}`;
 
     return {
       ...degree,
       rootNote: displayRoot,
-      symbol,
-      chordLabel:
-        degree.quality === "Diminished"
-          ? `${displayRoot}°`
-          : `${displayRoot}${symbol}`,
+      chordLabel: label,
       notes: chordNotes.map((note) =>
         formatNoteForDisplay(note)
       ),
       rawNotes: chordNotes,
-      seventhSymbol: seventhSymbolForDegree,
-      seventhChordLabel: `${displayRoot}${seventhSymbolForDegree}`,
-      seventhNotes: seventhChordNotes.map((note) =>
-        formatNoteForDisplay(note)
-      ),
-      seventhRawNotes: seventhChordNotes,
     };
   });
 }
 
-// The correctly-spelled display name for a key root, per its
-// actual key signature (e.g. passing "A#" for a flat key
-// returns "B♭"). Used to label the Progressions section with
-// the conventional key name rather than an arbitrary spelling.
+// The display name for a key root under the chosen
+// sharps/flats preference (e.g. "A#" + flats -> "B♭"),
+// matching how Explore labels its own root note.
 export function getDisplayKeyRoot(
   keyRoot: string,
-  scaleType: ScaleType = "major"
+  preference: AccidentalPreference
 ): string {
-  const keyPreference = getKeyAccidentalPreference(
-    keyRoot,
-    scaleType
-  );
   return formatNoteForDisplay(
-    convertRootNote(keyRoot, keyPreference)
+    convertRootNote(keyRoot, preference)
   );
 }

@@ -1199,57 +1199,114 @@ select {
 
 /* =========================
     PROGRESSION BUILDER
+    (its own dedicated panel, nested inside the
+    Progressions section)
 ========================= */
 
-.builder-section {
+.builder-panel {
   margin-top: 32px;
-  padding-top: 26px;
-  border-top: 2px dashed rgba(36, 30, 61, 0.25);
+  background: #fffaf0;
+  border-color: var(--purple);
+  box-shadow: 6px 6px 0 var(--purple);
 }
 
-.builder-section h3 {
-  margin: 0 0 6px;
-  font-size: 1.2rem;
+.builder-panel-header .eyebrow {
+  background: var(--purple);
+  color: #ffffff;
+}
+
+.builder-panel-header h3 {
+  margin: 0.3rem 0 8px;
+  font-size: 1.5rem;
+  font-weight: 800;
 }
 
 .builder-section-hint {
-  margin: 0 0 16px;
-  opacity: 0.7;
-  font-size: 0.9rem;
+  margin: 0 0 20px;
+  opacity: 0.75;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
-.custom-chip-row {
+.builder-empty {
+  padding: 20px;
+  margin-bottom: 18px;
+  border: 2px dashed rgba(36, 30, 61, 0.3);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.builder-slot-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 18px;
-  min-height: 42px;
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
 }
 
-.custom-chip {
-  display: inline-flex;
+.builder-slot {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  background: var(--blue);
+  gap: 4px;
+  min-width: 92px;
+  padding: 10px 12px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
 }
 
-.chip-remove {
+.builder-slot-index {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.5;
+}
+
+.builder-slot-chord {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.builder-slot-roman {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.builder-slot-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.slot-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: rgba(36, 30, 61, 0.25);
-  color: var(--ink);
-  font-size: 0.9rem;
-  line-height: 1;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
 }
 
-.chip-remove:hover {
+.slot-btn:hover:not(:disabled) {
+  background: var(--yellow);
+  transform: translateY(-1px);
+}
+
+.slot-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.slot-remove:hover:not(:disabled) {
   background: var(--red);
   color: #ffffff;
 }

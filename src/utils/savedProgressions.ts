@@ -6,14 +6,14 @@
 
 import type { ScaleType } from "../data/scales";
 
-export type ChordVoicing = "triads" | "sevenths";
-
 export interface SavedProgression {
   id: string;
   name: string;
   rootNote: string; // raw note, e.g. "C", "A#"
   scaleType: ScaleType;
-  voicing: ChordVoicing;
+  // Index into chordTypes (src/data/chords.ts) — the chord
+  // type every degree was voiced with when this was saved.
+  chordTypeIndex: number;
   degrees: number[];
   createdAt: number;
 }
@@ -38,7 +38,19 @@ export function loadSavedProgressions(): SavedProgression[] {
 
     const parsed = JSON.parse(raw);
 
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    // Entries saved by an earlier version of this feature
+    // used a "voicing" field ("triads" | "sevenths") instead
+    // of chordTypeIndex. Normalize those on load so old
+    // localStorage data doesn't crash the new UI.
+    return parsed.map((item) =>
+      typeof item.chordTypeIndex === "number"
+        ? item
+        : { ...item, chordTypeIndex: -1 }
+    );
   } catch {
     // Corrupt or inaccessible storage — fail soft, never
     // crash the Progressions tab over a parsing error.
