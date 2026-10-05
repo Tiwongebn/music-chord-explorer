@@ -895,3 +895,247 @@ select {
 .piano-key.black.keyboard-active {
   background: #7c3aed;
 }
+
+
+/* =========================
+    CHORD PROGRESSIONS
+========================= */
+
+.progressions-panel {
+  margin-top: 28px;
+}
+
+.progressions-header h2 {
+  margin: 0.3rem 0 10px;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 800;
+}
+
+.subtitle-left {
+  margin: 0;
+  max-width: 640px;
+  opacity: 0.75;
+}
+
+.prog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: flex-end;
+  margin: 22px 0 26px;
+  padding-bottom: 22px;
+  border-bottom: 2px dashed rgba(36, 30, 61, 0.25);
+}
+
+.degree-row {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.degree-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease;
+}
+
+.degree-card:hover {
+  transform: translateY(-3px);
+}
+
+.degree-card.active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+  color: #ffffff;
+}
+
+.degree-card.active.fn-tonic {
+  background: var(--purple);
+}
+
+.degree-card.active.fn-subdominant {
+  background: var(--blue);
+}
+
+.degree-card.active.fn-dominant {
+  background: var(--pink);
+}
+
+.degree-card.suggested {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(18, 196, 139, 0.3);
+}
+
+.degree-roman {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.degree-card.active .degree-roman {
+  opacity: 0.85;
+}
+
+.degree-chord-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.degree-notes {
+  font-size: 0.75rem;
+  opacity: 0.65;
+}
+
+.degree-card.active .degree-notes {
+  opacity: 0.9;
+}
+
+.degree-function {
+  margin-top: 4px;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(36, 30, 61, 0.08);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.degree-card.active .degree-function {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.harmony-hint {
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  border: 2px dashed rgba(36, 30, 61, 0.3);
+  border-radius: 14px;
+  background: #fffdf7;
+  line-height: 1.6;
+}
+
+.harmony-hint p {
+  margin: 0;
+}
+
+.function-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 28px;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 220px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+}
+
+.legend-item.fn-tonic .legend-dot {
+  background: var(--purple);
+}
+
+.legend-item.fn-subdominant .legend-dot {
+  background: var(--blue);
+}
+
+.legend-item.fn-dominant .legend-dot {
+  background: var(--pink);
+}
+
+.progression-templates h3 {
+  margin: 0 0 14px;
+  font-size: 1.2rem;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.template-card {
+  padding: 16px 18px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: linear-gradient(
+    160deg,
+    #f4edff,
+    #ffffff 60%
+  );
+  box-shadow: var(--shadow-sm);
+}
+
+.template-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.template-card-head h4 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.template-play {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.template-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.template-chip {
+  padding: 0.3rem 0.7rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--yellow);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.template-vibe {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+  line-height: 1.4;
+}
+
+@media (max-width: 700px) {
+  .prog-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

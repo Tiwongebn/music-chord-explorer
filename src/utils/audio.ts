@@ -198,3 +198,23 @@ export function playNotes(
     });
   });
 }
+
+// Play a sequence of chords back-to-back, one every
+// `chordSeconds`. `chords` is a list of pitch-class groups
+// (no octave, e.g. [["C","E","G"], ["F","A","C"]]) — an
+// octave number is appended automatically.
+export function playProgression(
+  chords: string[][],
+  chordSeconds = 0.85
+): void {
+  chords.forEach((chordNotes, chordIndex) => {
+    const when = chordIndex * chordSeconds;
+
+    chordNotes.forEach((note) => {
+      playNote(`${note}4`, {
+        when,
+        duration: chordSeconds * 0.95,
+      });
+    });
+  });
+}

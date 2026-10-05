@@ -6,6 +6,7 @@ import ChordSelector from "./components/ChordSelector";
 import ChordDisplay from "./components/ChordDisplay";
 import ChordAnalyzer from "./components/ChordAnalyzer";
 import ChordBuilder from "./components/ChordBuilder";
+import ChordProgressions from "./components/ChordProgressions";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
 import {
@@ -21,7 +22,7 @@ import {
   type AccidentalPreference,
 } from "./utils/musicTheory";
 
-type Mode = "explore" | "build";
+type Mode = "explore" | "build" | "progressions";
 
 // Find the catalog chord whose pitch-class pattern matches
 // the given interval pattern (compared mod 12, order-free).
@@ -225,6 +226,18 @@ function App() {
         >
           🧪 Chord Lab
         </button>
+
+        <button
+          type="button"
+          className={
+            mode === "progressions"
+              ? "tab active"
+              : "tab"
+          }
+          onClick={() => setMode("progressions")}
+        >
+          🗺️ Progressions
+        </button>
       </nav>
 
 
@@ -316,7 +329,9 @@ function App() {
           </div>
 
         </>
-      ) : (
+      ) : null}
+
+      {mode === "build" && (
 
         /* =========================
             CHORD LAB (BUILDER)
@@ -347,6 +362,14 @@ function App() {
           />
 
         </section>
+      )}
+
+      {mode === "progressions" && (
+        <ChordProgressions
+          rootNote={rootNote}
+          accidentalPreference={accidentalPreference}
+          onRootChange={setRootNote}
+        />
       )}
 
     </main>
