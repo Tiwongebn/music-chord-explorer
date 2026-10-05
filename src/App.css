@@ -834,3 +834,64 @@ select {
   background: #e9fbf3;
   border-color: var(--green);
 }
+
+
+/* =========================
+    SOUND
+========================= */
+
+.header-actions {
+  margin-top: 18px;
+}
+
+.sound-toggle {
+  padding: 0.55rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.sound-toggle:hover {
+  transform: translateY(-2px);
+}
+
+.chord-display-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 6px 0 26px;
+}
+
+.chord-display-header h2 {
+  margin: 0;
+}
+
+.play-chord {
+  padding: 0.6rem 1.2rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--blue);
+  box-shadow: var(--shadow-sm);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.play-chord:hover {
+  transform: translateY(-2px) rotate(-1deg);
+}
+
+/* Key lit up by keyboard press */
+.piano-key.white.keyboard-active {
+  background: #a78bfa; /* soft violet — tweak to match your theme */
+}
+
+.piano-key.black.keyboard-active {
+  background: #7c3aed;
+}

@@ -5,6 +5,7 @@ interface ChordDisplayProps {
   notes: string[];
   intervalNames: string[];
   intervals: number[];
+  onPlay?: () => void;
 }
 
 function ChordDisplay({
@@ -12,10 +13,23 @@ function ChordDisplay({
   notes,
   intervalNames,
   intervals,
+  onPlay,
 }: ChordDisplayProps) {
   return (
     <section className="chord-display">
-      <h2>{chordName}</h2>
+      <div className="chord-display-header">
+        <h2>{chordName}</h2>
+
+        {onPlay && (
+          <button
+            className="play-chord"
+            type="button"
+            onClick={onPlay}
+          >
+            ▶ Play chord
+          </button>
+        )}
+      </div>
 
       <div className="chord-notes">
         {notes.map((note, index) => (

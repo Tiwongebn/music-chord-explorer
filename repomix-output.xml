@@ -1,0 +1,4262 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+public/
+  favicon.svg
+  icons.svg
+src/
+  assets/
+    hero.png
+    react.svg
+    vite.svg
+  components/
+    ChordAnalyzer.tsx
+    ChordBuilder.tsx
+    ChordDisplay.tsx
+    ChordSelector.tsx
+    PianoKeyboard.tsx
+  data/
+    chordBuilder.ts
+    chords.ts
+  types/
+    music.ts
+  utils/
+    audio.ts
+    chordAnalyzer.ts
+    inversionAnalyzer.ts
+    musicTheory.ts
+  App.css
+  App.tsx
+  index.css
+  main.tsx
+.gitignore
+eslint.config.js
+index.html
+package.json
+README.md
+tsconfig.app.json
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/utils/audio.ts">
+// ============================================================
+// Tiny Web Audio synth — no dependencies, no asset files.
+//
+// Each note is two oscillators (fundamental + 2nd harmonic)
+// with a fast attack and an exponential decay, which gives a
+// music-box / electric-piano-ish tone. Good enough for
+// feedback while exploring; swap for sampled audio later if
+// you want a real piano (see README-SOUND.md).
+// ============================================================
+
+let audioContext: AudioContext | null = null;
+let masterGain: GainNode | null = null;
+let enabled = true;
+
+export function setAudioEnabled(value: boolean): void {
+  enabled = value;
+}
+
+export function isAudioEnabled(): boolean {
+  return enabled;
+}
+
+// Browsers require the AudioContext to be created (or
+// resumed) inside a user gesture — every call site here is
+// a click handler, so this is safe.
+function getContext(): AudioContext {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+    masterGain = audioContext.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioContext.destination);
+  }
+
+  if (audioContext.state === "suspended") {
+    void audioContext.resume();
+  }
+
+  return audioContext;
+}
+
+const LETTER_SEMITONES: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+};
+
+// "C#4" -> 61, "Bb3" -> 58. Handles #, ##, b, bb.
+export function noteToMidi(note: string): number {
+  const match = note.match(
+    /^([A-Ga-g])(#{1,2}|b{1,2})?(-?\d+)$/
+  );
+
+  if (!match) {
+    return Number.NaN;
+  }
+
+  const [, letter, accidental = "", octaveText] =
+    match;
+
+  let midi =
+    LETTER_SEMITONES[letter.toUpperCase()] +
+    (Number(octaveText) + 1) * 12;
+
+  for (const character of accidental) {
+    midi += character === "#" ? 1 : -1;
+  }
+
+  return midi;
+}
+
+function midiToFrequency(midi: number): number {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+interface PlayOptions {
+  when?: number; // seconds from now
+  duration?: number; // seconds
+  volume?: number;
+}
+
+// Play one note like "C#4". Silently ignores notes it
+// cannot parse and does nothing while muted.
+export function playNote(
+  note: string,
+  options: PlayOptions = {}
+): void {
+  if (!enabled) {
+    return;
+  }
+
+  const midi = noteToMidi(note);
+
+  if (Number.isNaN(midi)) {
+    return;
+  }
+
+  const { when = 0, duration = 4, volume = 0.32 } =
+    options;
+
+  const context = getContext();
+  const start = context.currentTime + when;
+  const frequency = midiToFrequency(midi);
+
+  // Amplitude envelope: quick attack, long decay.
+  const gain = context.createGain();
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    start + duration
+  );
+
+  // Fundamental
+  const fundamental = context.createOscillator();
+  fundamental.type = "triangle";
+  fundamental.frequency.value = frequency;
+
+  // Quiet 2nd harmonic adds "ping"
+  const harmonic = context.createOscillator();
+  harmonic.type = "sine";
+  harmonic.frequency.value = frequency * 2;
+  const harmonicGain = context.createGain();
+  harmonicGain.gain.value = 0.25;
+
+  fundamental.connect(gain);
+  harmonic.connect(harmonicGain);
+  harmonicGain.connect(gain);
+  gain.connect(masterGain!);
+
+  fundamental.start(start);
+  harmonic.start(start);
+  fundamental.stop(start + duration + 0.1);
+  harmonic.stop(start + duration + 0.1);
+}
+
+// Play several notes together (or arpeggiated if you pass a
+// stagger). `notes` use octave numbers, e.g. ["C4","E4","G4"].
+export function playNotes(
+  notes: string[],
+  staggerMs = 0
+): void {
+  notes.forEach((note, index) => {
+    playNote(note, {
+      when: (index * staggerMs) / 1000,
+    });
+  });
+}
+</file>
+
+<file path="public/favicon.svg">
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="46" fill="none" viewBox="0 0 48 46"><path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" style="fill:#863bff;fill:color(display-p3 .5252 .23 1);fill-opacity:1"/><mask id="a" width="48" height="46" x="0" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M25.842 44.938c-.664.844-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.183c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.498 0-3.579-1.842-3.579H1.133c-.92 0-1.456-1.04-.92-1.787L9.91.473c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.578 1.842 3.578h11.377c.943 0 1.473 1.088.89 1.832L25.843 44.94z" style="fill:#000;fill-opacity:1"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#ede6ff" rx="5.508" ry="14.704" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -4.47 31.516)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#ede6ff" rx="10.399" ry="29.851" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -39.328 7.883)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#7e14ff" rx="5.508" ry="30.487" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -25.913 -14.639)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -32.644 -3.334)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -34.34 30.47)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#ede6ff" rx="14.072" ry="22.078" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="rotate(93.35 24.506 48.493)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx=".387" cy="8.972" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(39.51 .387 8.972)"/></g><g filter="url(#k)"><ellipse cx="47.523" cy="-6.092" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 47.523 -6.092)"/></g><g filter="url(#l)"><ellipse cx="41.412" cy="6.333" fill="#47bfff" rx="5.971" ry="9.665" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 41.412 6.333)"/></g><g filter="url(#m)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#n)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#o)"><ellipse cx="35.651" cy="29.907" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 35.651 29.907)"/></g><g filter="url(#p)"><ellipse cx="38.418" cy="32.4" fill="#47bfff" rx="5.971" ry="15.297" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 38.418 32.4)"/></g></g><defs><filter id="b" width="60.045" height="41.654" x="-19.77" y="16.149" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-54.613" y="-7.533" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-49.64" y="2.03" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-45.045" y="20.029" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-43.513" y="21.178" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="15.756" y="-17.901" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-27.636" y="-22.853" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="20.116" y="-38.415" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="24.641" y="-11.323" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="8.244" y="-2.416" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="18.713" y="10.588" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter></defs></svg>
+</file>
+
+<file path="public/icons.svg">
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="bluesky-icon" viewBox="0 0 16 17">
+    <g clip-path="url(#bluesky-clip)"><path fill="#08060d" d="M7.75 7.735c-.693-1.348-2.58-3.86-4.334-5.097-1.68-1.187-2.32-.981-2.74-.79C.188 2.065.1 2.812.1 3.251s.241 3.602.398 4.13c.52 1.744 2.367 2.333 4.07 2.145-2.495.37-4.71 1.278-1.805 4.512 3.196 3.309 4.38-.71 4.987-2.746.608 2.036 1.307 5.91 4.93 2.746 2.72-2.746.747-4.143-1.747-4.512 1.702.189 3.55-.4 4.07-2.145.156-.528.397-3.691.397-4.13s-.088-1.186-.575-1.406c-.42-.19-1.06-.395-2.741.79-1.755 1.24-3.64 3.752-4.334 5.099"/></g>
+    <defs><clipPath id="bluesky-clip"><path fill="#fff" d="M.1.85h15.3v15.3H.1z"/></clipPath></defs>
+  </symbol>
+  <symbol id="discord-icon" viewBox="0 0 20 19">
+    <path fill="#08060d" d="M16.224 3.768a14.5 14.5 0 0 0-3.67-1.153c-.158.286-.343.67-.47.976a13.5 13.5 0 0 0-4.067 0c-.128-.306-.317-.69-.476-.976A14.4 14.4 0 0 0 3.868 3.77C1.546 7.28.916 10.703 1.231 14.077a14.7 14.7 0 0 0 4.5 2.306q.545-.748.965-1.587a9.5 9.5 0 0 1-1.518-.74q.191-.14.372-.293c2.927 1.369 6.107 1.369 8.999 0q.183.152.372.294-.723.437-1.52.74.418.838.963 1.588a14.6 14.6 0 0 0 4.504-2.308c.37-3.911-.63-7.302-2.644-10.309m-9.13 8.234c-.878 0-1.599-.82-1.599-1.82 0-.998.705-1.82 1.6-1.82.894 0 1.614.82 1.599 1.82.001 1-.705 1.82-1.6 1.82m5.91 0c-.878 0-1.599-.82-1.599-1.82 0-.998.705-1.82 1.6-1.82.893 0 1.614.82 1.599 1.82 0 1-.706 1.82-1.6 1.82"/>
+  </symbol>
+  <symbol id="documentation-icon" viewBox="0 0 21 20">
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="m15.5 13.333 1.533 1.322c.645.555.967.833.967 1.178s-.322.623-.967 1.179L15.5 18.333m-3.333-5-1.534 1.322c-.644.555-.966.833-.966 1.178s.322.623.966 1.179l1.534 1.321"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M17.167 10.836v-4.32c0-1.41 0-2.117-.224-2.68-.359-.906-1.118-1.621-2.08-1.96-.599-.21-1.349-.21-2.848-.21-2.623 0-3.935 0-4.983.369-1.684.591-3.013 1.842-3.641 3.428C3 6.449 3 7.684 3 10.154v2.122c0 2.558 0 3.838.706 4.726q.306.383.713.671c.76.536 1.79.64 3.581.66"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M3 10a2.78 2.78 0 0 1 2.778-2.778c.555 0 1.209.097 1.748-.047.48-.129.854-.503.982-.982.145-.54.048-1.194.048-1.749a2.78 2.78 0 0 1 2.777-2.777"/>
+  </symbol>
+  <symbol id="github-icon" viewBox="0 0 19 19">
+    <path fill="#08060d" fill-rule="evenodd" d="M9.356 1.85C5.05 1.85 1.57 5.356 1.57 9.694a7.84 7.84 0 0 0 5.324 7.44c.387.079.528-.168.528-.376 0-.182-.013-.805-.013-1.454-2.165.467-2.616-.935-2.616-.935-.349-.91-.864-1.143-.864-1.143-.71-.48.051-.48.051-.48.787.051 1.2.805 1.2.805.695 1.194 1.817.857 2.268.649.064-.507.27-.857.49-1.052-1.728-.182-3.545-.857-3.545-3.87 0-.857.31-1.558.8-2.104-.078-.195-.349-1 .077-2.078 0 0 .657-.208 2.14.805a7.5 7.5 0 0 1 1.946-.26c.657 0 1.328.092 1.946.26 1.483-1.013 2.14-.805 2.14-.805.426 1.078.155 1.883.078 2.078.502.546.799 1.247.799 2.104 0 3.013-1.818 3.675-3.558 3.87.284.247.528.714.528 1.454 0 1.052-.012 1.896-.012 2.156 0 .208.142.455.528.377a7.84 7.84 0 0 0 5.324-7.441c.013-4.338-3.48-7.844-7.773-7.844" clip-rule="evenodd"/>
+  </symbol>
+  <symbol id="social-icon" viewBox="0 0 20 20">
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M12.5 6.667a4.167 4.167 0 1 0-8.334 0 4.167 4.167 0 0 0 8.334 0"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M2.5 16.667a5.833 5.833 0 0 1 8.75-5.053m3.837.474.513 1.035c.07.144.257.282.414.309l.93.155c.596.1.736.536.307.965l-.723.73a.64.64 0 0 0-.152.531l.207.903c.164.715-.213.991-.84.618l-.872-.52a.63.63 0 0 0-.577 0l-.872.52c-.624.373-1.003.094-.84-.618l.207-.903a.64.64 0 0 0-.152-.532l-.723-.729c-.426-.43-.289-.864.306-.964l.93-.156a.64.64 0 0 0 .412-.31l.513-1.034c.28-.562.735-.562 1.012 0"/>
+  </symbol>
+  <symbol id="x-icon" viewBox="0 0 19 19">
+    <path fill="#08060d" fill-rule="evenodd" d="M1.893 1.98c.052.072 1.245 1.769 2.653 3.77l2.892 4.114c.183.261.333.48.333.486s-.068.089-.152.183l-.522.593-.765.867-3.597 4.087c-.375.426-.734.834-.798.905a1 1 0 0 0-.118.148c0 .01.236.017.664.017h.663l.729-.83c.4-.457.796-.906.879-.999a692 692 0 0 0 1.794-2.038c.034-.037.301-.34.594-.675l.551-.624.345-.392a7 7 0 0 1 .34-.374c.006 0 .93 1.306 2.052 2.903l2.084 2.965.045.063h2.275c1.87 0 2.273-.003 2.266-.021-.008-.02-1.098-1.572-3.894-5.547-2.013-2.862-2.28-3.246-2.273-3.266.008-.019.282-.332 2.085-2.38l2-2.274 1.567-1.782c.022-.028-.016-.03-.65-.03h-.674l-.3.342a871 871 0 0 1-1.782 2.025c-.067.075-.405.458-.75.852a100 100 0 0 1-.803.91c-.148.172-.299.344-.99 1.127-.304.343-.32.358-.345.327-.015-.019-.904-1.282-1.976-2.808L6.365 1.85H1.8zm1.782.91 8.078 11.294c.772 1.08 1.413 1.973 1.425 1.984.016.017.241.02 1.05.017l1.03-.004-2.694-3.766L7.796 5.75 5.722 2.852l-1.039-.004-1.039-.004z" clip-rule="evenodd"/>
+  </symbol>
+</svg>
+</file>
+
+<file path="src/assets/react.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+</file>
+
+<file path="src/assets/vite.svg">
+<svg xmlns="http://www.w3.org/2000/svg" width="77" height="47" fill="none" aria-labelledby="vite-logo-title" viewBox="0 0 77 47"><title id="vite-logo-title">Vite</title><style>.parenthesis{fill:#000}@media (prefers-color-scheme:dark){.parenthesis{fill:#fff}}</style><path fill="#9135ff" d="M40.151 45.71c-.663.844-2.02.374-2.02-.699V34.708a2.26 2.26 0 0 0-2.262-2.262H24.493c-.92 0-1.457-1.04-.92-1.788l7.479-10.471c1.07-1.498 0-3.578-1.842-3.578H15.443c-.92 0-1.456-1.04-.92-1.788l9.696-13.576c.213-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.472c-1.07 1.497 0 3.578 1.842 3.578h11.376c.944 0 1.474 1.087.89 1.83L40.153 45.712z"/><mask id="a" width="48" height="47" x="14" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M40.047 45.71c-.663.843-2.02.374-2.02-.699V34.708a2.26 2.26 0 0 0-2.262-2.262H24.389c-.92 0-1.457-1.04-.92-1.788l7.479-10.472c1.07-1.497 0-3.578-1.842-3.578H15.34c-.92 0-1.456-1.04-.92-1.788l9.696-13.575c.213-.297.556-.474.92-.474H53.93c.92 0 1.456 1.04.92 1.788L47.37 13.03c-1.07 1.498 0 3.578 1.842 3.578h11.376c.944 0 1.474 1.088.89 1.831L40.049 45.712z"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#eee6ff" rx="5.508" ry="14.704" transform="rotate(269.814 20.96 11.29)scale(-1 1)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#eee6ff" rx="10.399" ry="29.851" transform="rotate(89.814 -16.902 -8.275)scale(1 -1)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#8900ff" rx="5.508" ry="30.487" transform="rotate(89.814 -19.197 -7.127)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#8900ff" rx="5.508" ry="30.599" transform="rotate(89.814 -25.928 4.177)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#8900ff" rx="5.508" ry="30.599" transform="rotate(89.814 -25.738 5.52)scale(1 -1)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#eee6ff" rx="14.072" ry="22.078" transform="rotate(93.35 31.245 55.578)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#8900ff" rx="3.47" ry="21.501" transform="rotate(89.009 35.419 55.202)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#8900ff" rx="3.47" ry="21.501" transform="rotate(89.009 35.419 55.202)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx="14.592" cy="9.743" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(39.51 14.592 9.743)"/></g><g filter="url(#k)"><ellipse cx="61.728" cy="-5.321" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 61.728 -5.32)"/></g><g filter="url(#l)"><ellipse cx="55.618" cy="7.104" fill="#00c2ff" rx="5.971" ry="9.665" transform="rotate(37.892 55.618 7.104)"/></g><g filter="url(#m)"><ellipse cx="12.326" cy="39.103" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 12.326 39.103)"/></g><g filter="url(#n)"><ellipse cx="12.326" cy="39.103" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 12.326 39.103)"/></g><g filter="url(#o)"><ellipse cx="49.857" cy="30.678" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 49.857 30.678)"/></g><g filter="url(#p)"><ellipse cx="52.623" cy="33.171" fill="#00c2ff" rx="5.971" ry="15.297" transform="rotate(37.892 52.623 33.17)"/></g></g><path d="M6.919 0c-9.198 13.166-9.252 33.575 0 46.789h6.215c-9.25-13.214-9.196-33.623 0-46.789zm62.424 0h-6.215c9.198 13.166 9.252 33.575 0 46.789h6.215c9.25-13.214 9.196-33.623 0-46.789" class="parenthesis"/><defs><filter id="b" width="60.045" height="41.654" x="-5.564" y="16.92" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-40.407" y="-6.762" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-35.435" y="2.801" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-30.84" y="20.8" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-29.307" y="21.949" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="29.961" y="-17.13" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="37.754" y="3.055" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="37.754" y="3.055" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-13.43" y="-22.082" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="34.321" y="-37.644" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="38.847" y="-10.552" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-15.081" y="6.78" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-15.081" y="6.78" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="22.45" y="-1.645" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="32.919" y="11.36" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter></defs></svg>
+</file>
+
+<file path="src/components/ChordAnalyzer.tsx">
+import { analyzeChord } from "../utils/chordAnalyzer";
+import { detectInversion } from "../utils/inversionAnalyzer";
+
+interface ChordAnalyzerProps {
+  selectedNotes: string[];
+  onUseDetectedChord: () => void;
+}
+
+function removeOctave(note: string): string {
+  return note.replace(/\d+$/, "");
+}
+
+function ChordAnalyzer({
+  selectedNotes,
+  onUseDetectedChord,
+}: ChordAnalyzerProps) {
+  const pitchClasses = selectedNotes.map(
+    removeOctave
+  );
+
+  const detectedChord =
+    analyzeChord(pitchClasses);
+
+  const inversion = detectedChord
+    ? detectInversion(
+        selectedNotes,
+        detectedChord.root
+      )
+    : null;
+
+  return (
+    <section className="chord-analyzer">
+
+      <h2>Chord Analyzer</h2>
+
+      {selectedNotes.length === 0 ? (
+        <p>
+          Select notes on the piano to analyze
+          the chord.
+        </p>
+      ) : detectedChord ? (
+        <div className="detected-chord">
+
+          <p className="detected-label">
+            Detected Chord
+          </p>
+
+          <h3>
+            {detectedChord.root}
+            {detectedChord.symbol}
+          </h3>
+
+          <p className="chord-type">
+            {detectedChord.name}
+          </p>
+
+          {inversion && (
+            <p className="inversion">
+              {inversion}
+            </p>
+          )}
+
+          <div className="analyzed-notes">
+
+            <h4>Selected Notes</h4>
+
+            <div className="analyzed-note-list">
+              {selectedNotes.map((note) => (
+                <span
+                  className="analyzed-note"
+                  key={note}
+                >
+                  {note}
+                </span>
+              ))}
+            </div>
+
+          </div>
+
+          <button
+  className="use-detected-chord"
+  type="button"
+  onClick={onUseDetectedChord}
+>
+  Use This Chord
+</button>
+
+        </div>
+      ) : (
+        <div className="unknown-chord">
+
+          <p>
+            No matching chord found.
+          </p>
+
+          <p>
+            Try selecting a different combination
+            of notes.
+          </p>
+
+        </div>
+      )}
+
+    </section>
+  );
+}
+
+export default ChordAnalyzer;
+</file>
+
+<file path="src/data/chordBuilder.ts">
+export interface ChordBuilderOption {
+  id: string;
+  label: string;
+  interval: number;
+  symbol: string;
+  intervalName: string;
+}
+
+export const chordQualities: ChordBuilderOption[] = [
+  {
+    id: "major",
+    label: "Major",
+    interval: 4,
+    symbol: "",
+    intervalName: "Major 3rd",
+  },
+  {
+    id: "minor",
+    label: "Minor",
+    interval: 3,
+    symbol: "m",
+    intervalName: "Minor 3rd",
+  },
+  {
+    id: "diminished",
+    label: "Diminished",
+    interval: 3,
+    symbol: "dim",
+    intervalName: "Minor 3rd",
+  },
+  {
+    id: "augmented",
+    label: "Augmented",
+    interval: 4,
+    symbol: "aug",
+    intervalName: "Major 3rd",
+  },
+];
+
+export const chordExtensions: ChordBuilderOption[] = [
+  {
+    id: "6",
+    label: "6th",
+    interval: 9,
+    symbol: "6",
+    intervalName: "Major 6th",
+  },
+  {
+    id: "b7",
+    label: "Dominant 7th",
+    interval: 10,
+    symbol: "7",
+    intervalName: "Minor 7th",
+  },
+  {
+    id: "maj7",
+    label: "Major 7th",
+    interval: 11,
+    symbol: "maj7",
+    intervalName: "Major 7th",
+  },
+  {
+    id: "9",
+    label: "9th",
+    interval: 2,
+    symbol: "9",
+    intervalName: "Major 9th",
+  },
+  {
+    id: "11",
+    label: "11th",
+    interval: 5,
+    symbol: "11",
+    intervalName: "Perfect 11th",
+  },
+  {
+    id: "13",
+    label: "13th",
+    interval: 9,
+    symbol: "13",
+    intervalName: "Major 13th",
+  },
+];
+
+export const chordAlterations: ChordBuilderOption[] = [
+  {
+    id: "b5",
+    label: "♭5",
+    interval: 6,
+    symbol: "b5",
+    intervalName: "Diminished 5th",
+  },
+  {
+    id: "#5",
+    label: "♯5",
+    interval: 8,
+    symbol: "#5",
+    intervalName: "Augmented 5th",
+  },
+  {
+    id: "b9",
+    label: "♭9",
+    interval: 1,
+    symbol: "b9",
+    intervalName: "Minor 9th",
+  },
+  {
+    id: "#9",
+    label: "♯9",
+    interval: 3,
+    symbol: "#9",
+    intervalName: "Augmented 9th",
+  },
+  {
+    id: "#11",
+    label: "♯11",
+    interval: 6,
+    symbol: "#11",
+    intervalName: "Augmented 11th",
+  },
+  {
+    id: "b13",
+    label: "♭13",
+    interval: 8,
+    symbol: "b13",
+    intervalName: "Minor 13th",
+  },
+];
+</file>
+
+<file path="src/utils/inversionAnalyzer.ts">
+import {
+  sharpNotes,
+  flatNotes,
+} from "./musicTheory";
+
+export type Inversion =
+  | "Root Position"
+  | "1st Inversion"
+  | "2nd Inversion"
+  | "3rd Inversion"
+  | "Unknown";
+
+function normalizeNote(note: string): string {
+  const noteMap: Record<string, string> = {
+    Db: "C#",
+    Eb: "D#",
+    Gb: "F#",
+    Ab: "G#",
+    Bb: "A#",
+
+    Cb: "B",
+    Fb: "E",
+
+    "C##": "D",
+    "D##": "E",
+    "E##": "F#",
+    "F##": "G",
+    "G##": "A",
+    "A##": "B",
+    "B##": "C#",
+
+    "Cbb": "A#",
+    "Dbb": "C",
+    "Ebb": "D",
+    "Fbb": "D#",
+    "Gbb": "F",
+    "Abb": "G",
+    "Bbb": "A",
+  };
+
+  return noteMap[note] ?? note;
+}
+
+function getNoteIndex(note: string): number {
+  const normalized = normalizeNote(note);
+
+  const sharpIndex =
+    sharpNotes.indexOf(normalized);
+
+  if (sharpIndex !== -1) {
+    return sharpIndex;
+  }
+
+  return flatNotes.indexOf(normalized);
+}
+
+export function detectInversion(
+  selectedNotes: string[],
+  root: string
+): Inversion {
+
+  if (selectedNotes.length === 0) {
+    return "Unknown";
+  }
+
+  const sortedNotes = [...selectedNotes].sort(
+    (a, b) => {
+      const octaveA =
+        parseInt(a.match(/\d+$/)?.[0] ?? "0");
+
+      const octaveB =
+        parseInt(b.match(/\d+$/)?.[0] ?? "0");
+
+      if (octaveA !== octaveB) {
+        return octaveA - octaveB;
+      }
+
+      const noteA =
+        a.replace(/\d+$/, "");
+
+      const noteB =
+        b.replace(/\d+$/, "");
+
+      return (
+        getNoteIndex(noteA) -
+        getNoteIndex(noteB)
+      );
+    }
+  );
+
+  const lowestNote =
+    sortedNotes[0].replace(/\d+$/, "");
+
+  const normalizedRoot =
+    normalizeNote(root);
+
+  if (lowestNote === normalizedRoot) {
+    return "Root Position";
+  }
+
+  const rootIndex =
+    getNoteIndex(normalizedRoot);
+
+  const lowestIndex =
+    getNoteIndex(lowestNote);
+
+  const interval =
+    (lowestIndex - rootIndex + 12) % 12;
+
+  switch (interval) {
+    case 3:
+    case 4:
+      return "1st Inversion";
+
+    case 6:
+    case 7:
+    case 8:
+      return "2nd Inversion";
+
+    case 10:
+    case 11:
+      return "3rd Inversion";
+
+    default:
+      return "Unknown";
+  }
+}
+</file>
+
+<file path="src/index.css">
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+select {
+  font: inherit;
+}
+</file>
+
+<file path="src/main.tsx">
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="eslint.config.js">
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
+import { defineConfig, globalIgnores } from 'eslint/config'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommended,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+])
+</file>
+
+<file path="package.json">
+{
+  "name": "music-chord-explorer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "eslint": "^10.9.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.4",
+    "globals": "^17.11.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.67.0",
+    "vite": "^8.2.2"
+  }
+}
+</file>
+
+<file path="README.md">
+# React + TypeScript + Vite
+
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+
+## React Compiler
+
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```
+
+You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```
+</file>
+
+<file path="tsconfig.app.json">
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
+</file>
+
+<file path="tsconfig.json">
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
+</file>
+
+<file path="tsconfig.node.json">
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "module": "nodenext",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts"]
+}
+</file>
+
+<file path="vite.config.ts">
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})
+</file>
+
+<file path="src/components/ChordBuilder.tsx">
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  chordQualities,
+  chordExtensions,
+  chordAlterations,
+} from "../data/chordBuilder";
+
+interface BuiltChord {
+  intervals: number[];
+  symbol: string;
+  name: string;
+}
+
+interface ChordBuilderProps {
+  rootNote: string;
+  onRootChange: (root: string) => void;
+  onChordBuild?: (chord: BuiltChord) => void;
+}
+
+function ChordBuilder({
+  rootNote,
+  onRootChange,
+  onChordBuild,
+}: ChordBuilderProps) {
+  const [quality, setQuality] =
+    useState("major");
+
+  const [selectedExtensions, setSelectedExtensions] =
+    useState<string[]>([]);
+
+  const [selectedAlterations, setSelectedAlterations] =
+    useState<string[]>([]);
+
+  const selectedQuality =
+    chordQualities.find(
+      (item) => item.id === quality
+    );
+
+  const toggleExtension = (id: string) => {
+    setSelectedExtensions((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    );
+  };
+
+  const toggleAlteration = (id: string) => {
+    setSelectedAlterations((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    );
+  };
+
+  const builtChord = useMemo(() => {
+    const extensions =
+      chordExtensions.filter((extension) =>
+        selectedExtensions.includes(extension.id)
+      );
+
+    const alterations =
+      chordAlterations.filter((alteration) =>
+        selectedAlterations.includes(alteration.id)
+      );
+
+    const intervals = [
+      0,
+      selectedQuality?.interval ?? 4,
+      7,
+      ...extensions.map(
+        (extension) => extension.interval
+      ),
+      ...alterations.map(
+        (alteration) => alteration.interval
+      ),
+    ];
+
+    const uniqueIntervals = [
+      ...new Set(intervals),
+    ].sort((a, b) => a - b);
+
+    let symbol =
+  selectedQuality?.symbol ?? "";
+
+const hasMajor7 =
+  selectedExtensions.includes("maj7");
+
+const hasDominant7 =
+  selectedExtensions.includes("b7");
+
+const has9 =
+  selectedExtensions.includes("9");
+
+const has11 =
+  selectedExtensions.includes("11");
+
+const has13 =
+  selectedExtensions.includes("13");
+
+if (has13) {
+  symbol += "13";
+} else if (has11) {
+  symbol += "11";
+} else if (has9) {
+  symbol += "9";
+} else if (hasMajor7) {
+  symbol += "maj7";
+} else if (hasDominant7) {
+  symbol += "7";
+} else if (
+  selectedExtensions.includes("6")
+) {
+  symbol += "6";
+}
+
+const alterationSymbols =
+  alterations.map(
+    (alteration) => alteration.symbol
+  );
+
+symbol += alterationSymbols.join("");
+
+return {
+  intervals: uniqueIntervals,
+  symbol,
+  name: `${selectedQuality?.label ?? "Major"} Chord`,
+  extensions,
+  alterations,
+};
+  }, [
+    selectedQuality,
+    selectedExtensions,
+    selectedAlterations,
+  ]);
+
+  // Let the parent component know whenever the
+  // built chord changes.
+  useEffect(() => {
+    onChordBuild?.(builtChord);
+  }, [builtChord, onChordBuild]);
+
+  return (
+    <section className="chord-builder">
+
+      <div className="builder-header">
+        <p className="eyebrow">
+          BUILD A CHORD
+        </p>
+
+        <h2>Chord Builder</h2>
+
+        <p>
+          Build a chord by selecting its individual
+          components.
+        </p>
+      </div>
+
+
+      {/* ROOT */}
+
+      <div className="builder-control">
+        <label htmlFor="builder-root">
+          Root Note
+        </label>
+
+        <select
+          id="builder-root"
+          value={rootNote}
+          onChange={(event) =>
+            onRootChange(event.target.value)
+          }
+        >
+          <option value="C">C</option>
+          <option value="C#">C#</option>
+          <option value="D">D</option>
+          <option value="D#">D#</option>
+          <option value="E">E</option>
+          <option value="F">F</option>
+          <option value="F#">F#</option>
+          <option value="G">G</option>
+          <option value="G#">G#</option>
+          <option value="A">A</option>
+          <option value="A#">A#</option>
+          <option value="B">B</option>
+        </select>
+      </div>
+
+
+      {/* QUALITY */}
+
+      <div className="builder-group">
+
+        <h3>Chord Quality</h3>
+
+        <div className="builder-options">
+
+          {chordQualities.map((item) => (
+            <label
+              className="builder-option"
+              key={item.id}
+            >
+              <input
+                type="radio"
+                name="chord-quality"
+                checked={quality === item.id}
+                onChange={() =>
+                  setQuality(item.id)
+                }
+              />
+
+              <span>
+                {item.label}
+              </span>
+            </label>
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* EXTENSIONS */}
+
+      <div className="builder-group">
+
+        <h3>Extensions</h3>
+
+        <div className="builder-options">
+
+          {chordExtensions.map((item) => (
+            <label
+              className="builder-option"
+              key={item.id}
+            >
+              <input
+                type="checkbox"
+                checked={selectedExtensions.includes(
+                  item.id
+                )}
+                onChange={() =>
+                  toggleExtension(item.id)
+                }
+              />
+
+              <span>
+                {item.label}
+              </span>
+            </label>
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* ALTERATIONS */}
+
+      <div className="builder-group">
+
+        <h3>Alterations</h3>
+
+        <div className="builder-options">
+
+          {chordAlterations.map((item) => (
+            <label
+              className="builder-option"
+              key={item.id}
+            >
+              <input
+                type="checkbox"
+                checked={selectedAlterations.includes(
+                  item.id
+                )}
+                onChange={() =>
+                  toggleAlteration(item.id)
+                }
+              />
+
+              <span>
+                {item.label}
+              </span>
+            </label>
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* RESULT */}
+
+      <div className="builder-result">
+
+        <h3>Chord Structure</h3>
+
+        <p>
+          Root: <strong>{rootNote}</strong>
+        </p>
+
+        <p>
+          Intervals:
+        </p>
+
+        <p>
+          {builtChord.intervals.join(" → ")}
+        </p>
+
+      </div>
+
+    </section>
+  );
+}
+
+export default ChordBuilder;
+</file>
+
+<file path="src/components/ChordDisplay.tsx">
+import { formatNoteForDisplay } from "../utils/musicTheory";
+
+interface ChordDisplayProps {
+  chordName: string;
+  notes: string[];
+  intervalNames: string[];
+  intervals: number[];
+  onPlay?: () => void;
+}
+
+function ChordDisplay({
+  chordName,
+  notes,
+  intervalNames,
+  intervals,
+  onPlay,
+}: ChordDisplayProps) {
+  return (
+    <section className="chord-display">
+      <div className="chord-display-header">
+        <h2>{chordName}</h2>
+
+        {onPlay && (
+          <button
+            className="play-chord"
+            type="button"
+            onClick={onPlay}
+          >
+            ▶ Play chord
+          </button>
+        )}
+      </div>
+
+      <div className="chord-notes">
+        {notes.map((note, index) => (
+          <div
+            className="note-card"
+            key={`${note}-${index}`}
+          >
+            <span className="note-name">
+              {formatNoteForDisplay(note)}
+            </span>
+
+            <span className="interval-name">
+              {intervalNames[index]}
+            </span>
+
+            <span className="semitone-value">
+              {intervals[index] === 0
+                ? "Root"
+                : `+${intervals[index]} semitones`}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="structure">
+        <h3>Chord Structure</h3>
+
+        <p className="structure-notes">
+          {notes
+            .map((note) => formatNoteForDisplay(note))
+            .join(" → ")}
+        </p>
+
+        <p className="structure-intervals">
+          {intervalNames.join(" → ")}
+        </p>
+
+        <p className="structure-semitones">
+          {intervals.join(" → ")} semitones
+        </p>
+      </div>
+    </section>
+  );
+}
+
+export default ChordDisplay;
+</file>
+
+<file path="src/data/chords.ts">
+import type { ChordType } from "../types/music";
+
+export const chordTypes: ChordType[] = [
+
+  // =========================
+  // TRIADS
+  // =========================
+
+  {
+    name: "Major",
+    symbol: "",
+    category: "Triads",
+    intervals: [0, 4, 7],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+    ],
+  },
+
+  {
+    name: "Minor",
+    symbol: "m",
+    category: "Triads",
+    intervals: [0, 3, 7],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+    ],
+  },
+
+  {
+    name: "Diminished",
+    symbol: "dim",
+    category: "Triads",
+    intervals: [0, 3, 6],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Diminished 5th",
+    ],
+  },
+
+  {
+    name: "Augmented",
+    symbol: "aug",
+    category: "Triads",
+    intervals: [0, 4, 8],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Augmented 5th",
+    ],
+  },
+
+
+  // =========================
+  // SUSPENDED
+  // =========================
+
+  {
+    name: "Suspended 2nd",
+    symbol: "sus2",
+    category: "Suspended",
+    intervals: [0, 2, 7],
+    intervalNames: [
+      "Root",
+      "Major 2nd",
+      "Perfect 5th",
+    ],
+  },
+
+  {
+    name: "Suspended 4th",
+    symbol: "sus4",
+    category: "Suspended",
+    intervals: [0, 5, 7],
+    intervalNames: [
+      "Root",
+      "Perfect 4th",
+      "Perfect 5th",
+    ],
+  },
+
+
+  // =========================
+  // SIXTH CHORDS
+  // =========================
+
+  {
+    name: "Major 6th",
+    symbol: "6",
+    category: "Sixth Chords",
+    intervals: [0, 4, 7, 9],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 6th",
+    ],
+  },
+
+  {
+    name: "Minor 6th",
+    symbol: "m6",
+    category: "Sixth Chords",
+    intervals: [0, 3, 7, 9],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Major 6th",
+    ],
+  },
+
+  {
+    name: "6/9",
+    symbol: "6/9",
+    category: "Sixth Chords",
+    intervals: [0, 4, 7, 9, 14],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 6th",
+      "Major 9th",
+    ],
+  },
+
+
+  // =========================
+  // SEVENTH CHORDS
+  // =========================
+
+  {
+    name: "Major 7th",
+    symbol: "maj7",
+    category: "Seventh Chords",
+    intervals: [0, 4, 7, 11],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+    ],
+  },
+
+  {
+    name: "Minor 7th",
+    symbol: "m7",
+    category: "Seventh Chords",
+    intervals: [0, 3, 7, 10],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th",
+    symbol: "7",
+    category: "Seventh Chords",
+    intervals: [0, 4, 7, 10],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+    ],
+  },
+
+  {
+    name: "Minor Major 7th",
+    symbol: "mMaj7",
+    category: "Seventh Chords",
+    intervals: [0, 3, 7, 11],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Major 7th",
+    ],
+  },
+
+  {
+    name: "Half-Diminished 7th",
+    symbol: "m7♭5",
+    category: "Seventh Chords",
+    intervals: [0, 3, 6, 10],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Diminished 5th",
+      "Minor 7th",
+    ],
+  },
+
+  {
+    name: "Diminished 7th",
+    symbol: "dim7",
+    category: "Seventh Chords",
+    intervals: [0, 3, 6, 9],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Diminished 5th",
+      "Diminished 7th",
+    ],
+  },
+
+
+  // =========================
+  // EXTENDED CHORDS - 9TH
+  // =========================
+
+  {
+    name: "Dominant 9th",
+    symbol: "9",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 10, 14],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+    ],
+  },
+
+  {
+    name: "Major 9th",
+    symbol: "maj9",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 14],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Major 9th",
+    ],
+  },
+
+  {
+    name: "Minor 9th",
+    symbol: "m9",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 10, 14],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+    ],
+  },
+
+  {
+    name: "Minor Major 9th",
+    symbol: "mMaj9",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 11, 14],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Major 9th",
+    ],
+  },
+
+
+  // =========================
+  // EXTENDED CHORDS - 11TH
+  // =========================
+
+  {
+    name: "Dominant 11th",
+    symbol: "11",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 10, 14, 17],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Perfect 11th",
+    ],
+  },
+
+  {
+    name: "Major 11th",
+    symbol: "maj11",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 14, 17],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Major 9th",
+      "Perfect 11th",
+    ],
+  },
+
+  {
+    name: "Minor 11th",
+    symbol: "m11",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 10, 14, 17],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Perfect 11th",
+    ],
+  },
+
+
+  // =========================
+  // EXTENDED CHORDS - 13TH
+  // =========================
+
+  {
+    name: "Dominant 13th",
+    symbol: "13",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 10, 14, 17, 21],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Perfect 11th",
+      "Major 13th",
+    ],
+  },
+
+  {
+    name: "Major 13th",
+    symbol: "maj13",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 14, 17, 21],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Major 9th",
+      "Perfect 11th",
+      "Major 13th",
+    ],
+  },
+
+  {
+    name: "Minor 13th",
+    symbol: "m13",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 10, 14, 17, 21],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Perfect 11th",
+      "Major 13th",
+    ],
+  },
+
+
+  // =========================
+  // ALTERED DOMINANTS
+  // =========================
+
+  {
+    name: "Dominant 7th Flat 5",
+    symbol: "7♭5",
+    category: "Altered Chords",
+    intervals: [0, 4, 6, 10],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Diminished 5th",
+      "Minor 7th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Sharp 5",
+    symbol: "7♯5",
+    category: "Altered Chords",
+    intervals: [0, 4, 8, 10],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Augmented 5th",
+      "Minor 7th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Flat 9",
+    symbol: "7♭9",
+    category: "Altered Chords",
+    intervals: [0, 4, 7, 10, 13],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Minor 9th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Sharp 9",
+    symbol: "7♯9",
+    category: "Altered Chords",
+    intervals: [0, 4, 7, 10, 15],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Augmented 9th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Sharp 11",
+    symbol: "7♯11",
+    category: "Altered Chords",
+    intervals: [0, 4, 7, 10, 18],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Augmented 11th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Flat 13",
+    symbol: "7♭13",
+    category: "Altered Chords",
+    intervals: [0, 4, 7, 10, 20],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Minor 13th",
+    ],
+  },
+
+  {
+    name: "7 Sharp 5 Sharp 9",
+    symbol: "7♯5♯9",
+    category: "Altered Chords",
+    intervals: [0, 4, 8, 10, 15],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Augmented 5th",
+      "Minor 7th",
+      "Augmented 9th",
+    ],
+  },
+
+
+  // =========================
+  // ADDED TONE CHORDS
+  // =========================
+
+  {
+    name: "Add 9",
+    symbol: "add9",
+    category: "Added Tone Chords",
+    intervals: [0, 4, 7, 14],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 9th",
+    ],
+  },
+
+  {
+    name: "Minor Add 9",
+    symbol: "m(add9)",
+    category: "Added Tone Chords",
+    intervals: [0, 3, 7, 14],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Major 9th",
+    ],
+  },
+
+  {
+    name: "Add 11",
+    symbol: "add11",
+    category: "Added Tone Chords",
+    intervals: [0, 4, 7, 17],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Perfect 11th",
+    ],
+  },
+
+  {
+    name: "Add 13",
+    symbol: "add13",
+    category: "Added Tone Chords",
+    intervals: [0, 4, 7, 21],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 13th",
+    ],
+  },
+];
+</file>
+
+<file path="src/types/music.ts">
+export type ChordCategory =
+  | "Triads"
+  | "Suspended"
+  | "Sixth Chords"
+  | "Seventh Chords"
+  | "Extended Chords"
+  | "Altered Chords"
+  | "Added Tone Chords";
+
+export interface ChordType {
+  name: string;
+  symbol: string;
+  category: ChordCategory;
+  intervals: number[];
+  intervalNames: string[];
+}
+</file>
+
+<file path="src/utils/chordAnalyzer.ts">
+import {
+  sharpNotes,
+  flatNotes,
+} from "./musicTheory";
+
+export interface DetectedChord {
+  root: string;
+  name: string;
+  symbol: string;
+  notes: string[];
+  pattern: number[];
+}
+
+interface ChordPattern {
+  intervals: number[];
+  symbol: string;
+  name: string;
+}
+
+// Chord patterns are represented using semitone distances
+// from the root.
+//
+// Example:
+// C Major = C(0) E(4) G(7)
+// therefore [0, 4, 7]
+
+const chordPatterns: ChordPattern[] = [
+  // =========================
+  // TRIADS
+  // =========================
+
+  {
+    intervals: [0, 4, 7],
+    symbol: "",
+    name: "Major",
+  },
+
+  {
+    intervals: [0, 3, 7],
+    symbol: "m",
+    name: "Minor",
+  },
+
+  {
+    intervals: [0, 3, 6],
+    symbol: "dim",
+    name: "Diminished",
+  },
+
+  {
+    intervals: [0, 4, 8],
+    symbol: "aug",
+    name: "Augmented",
+  },
+
+  {
+    intervals: [0, 2, 7],
+    symbol: "sus2",
+    name: "Suspended 2nd",
+  },
+
+  {
+    intervals: [0, 5, 7],
+    symbol: "sus4",
+    name: "Suspended 4th",
+  },
+
+
+  // =========================
+  // SIXTH CHORDS
+  // =========================
+
+  {
+    intervals: [0, 4, 7, 9],
+    symbol: "6",
+    name: "Major 6th",
+  },
+
+  {
+    intervals: [0, 3, 7, 9],
+    symbol: "m6",
+    name: "Minor 6th",
+  },
+
+  {
+  intervals: [0, 2, 4, 7, 9],
+  symbol: "6/9",
+  name: "Sixth Add 9",
+},
+
+
+  // =========================
+  // SEVENTH CHORDS
+  // =========================
+
+  {
+    intervals: [0, 4, 7, 10],
+    symbol: "7",
+    name: "Dominant 7th",
+  },
+
+  {
+    intervals: [0, 4, 7, 11],
+    symbol: "maj7",
+    name: "Major 7th",
+  },
+
+  {
+    intervals: [0, 3, 7, 10],
+    symbol: "m7",
+    name: "Minor 7th",
+  },
+
+  {
+    intervals: [0, 3, 7, 11],
+    symbol: "mMaj7",
+    name: "Minor Major 7th",
+  },
+
+  {
+    intervals: [0, 3, 6, 10],
+    symbol: "ø7",
+    name: "Half-Diminished 7th",
+  },
+
+  {
+    intervals: [0, 3, 6, 9],
+    symbol: "dim7",
+    name: "Diminished 7th",
+  },
+
+
+  // =========================
+  // NINTH CHORDS
+  // =========================
+
+  {
+  intervals: [0, 2, 4, 7, 10],
+  symbol: "9",
+  name: "Dominant 9th",
+},
+
+{
+  intervals: [0, 2, 4, 7, 11],
+  symbol: "maj9",
+  name: "Major 9th",
+},
+
+{
+  intervals: [0, 2, 3, 7, 10],
+  symbol: "m9",
+  name: "Minor 9th",
+},
+
+{
+  intervals: [0, 2, 4, 7],
+  symbol: "add9",
+  name: "Add 9",
+},
+
+
+  // =========================
+  // ELEVENTH CHORDS
+  // =========================
+
+  {
+  intervals: [0, 2, 4, 5, 7, 10],
+  symbol: "11",
+  name: "Dominant 11th",
+},
+
+{
+  intervals: [0, 2, 4, 5, 7, 11],
+  symbol: "maj11",
+  name: "Major 11th",
+},
+
+{
+  intervals: [0, 2, 3, 5, 7, 10],
+  symbol: "m11",
+  name: "Minor 11th",
+},
+
+
+  // =========================
+  // THIRTEENTH CHORDS
+  // =========================
+
+  {
+    intervals: [0, 4, 7, 10, 2, 5, 9],
+    symbol: "13",
+    name: "Dominant 13th",
+  },
+
+  {
+    intervals: [0, 4, 7, 11, 2, 5, 9],
+    symbol: "maj13",
+    name: "Major 13th",
+  },
+
+  {
+    intervals: [0, 3, 7, 10, 2, 5, 9],
+    symbol: "m13",
+    name: "Minor 13th",
+  },
+
+
+  // =========================
+  // ALTERED DOMINANT CHORDS
+  // =========================
+
+  {
+  intervals: [0, 1, 4, 7, 10],
+  symbol: "7b9",
+  name: "Dominant 7th Flat 9",
+},
+
+{
+  intervals: [0, 3, 4, 7, 10],
+  symbol: "7#9",
+  name: "Dominant 7th Sharp 9",
+},
+
+{
+  intervals: [0, 4, 6, 7, 10],
+  symbol: "7#11",
+  name: "Dominant 7th Sharp 11",
+},
+
+{
+  intervals: [0, 4, 7, 8, 10],
+  symbol: "7b13",
+  name: "Dominant 7th Flat 13",
+},
+
+
+  // =========================
+  // MAJOR ALTERATIONS
+  // =========================
+
+  {
+  intervals: [0, 4, 6, 7, 11],
+  symbol: "maj7#11",
+  name: "Major 7th Sharp 11",
+},
+];
+
+
+const sortedPatterns = [...chordPatterns].sort(
+  (a, b) =>
+    b.intervals.length - a.intervals.length
+);
+
+function normalizeNote(note: string): string {
+  const noteMap: Record<string, string> = {
+    Db: "C#",
+    Eb: "D#",
+    Gb: "F#",
+    Ab: "G#",
+    Bb: "A#",
+
+    Cb: "B",
+    Fb: "E",
+
+    "C##": "D",
+    "D##": "E",
+    "E##": "F#",
+    "F##": "G",
+    "G##": "A",
+    "A##": "B",
+    "B##": "C#",
+
+    "Cbb": "A#",
+    "Dbb": "C",
+    "Ebb": "D",
+    "Fbb": "D#",
+    "Gbb": "F",
+    "Abb": "G",
+    "Bbb": "A",
+  };
+
+  return noteMap[note] ?? note;
+}
+
+function getNoteIndex(note: string): number {
+  const normalized = normalizeNote(note);
+
+  const index = sharpNotes.indexOf(normalized);
+
+  if (index !== -1) {
+    return index;
+  }
+
+  return flatNotes.indexOf(normalized);
+}
+
+function getInterval(
+  rootIndex: number,
+  noteIndex: number
+): number {
+  return (noteIndex - rootIndex + 12) % 12;
+}
+
+function arraysEqual(
+  first: number[],
+  second: number[]
+): boolean {
+  if (first.length !== second.length) {
+    return false;
+  }
+
+  return first.every(
+    (value, index) => value === second[index]
+  );
+}
+
+export function analyzeChord(
+  selectedNotes: string[]
+): DetectedChord | null {
+  if (selectedNotes.length < 2) {
+    return null;
+  }
+
+  const normalizedNotes = selectedNotes.map(normalizeNote);
+
+  const noteIndexes = normalizedNotes
+    .map(getNoteIndex)
+    .filter((index) => index !== -1);
+
+  // Remove duplicate pitch classes.
+  const uniqueIndexes = [...new Set(noteIndexes)];
+
+  if (uniqueIndexes.length < 2) {
+    return null;
+  }
+
+  // Try every selected note as a possible root.
+  for (const rootIndex of uniqueIndexes) {
+    const intervals = uniqueIndexes
+      .map((noteIndex) =>
+        getInterval(rootIndex, noteIndex)
+      )
+      .sort((a, b) => a - b);
+
+    for (const pattern of sortedPatterns) {
+  const patternIntervals = [...pattern.intervals].sort(
+    (a, b) => a - b
+  );
+
+  if (arraysEqual(intervals, patternIntervals)) {
+        const root =
+          sharpNotes[rootIndex];
+
+        return {
+        root,
+        name: `${root} ${pattern.name}`,
+        symbol: pattern.symbol,
+        notes: normalizedNotes,
+        pattern: patternIntervals,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+</file>
+
+<file path="index.html">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music Chord Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  <base target="_blank">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="src/components/ChordSelector.tsx">
+import { chordTypes } from "../data/chords";
+import {
+  formatNoteForDisplay,
+  getNotesByPreference,
+  type AccidentalPreference,
+} from "../utils/musicTheory";
+
+interface ChordSelectorProps {
+  rootNote: string;
+  chordTypeIndex: number;
+  accidentalPreference: AccidentalPreference;
+  onRootChange: (note: string) => void;
+  onChordTypeChange: (index: number) => void;
+  onAccidentalPreferenceChange: (
+    preference: AccidentalPreference
+  ) => void;
+}
+
+function ChordSelector({
+  rootNote,
+  chordTypeIndex,
+  accidentalPreference,
+  onRootChange,
+  onChordTypeChange,
+  onAccidentalPreferenceChange,
+}: ChordSelectorProps) {
+  const notes = getNotesByPreference(
+    accidentalPreference
+  );
+
+  const categories = [
+    "Triads",
+    "Suspended",
+    "Sixth Chords",
+    "Seventh Chords",
+    "Extended Chords",
+    "Altered Chords",
+    "Added Tone Chords",
+  ];
+
+  return (
+    <div className="chord-selector">
+
+      {/* ROOT NOTE — tap-friendly pills */}
+      <div className="selector-group root-group">
+        <span className="selector-label" id="root-label">
+          Root note
+        </span>
+
+        <div
+          className="root-pills"
+          role="group"
+          aria-labelledby="root-label"
+        >
+          {notes.map((note) => (
+            <button
+              key={note}
+              type="button"
+              className={
+                rootNote === note
+                  ? "root-pill active"
+                  : "root-pill"
+              }
+              onClick={() => onRootChange(note)}
+            >
+              {formatNoteForDisplay(note)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+
+      {/* CHORD TYPE */}
+      <div className="selector-group">
+        <label
+          className="selector-label"
+          htmlFor="chord-type"
+        >
+          Chord type
+        </label>
+
+        <select
+          id="chord-type"
+          value={chordTypeIndex}
+          onChange={(event) =>
+            onChordTypeChange(
+              Number(event.target.value)
+            )
+          }
+        >
+          {categories.map((category) => {
+            const categoryChords = chordTypes
+              .map((chord, index) => ({
+                chord,
+                index,
+              }))
+              .filter(
+                ({ chord }) =>
+                  chord.category === category
+              );
+
+            return (
+              <optgroup
+                key={category}
+                label={category}
+              >
+                {categoryChords.map(
+                  ({ chord, index }) => (
+                    <option
+                      key={chord.name}
+                      value={index}
+                    >
+                      {chord.name}
+                    </option>
+                  )
+                )}
+              </optgroup>
+            );
+          })}
+        </select>
+      </div>
+
+
+      {/* SPELLING — segmented toggle */}
+      <div className="selector-group">
+        <span
+          className="selector-label"
+          id="notation-label"
+        >
+          Spelling
+        </span>
+
+        <div
+          className="segmented"
+          role="group"
+          aria-labelledby="notation-label"
+        >
+          <button
+            type="button"
+            className={
+              accidentalPreference === "sharps"
+                ? "seg active"
+                : "seg"
+            }
+            onClick={() =>
+              onAccidentalPreferenceChange("sharps")
+            }
+          >
+            ♯ Sharps
+          </button>
+
+          <button
+            type="button"
+            className={
+              accidentalPreference === "flats"
+                ? "seg active"
+                : "seg"
+            }
+            onClick={() =>
+              onAccidentalPreferenceChange("flats")
+            }
+          >
+            ♭ Flats
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+export default ChordSelector;
+</file>
+
+<file path="src/components/PianoKeyboard.tsx">
+import {
+  formatNoteForDisplay,
+  type AccidentalPreference,
+} from "../utils/musicTheory";
+
+interface PianoKeyboardProps {
+  chordNotes: string[];
+  accidentalPreference: AccidentalPreference;
+  selectedNotes: string[];
+  onNoteToggle: (note: string) => void;
+  onClearSelection?: () => void;
+}
+
+interface PianoKey {
+  note: string;
+  type: "white" | "black";
+  whiteKeyIndex?: number;
+}
+
+const whiteKeys = [
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "A",
+  "B",
+];
+
+const blackKeys: PianoKey[] = [
+  {
+    note: "C#",
+    type: "black",
+    whiteKeyIndex: 1,
+  },
+  {
+    note: "D#",
+    type: "black",
+    whiteKeyIndex: 2,
+  },
+  {
+    note: "F#",
+    type: "black",
+    whiteKeyIndex: 4,
+  },
+  {
+    note: "G#",
+    type: "black",
+    whiteKeyIndex: 5,
+  },
+  {
+    note: "A#",
+    type: "black",
+    whiteKeyIndex: 6,
+  },
+];
+
+const flatNoteNames: Record<string, string> = {
+  "C#": "Db",
+  "D#": "Eb",
+  "F#": "Gb",
+  "G#": "Ab",
+  "A#": "Bb",
+};
+
+function removeOctave(note: string): string {
+  return note.replace(/\d+$/, "");
+}
+
+function normalizeNote(note: string): string {
+  const noteMap: Record<string, string> = {
+    Db: "C#",
+    Eb: "D#",
+    Gb: "F#",
+    Ab: "G#",
+    Bb: "A#",
+
+    Cb: "B",
+    Fb: "E",
+
+    "C##": "D",
+    "D##": "E",
+    "E##": "F#",
+    "F##": "G",
+    "G##": "A",
+    "A##": "B",
+    "B##": "C#",
+
+    "Cbb": "A#",
+    "Dbb": "C",
+    "Ebb": "D",
+    "Fbb": "D#",
+    "Gbb": "F",
+    "Abb": "G",
+    "Bbb": "A",
+  };
+
+  return noteMap[note] ?? note;
+}
+
+function getDisplayNote(
+  note: string,
+  preference: AccidentalPreference
+): string {
+  const preferredNote =
+    preference === "flats" && flatNoteNames[note]
+      ? flatNoteNames[note]
+      : note;
+
+  return formatNoteForDisplay(preferredNote);
+}
+
+function PianoKeyboard({
+  chordNotes,
+  accidentalPreference,
+  selectedNotes,
+  onNoteToggle,
+  onClearSelection,
+}: PianoKeyboardProps) {
+  const normalizedChordNotes = chordNotes.map(
+    normalizeNote
+  );
+
+  const normalizedSelectedNotes =
+    selectedNotes
+      .map(removeOctave)
+      .map(normalizeNote);
+
+  const octaves = [3, 4, 5];
+
+  return (
+    <section className="piano-section">
+      <h2>Tap the keys</h2>
+
+      <p className="piano-description">
+        Purple keys = the chord above · yellow keys =
+        your picks
+      </p>
+
+      <div className="piano-wrapper">
+        <div className="piano-keyboard">
+
+          {/* WHITE KEYS */}
+          {octaves.map((octave) =>
+            whiteKeys.map((note, index) => {
+              const isChordNote =
+                normalizedChordNotes.includes(note);
+
+              const isSelected =
+                normalizedSelectedNotes.includes(note);
+
+              return (
+               <button
+                  key={`${note}${octave}`}
+                  className={`piano-key white ${
+                    isChordNote ? "active" : ""
+                  } ${isSelected ? "selected" : ""}`}
+                  onClick={() =>
+                    onNoteToggle(`${note}${octave}`)
+                  }
+                  type="button"
+                >
+                  <span className="key-label">
+                    {getDisplayNote(
+                      note,
+                      accidentalPreference
+                    )}
+                  </span>
+
+                  {index === 0 && (
+                    <span className="octave-label">
+                      C{octave}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+
+          {/* BLACK KEYS */}
+          {octaves.flatMap((octave, octaveIndex) =>
+            blackKeys.map((key) => {
+              const isChordNote =
+                normalizedChordNotes.includes(
+                  key.note
+                );
+
+              const isSelected =
+                normalizedSelectedNotes.includes(
+                  key.note
+                );
+
+              const whiteKeyWidth =
+                100 /
+                (whiteKeys.length * octaves.length);
+
+              const leftPosition =
+                (octaveIndex * 7 +
+                  (key.whiteKeyIndex ?? 0) -
+                  0.35) *
+                whiteKeyWidth;
+
+              return (
+                <button
+                  key={`${key.note}${octave}`}
+                  className={`piano-key black ${
+                    isChordNote ? "active" : ""
+                  } ${
+                    isSelected ? "selected" : ""
+                  }`}
+                  style={{
+                    left: `${leftPosition}%`,
+                  }}
+                  onClick={() =>
+                    onNoteToggle(`${key.note}${octave}`)
+                  }
+                  type="button"
+                >
+                  <span className="key-label">
+                    {getDisplayNote(
+                      key.note,
+                      accidentalPreference
+                    )}
+                  </span>
+                </button>
+              );
+            })
+          )}
+
+        </div>
+      </div>
+
+      {/* SELECTED NOTES */}
+      <div className="selected-notes">
+
+        <h3>Your notes</h3>
+
+        {selectedNotes.length === 0 ? (
+          <p className="hint">
+            No notes yet — tap some keys!
+          </p>
+        ) : (
+          <div className="selected-note-list">
+            {selectedNotes.map((note) => (
+              <span
+                className="selected-note"
+                key={note}
+              >
+                {formatNoteForDisplay(note)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {selectedNotes.length > 0 && (
+          <button
+            className="clear-selection"
+            type="button"
+            onClick={onClearSelection}
+          >
+            Clear selection
+          </button>
+        )}
+
+      </div>
+    </section>
+  );
+}
+
+export default PianoKeyboard;
+</file>
+
+<file path="src/utils/musicTheory.ts">
+const naturalNotes = [
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "A",
+  "B",
+];
+
+const naturalNoteValues: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+};
+
+interface ParsedInterval {
+  degree: number;
+  semitones: number;
+}
+
+function normalizeSemitoneDifference(value: number): number {
+  while (value > 6) {
+    value -= 12;
+  }
+
+  while (value < -6) {
+    value += 12;
+  }
+
+  return value;
+}
+
+function getRootLetter(rootNote: string): string {
+  return rootNote.charAt(0);
+}
+
+function getAccidentalOffset(note: string): number {
+  let offset = 0;
+
+  for (const character of note.slice(1)) {
+    if (character === "#") {
+      offset++;
+    }
+
+    if (character === "b") {
+      offset--;
+    }
+  }
+
+  return offset;
+}
+
+function parseInterval(
+  intervalName: string,
+  fallbackSemitones: number
+): ParsedInterval {
+  if (intervalName === "Root") {
+    return {
+      degree: 1,
+      semitones: 0,
+    };
+  }
+
+  const degreeMatch = intervalName.match(/(\d+)/);
+
+  if (!degreeMatch) {
+    return {
+      degree: 1,
+      semitones: fallbackSemitones,
+    };
+  }
+
+  const degree = Number(degreeMatch[1]);
+
+  const intervalSemitones: Record<string, number> = {
+    "Minor 2nd": 1,
+    "Major 2nd": 2,
+
+    "Minor 3rd": 3,
+    "Major 3rd": 4,
+
+    "Perfect 4th": 5,
+    "Augmented 4th": 6,
+
+    "Diminished 5th": 6,
+    "Perfect 5th": 7,
+    "Augmented 5th": 8,
+
+    "Minor 6th": 8,
+    "Major 6th": 9,
+
+    "Diminished 7th": 9,
+    "Minor 7th": 10,
+    "Major 7th": 11,
+
+    "Minor 9th": 13,
+    "Major 9th": 14,
+    "Augmented 9th": 15,
+
+    "Perfect 11th": 17,
+    "Augmented 11th": 18,
+
+    "Minor 13th": 20,
+    "Major 13th": 21,
+  };
+
+  return {
+    degree,
+    semitones:
+      intervalSemitones[intervalName] ?? fallbackSemitones,
+  };
+}
+
+function getLetterForDegree(
+  rootLetter: string,
+  degree: number
+): string {
+  const rootIndex = naturalNotes.indexOf(rootLetter);
+
+  if (rootIndex === -1) {
+    return rootLetter;
+  }
+
+  const degreeIndex = (rootIndex + degree - 1) % 7;
+
+  return naturalNotes[degreeIndex];
+}
+
+function formatAccidental(offset: number): string {
+  if (offset === 0) {
+    return "";
+  }
+
+  if (offset === 1) {
+    return "#";
+  }
+
+  if (offset === 2) {
+    return "##";
+  }
+
+  if (offset === -1) {
+    return "b";
+  }
+
+  if (offset === -2) {
+    return "bb";
+  }
+
+  return "";
+}
+
+
+export function formatNoteForDisplay(note: string): string {
+  return note
+    .replaceAll("##", "𝄪")
+    .replaceAll("bb", "𝄫")
+    .replaceAll("#", "♯")
+    .replaceAll("b", "♭");
+}
+
+
+export function calculateChordNotes(
+  rootNote: string,
+  intervals: number[],
+  intervalNames: string[],
+  preference: AccidentalPreference
+): string[] {
+
+   const preferredRootNote = convertRootNote(
+    rootNote,
+    preference
+  );
+
+  const rootLetter = getRootLetter(rootNote);
+
+  const rootAccidental = getAccidentalOffset(rootNote);
+
+  const rootNaturalValue = naturalNoteValues[rootLetter];
+
+  if (rootNaturalValue === undefined) {
+    return [];
+  }
+
+  return intervals.map((interval, index) => {
+    const intervalName = intervalNames[index];
+
+    const parsedInterval = parseInterval(
+      intervalName,
+      interval
+    );
+
+    if (parsedInterval.degree === 1) {
+  return preferredRootNote;
+}
+
+    const targetPitch =
+      (rootNaturalValue +
+        rootAccidental +
+        parsedInterval.semitones) %
+      12;
+
+    const targetLetter = getLetterForDegree(
+      rootLetter,
+      parsedInterval.degree
+    );
+
+    const targetNaturalPitch =
+      naturalNoteValues[targetLetter];
+
+    let accidentalDifference =
+      targetPitch - targetNaturalPitch;
+
+    accidentalDifference =
+      normalizeSemitoneDifference(accidentalDifference);
+
+    const accidental = formatAccidental(
+      accidentalDifference
+    );
+
+    return `${targetLetter}${accidental}`;
+  });
+}
+
+export interface NoteOption {
+  name: string;
+  value: string;
+}
+
+export const sharpNotes = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
+
+export const flatNotes = [
+  "C",
+  "Db",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "Gb",
+  "G",
+  "Ab",
+  "A",
+  "Bb",
+  "B",
+];
+
+export type AccidentalPreference = "sharps" | "flats";
+
+export function getNotesByPreference(
+  preference: AccidentalPreference
+): string[] {
+  return preference === "sharps"
+    ? sharpNotes
+    : flatNotes;
+}
+
+export function convertRootNote(
+  note: string,
+  preference: AccidentalPreference
+): string {
+  const sharpIndex = sharpNotes.indexOf(note);
+
+  if (sharpIndex !== -1) {
+    return preference === "sharps"
+      ? sharpNotes[sharpIndex]
+      : flatNotes[sharpIndex];
+  }
+
+  const flatIndex = flatNotes.indexOf(note);
+
+  if (flatIndex !== -1) {
+    return preference === "sharps"
+      ? sharpNotes[flatIndex]
+      : flatNotes[flatIndex];
+  }
+
+  return note;
+}
+</file>
+
+<file path="src/App.css">
+/* ============================================================
+   Music Chord Explorer — playful card-based redesign
+   ============================================================ */
+
+:root {
+  --bg: #fdf4e6;
+  --ink: #241e3d;
+  --card: #ffffff;
+  --purple: #863bff;
+  --purple-deep: #5a1fd0;
+  --pink: #ff6b9d;
+  --yellow: #ffd166;
+  --blue: #47bfff;
+  --green: #12c48b;
+  --red: #ff5d5d;
+  --radius: 18px;
+  --shadow: 6px 6px 0 var(--ink);
+  --shadow-sm: 3px 3px 0 var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 15% 8%,
+      rgba(134, 59, 255, 0.12),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 88% 18%,
+      rgba(255, 209, 102, 0.3),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 50% 105%,
+      rgba(71, 191, 255, 0.14),
+      transparent 45%
+    ),
+    var(--bg);
+  color: var(--ink);
+  font-family:
+    "Outfit", "Segoe UI", Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+select:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.app {
+  width: min(100% - 32px, 1020px);
+  margin: 0 auto;
+  padding: 48px 0 80px;
+}
+
+
+/* =========================
+    HEADER
+========================= */
+
+.header {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin: 0 0 18px;
+  padding: 0.45rem 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--yellow);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  transform: rotate(-1.5deg);
+}
+
+.header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  background: linear-gradient(
+    90deg,
+    var(--purple),
+    var(--pink) 55%,
+    var(--blue)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  max-width: 560px;
+  margin: 0 auto;
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+
+/* =========================
+    MODE TABS
+========================= */
+
+.mode-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  width: fit-content;
+  margin: 26px auto 30px;
+  padding: 6px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tab {
+  padding: 0.6rem 1.4rem;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.tab:hover {
+  transform: translateY(-2px);
+}
+
+.tab.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff;
+}
+
+
+/* =========================
+    PANELS (cards)
+========================= */
+
+.panel {
+  padding: 28px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.piano-panel {
+  margin-top: 28px;
+}
+
+.lab-panel {
+  margin-top: 28px;
+}
+
+.duo-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 28px;
+  align-items: stretch;
+  margin-top: 28px;
+}
+
+.duo-grid > * {
+  min-width: 0;
+}
+
+
+/* =========================
+    CHORD SELECTOR
+========================= */
+
+.chord-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: flex-end;
+  margin-bottom: 26px;
+  padding-bottom: 22px;
+  border-bottom: 2px dashed rgba(36, 30, 61, 0.25);
+}
+
+.selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.selector-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.root-group {
+  flex: 1 1 340px;
+}
+
+.root-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.root-pill {
+  min-width: 44px;
+  padding: 0.55rem 0.7rem;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 rgba(36, 30, 61, 0.9);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease;
+}
+
+.root-pill:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 rgba(36, 30, 61, 0.9);
+}
+
+.root-pill.active {
+  background: var(--purple);
+  color: #ffffff;
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.segmented {
+  display: flex;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.seg {
+  padding: 0.6rem 1rem;
+  border: none;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.seg + .seg {
+  border-left: 2px solid var(--ink);
+}
+
+.seg.active {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+select {
+  min-width: 220px;
+  padding: 0.7rem 2.4rem 0.7rem 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23241e3d' stroke-width='2' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+
+/* =========================
+    CHORD DISPLAY
+========================= */
+
+.chord-display h2 {
+  margin: 6px 0 26px;
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.chord-notes {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.note-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: linear-gradient(
+    160deg,
+    #f4edff,
+    #ffffff 60%
+  );
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  transition: transform 0.15s ease;
+}
+
+.note-card:hover {
+  transform: translateY(-4px) rotate(-0.5deg);
+}
+
+.note-name {
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+
+.interval-name {
+  font-weight: 700;
+  color: var(--purple-deep);
+}
+
+.semitone-value {
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.structure {
+  margin-top: 26px;
+  padding: 18px 20px;
+  border: 2px dashed rgba(36, 30, 61, 0.35);
+  border-radius: 14px;
+  background: #fffdf7;
+}
+
+.structure h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.structure-notes {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.structure-intervals,
+.structure-semitones {
+  margin: 4px 0;
+  opacity: 0.8;
+}
+
+
+/* =========================
+    PIANO
+========================= */
+
+.piano-section h2 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.piano-section h2::before {
+  content: "🎹 ";
+}
+
+.piano-description {
+  margin: 0 0 18px;
+  opacity: 0.7;
+}
+
+.piano-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+}
+
+.piano-keyboard {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  min-width: 900px;
+  height: 250px;
+  margin: 0 auto;
+}
+
+.piano-key {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border: 2px solid var(--ink);
+  box-sizing: border-box;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    background-color 0.15s ease;
+}
+
+.piano-key:hover {
+  transform: translateY(-3px);
+}
+
+.piano-key.white {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  padding-bottom: 12px;
+  border-radius: 0 0 12px 12px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.piano-key.black {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  width: 3.6%;
+  height: 60%;
+  padding-bottom: 10px;
+  border-radius: 0 0 10px 10px;
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.piano-key.active.white {
+  background: var(--purple);
+  color: #ffffff;
+}
+
+.piano-key.active.black {
+  background: var(--purple-deep);
+  color: #ffffff;
+}
+
+.piano-key.selected.white {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.piano-key.selected.black {
+  background: #e6a700;
+  color: var(--ink);
+}
+
+.key-label {
+  pointer-events: none;
+  font-weight: 700;
+}
+
+.piano-key.black .key-label {
+  font-size: 0.8rem;
+}
+
+.octave-label {
+  position: absolute;
+  bottom: 38px;
+  font-size: 0.7rem;
+  opacity: 0.55;
+}
+
+.selected-notes {
+  margin-top: 6px;
+}
+
+.selected-notes h3 {
+  margin: 18px 0 10px;
+}
+
+.selected-note-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.selected-note {
+  padding: 0.5rem 0.9rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--yellow);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-weight: 700;
+}
+
+.hint {
+  opacity: 0.65;
+}
+
+.clear-selection {
+  margin-top: 14px;
+  padding: 0.6rem 1.2rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
+}
+
+.clear-selection:hover {
+  background: var(--red);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+
+/* =========================
+    ANALYZER
+========================= */
+
+.chord-analyzer {
+  padding: 28px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.chord-analyzer h2 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.chord-analyzer h2::before {
+  content: "🔍 ";
+}
+
+.chord-analyzer > p {
+  opacity: 0.75;
+}
+
+.detected-chord {
+  margin-top: 12px;
+  animation: pop 0.35s ease;
+}
+
+.detected-label {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.detected-chord h3 {
+  margin: 6px 0;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 800;
+  background: linear-gradient(
+    90deg,
+    var(--purple),
+    var(--pink)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.chord-type {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.inversion {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 0.35rem 0.9rem;
+  border: 2px solid var(--green);
+  border-radius: 999px;
+  background: #e9fbf3;
+  color: #0a7d57;
+  font-weight: 700;
+}
+
+.analyzed-notes {
+  margin-top: 18px;
+}
+
+.analyzed-notes h4 {
+  margin: 0 0 10px;
+}
+
+.analyzed-note-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.analyzed-note {
+  padding: 0.45rem 0.8rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #f1ecff;
+  font-weight: 700;
+}
+
+.use-detected-chord {
+  margin-top: 18px;
+  padding: 0.8rem 1.6rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--purple);
+  box-shadow: var(--shadow-sm);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
+}
+
+.use-detected-chord:hover {
+  background: var(--purple-deep);
+  transform: translateY(-2px);
+}
+
+.unknown-chord {
+  margin-top: 12px;
+  opacity: 0.75;
+}
+
+.unknown-chord p {
+  margin: 6px 0;
+}
+
+
+/* =========================
+    TIPS CARD
+========================= */
+
+.tips-card h2 {
+  margin: 0 0 14px;
+  font-size: 1.4rem;
+}
+
+.tips-card h2::before {
+  content: "💡 ";
+}
+
+.tip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+.tip-list strong {
+  color: var(--purple-deep);
+}
+
+
+/* =========================
+    CHORD BUILDER
+========================= */
+
+.builder-header h2 {
+  margin: 0.3rem 0;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.builder-header p {
+  margin-top: 0;
+  opacity: 0.75;
+}
+
+.builder-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 260px;
+  margin-top: 20px;
+}
+
+.builder-control label {
+  font-weight: 700;
+}
+
+.builder-group {
+  margin-top: 24px;
+}
+
+.builder-group h3 {
+  margin: 0 0 10px;
+}
+
+.builder-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.builder-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.6rem 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 rgba(36, 30, 61, 0.85);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.builder-option:hover {
+  transform: translateY(-2px);
+}
+
+.builder-option:has(input:checked) {
+  background: var(--yellow);
+}
+
+.builder-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--purple);
+  cursor: pointer;
+}
+
+.builder-result {
+  margin-top: 28px;
+  padding: 18px 20px;
+  border: 2px dashed rgba(36, 30, 61, 0.35);
+  border-radius: 14px;
+  background: #fffdf7;
+}
+
+.builder-result h3 {
+  margin: 0 0 8px;
+}
+
+.builder-result p {
+  margin: 4px 0;
+}
+
+
+/* =========================
+    MOTION + RESPONSIVE
+========================= */
+
+@keyframes pop {
+  0% {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .duo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .panel {
+    padding: 20px;
+  }
+
+  .piano-keyboard {
+    min-width: 720px;
+    height: 220px;
+  }
+
+  .chord-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  select {
+    width: 100%;
+  }
+}
+
+
+/* =========================
+    CHORD LAB HINT BANNER
+========================= */
+
+.lab-hint {
+  margin: 0 0 22px;
+  padding: 0.85rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: #fff3f6;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.lab-hint.match {
+  background: #e9fbf3;
+  border-color: var(--green);
+}
+
+
+/* =========================
+    SOUND
+========================= */
+
+.header-actions {
+  margin-top: 18px;
+}
+
+.sound-toggle {
+  padding: 0.55rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.sound-toggle:hover {
+  transform: translateY(-2px);
+}
+
+.chord-display-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 6px 0 26px;
+}
+
+.chord-display-header h2 {
+  margin: 0;
+}
+
+.play-chord {
+  padding: 0.6rem 1.2rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--blue);
+  box-shadow: var(--shadow-sm);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.play-chord:hover {
+  transform: translateY(-2px) rotate(-1deg);
+}
+</file>
+
+<file path="src/App.tsx">
+import { useState } from "react";
+import "./App.css";
+
+import PianoKeyboard from "./components/PianoKeyboard";
+import ChordSelector from "./components/ChordSelector";
+import ChordDisplay from "./components/ChordDisplay";
+import ChordAnalyzer from "./components/ChordAnalyzer";
+import ChordBuilder from "./components/ChordBuilder";
+import { chordTypes } from "./data/chords";
+import { analyzeChord } from "./utils/chordAnalyzer";
+import {
+  playNote,
+  playNotes,
+  setAudioEnabled,
+} from "./utils/audio";
+import {
+  calculateChordNotes,
+  convertRootNote,
+  formatNoteForDisplay,
+  type AccidentalPreference,
+} from "./utils/musicTheory";
+
+type Mode = "explore" | "build";
+
+// Find the catalog chord whose pitch-class pattern matches
+// the given interval pattern (compared mod 12, order-free).
+function findMatchingChordIndex(pattern: number[]): number {
+  const target = pattern
+    .map((interval) => interval % 12)
+    .sort((a, b) => a - b);
+
+  return chordTypes.findIndex((chord) => {
+    const chordPattern = chord.intervals
+      .map((interval) => interval % 12)
+      .sort((a, b) => a - b);
+
+    return (
+      chordPattern.length === target.length &&
+      chordPattern.every(
+        (interval, index) => interval === target[index]
+      )
+    );
+  });
+}
+
+function App() {
+  const [mode, setMode] = useState<Mode>("explore");
+
+  const [rootNote, setRootNote] = useState("C");
+  const [selectedChordIndex, setSelectedChordIndex] =
+    useState(0);
+  const [accidentalPreference, setAccidentalPreference] =
+    useState<AccidentalPreference>("sharps");
+
+  // Notes selected by clicking the piano
+  const [selectedNotes, setSelectedNotes] = useState<
+    string[]
+  >([]);
+
+  // Sound output toggle
+  const [soundOn, setSoundOn] = useState(true);
+
+  // Result of the last Chord Lab build — used for the hint
+  // banner only. Never switches tabs on its own.
+  const [lastBuild, setLastBuild] = useState<{
+    matched: boolean;
+  } | null>(null);
+
+  const selectedChord = chordTypes[selectedChordIndex];
+
+  const pitchClasses = selectedNotes.map((note) =>
+    note.replace(/\d+$/, "")
+  );
+
+  const detectedChord = analyzeChord(pitchClasses);
+
+  const displayedRootNote = convertRootNote(
+    rootNote,
+    accidentalPreference
+  );
+
+  const chordNotes = calculateChordNotes(
+    rootNote,
+    selectedChord.intervals,
+    selectedChord.intervalNames,
+    accidentalPreference
+  );
+
+  const chordName =
+    `${formatNoteForDisplay(displayedRootNote)}${selectedChord.symbol}`;
+
+  const handleSoundToggle = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setAudioEnabled(next);
+  };
+
+  const handleAccidentalPreferenceChange = (
+    preference: AccidentalPreference
+  ) => {
+    setRootNote(convertRootNote(rootNote, preference));
+    setAccidentalPreference(preference);
+  };
+
+  const handleNoteToggle = (note: string) => {
+    // Play on key-down only (not when un-selecting). Done
+    // outside the state updater on purpose: updaters can run
+    // twice in StrictMode dev, which would double the sound.
+    if (!selectedNotes.includes(note)) {
+      playNote(note);
+    }
+
+    setSelectedNotes((current) =>
+      current.includes(note)
+        ? current.filter((item) => item !== note)
+        : [...current, note]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedNotes([]);
+  };
+
+  // Play the current chord in octave 4. Pitch-class names
+  // from calculateChordNotes ("C#", "E", "G") get an octave
+  // tacked on; playNotes ignores anything unparseable.
+  const handlePlayChord = () => {
+    playNotes(chordNotes.map((note) => `${note}4`));
+  };
+
+  // Analyzer -> selector: apply the detected chord.
+  // The analyzer only exists inside Explore, so this never
+  // fights the user for tab control.
+  const handleUseDetectedChord = () => {
+    if (!detectedChord) {
+      return;
+    }
+
+    const match = findMatchingChordIndex(
+      detectedChord.pattern
+    );
+
+    if (match === -1) {
+      return;
+    }
+
+    setRootNote(
+      convertRootNote(
+        detectedChord.root,
+        accidentalPreference
+      )
+    );
+    setSelectedChordIndex(match);
+  };
+
+  // Chord Lab -> Explore: update the Explore chord silently
+  // in the background and show a hint banner. Important:
+  // ChordBuilder fires onChordBuild on mount AND on every
+  // toggle, so switching tabs here would instantly snap the
+  // user back to Explore — never call setMode() from this.
+  const handleChordBuild = (chord: {
+    intervals: number[];
+  }) => {
+    const match = findMatchingChordIndex(chord.intervals);
+
+    setLastBuild({ matched: match !== -1 });
+
+    if (match !== -1) {
+      setSelectedChordIndex(match);
+    }
+  };
+
+  return (
+    <main className="app">
+
+      {/* =========================
+          HEADER
+      ========================== */}
+      <header className="header">
+        <p className="eyebrow">
+          INTERACTIVE MUSIC THEORY
+        </p>
+
+        <h1>Music Chord Explorer</h1>
+
+        <p className="subtitle">
+          Pick a chord, tap the keys, and watch the
+          theory come alive.
+        </p>
+
+        <div className="header-actions">
+          <button
+            className="sound-toggle"
+            type="button"
+            onClick={handleSoundToggle}
+          >
+            {soundOn ? "🔊 Sound on" : "🔇 Muted"}
+          </button>
+        </div>
+      </header>
+
+
+      {/* =========================
+          MODE TABS
+      ========================== */}
+      <nav className="mode-tabs" aria-label="App mode">
+        <button
+          type="button"
+          className={
+            mode === "explore" ? "tab active" : "tab"
+          }
+          onClick={() => setMode("explore")}
+        >
+          🎹 Explore
+        </button>
+
+        <button
+          type="button"
+          className={
+            mode === "build" ? "tab active" : "tab"
+          }
+          onClick={() => setMode("build")}
+        >
+          🧪 Chord Lab
+        </button>
+      </nav>
+
+
+      {mode === "explore" ? (
+        <>
+
+          {/* =========================
+              HERO: PICK + SEE THE CHORD
+          ========================== */}
+          <section className="panel hero-card">
+
+            <ChordSelector
+              rootNote={rootNote}
+              chordTypeIndex={selectedChordIndex}
+              accidentalPreference={accidentalPreference}
+              onRootChange={setRootNote}
+              onChordTypeChange={setSelectedChordIndex}
+              onAccidentalPreferenceChange={
+                handleAccidentalPreferenceChange
+              }
+            />
+
+            <ChordDisplay
+              chordName={chordName}
+              notes={chordNotes}
+              intervalNames={selectedChord.intervalNames}
+              intervals={selectedChord.intervals}
+              onPlay={handlePlayChord}
+            />
+
+          </section>
+
+
+          {/* =========================
+              PIANO STAGE
+          ========================== */}
+          <section className="panel piano-panel">
+
+            <PianoKeyboard
+              chordNotes={chordNotes}
+              accidentalPreference={accidentalPreference}
+              selectedNotes={selectedNotes}
+              onNoteToggle={handleNoteToggle}
+              onClearSelection={handleClearSelection}
+            />
+
+          </section>
+
+
+          {/* =========================
+              ANALYZER + THEORY BITES
+          ========================== */}
+          <div className="duo-grid">
+
+            <ChordAnalyzer
+              selectedNotes={selectedNotes}
+              onUseDetectedChord={
+                handleUseDetectedChord
+              }
+            />
+
+            <aside className="panel tips-card">
+              <h2>Quick theory bites</h2>
+
+              <ul className="tip-list">
+                <li>
+                  <strong>Major vs minor</strong> is a
+                  single semitone — the 3rd.
+                </li>
+
+                <li>
+                  A <strong>diminished</strong> triad
+                  stacks two minor 3rds (0–3–6).
+                </li>
+
+                <li>
+                  <strong>Sus chords</strong> replace the
+                  3rd with a 2nd or 4th.
+                </li>
+
+                <li>
+                  Same notes, different bottom key? That
+                  is an <strong>inversion</strong> — the
+                  analyzer spots it.
+                </li>
+              </ul>
+            </aside>
+
+          </div>
+
+        </>
+      ) : (
+
+        /* =========================
+            CHORD LAB (BUILDER)
+        ========================== */
+        <section className="panel lab-panel">
+
+          {lastBuild?.matched && (
+            <p className="lab-hint match">
+              🎉 That matches{" "}
+              <strong>{chordName}</strong> — flip to{" "}
+              <strong>🎹 Explore</strong> to see it
+              light up the piano.
+            </p>
+          )}
+
+          {lastBuild && !lastBuild.matched && (
+            <p className="lab-hint">
+              🧪 That combination is more exotic than
+              the catalog — the intervals below still
+              tell the story.
+            </p>
+          )}
+
+          <ChordBuilder
+            rootNote={rootNote}
+            onRootChange={setRootNote}
+            onChordBuild={handleChordBuild}
+          />
+
+        </section>
+      )}
+
+    </main>
+  );
+}
+
+export default App;
+</file>
+
+</files>

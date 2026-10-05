@@ -1,3 +1,4 @@
+import { useRef, useEffect, useState } from "react";
 import {
   formatNoteForDisplay,
   type AccidentalPreference,
@@ -63,6 +64,27 @@ const flatNoteNames: Record<string, string> = {
   "A#": "Bb",
 };
 
+// Maps keyboard keys → note with octave
+const keyboardMap: Record<string, string> = {
+  // White keys (home row)
+  a: "C4",
+  s: "D4",
+  d: "E4",
+  f: "F4",
+  g: "G4",
+  h: "A4",
+  j: "B4",
+  k: "C5",
+  l: "D5",
+  // Black keys (top row)
+  w: "C#4",
+  e: "D#4",
+  t: "F#4",
+  y: "G#4",
+  u: "A#4",
+  o: "C#5",
+};
+
 function removeOctave(note: string): string {
   return note.replace(/\d+$/, "");
 }
@@ -117,6 +139,63 @@ function PianoKeyboard({
   onNoteToggle,
   onClearSelection,
 }: PianoKeyboardProps) {
+  const isPointerDown = useRef(false);
+  const [keyboardActiveNotes, setKeyboardActiveNotes] =
+    useState<Set<string>>(new Set());
+
+  // Safety net: release the drag flag if the pointer is
+  // released anywhere outside the piano keys.
+  useEffect(() => {
+    const handlePointerUp = () => {
+      isPointerDown.current = false;
+    };
+    window.addEventListener("pointerup", handlePointerUp);
+    return () =>
+      window.removeEventListener("pointerup", handlePointerUp);
+  }, []);
+
+  // Keyboard → piano key mapping
+  useEffect(() => {
+    const pressedKeys = new Set<string>();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
+
+      const note = keyboardMap[e.key.toLowerCase()];
+      if (!note || pressedKeys.has(e.key)) return;
+
+      pressedKeys.add(e.key);
+      const noteWithoutOctave = removeOctave(note);
+      setKeyboardActiveNotes((prev) =>
+        new Set([...prev, normalizeNote(noteWithoutOctave)])
+      );
+      onNoteToggle(note);
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      pressedKeys.delete(e.key);
+      const note = keyboardMap[e.key.toLowerCase()];
+      if (!note) return;
+      const noteWithoutOctave = removeOctave(note);
+      setKeyboardActiveNotes((prev) => {
+        const next = new Set(prev);
+        next.delete(normalizeNote(noteWithoutOctave));
+        return next;
+      });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [onNoteToggle]);
+
   const normalizedChordNotes = chordNotes.map(
     normalizeNote
   );
@@ -128,13 +207,36 @@ function PianoKeyboard({
 
   const octaves = [3, 4, 5];
 
+  function makeKeyHandlers(noteWithOctave: string) {
+    return {
+      onPointerDown: (
+        e: React.PointerEvent<HTMLButtonElement>
+      ) => {
+        // Release capture so pointer-enter fires on
+        // adjacent keys while dragging.
+        e.currentTarget.releasePointerCapture(e.pointerId);
+        isPointerDown.current = true;
+        onNoteToggle(noteWithOctave);
+      },
+      onPointerEnter: () => {
+        if (isPointerDown.current) {
+          onNoteToggle(noteWithOctave);
+        }
+      },
+      onPointerUp: () => {
+        isPointerDown.current = false;
+      },
+    };
+  }
+
   return (
     <section className="piano-section">
       <h2>Tap the keys</h2>
 
       <p className="piano-description">
         Purple keys = the chord above · yellow keys =
-        your picks
+        your picks · <kbd>A</kbd>–<kbd>L</kbd> &amp;{" "}
+        <kbd>W</kbd>/<kbd>E</kbd>/<kbd>T</kbd>/<kbd>Y</kbd>/<kbd>U</kbd> = keyboard
       </p>
 
       <div className="piano-wrapper">
@@ -149,16 +251,21 @@ function PianoKeyboard({
               const isSelected =
                 normalizedSelectedNotes.includes(note);
 
+              const isKeyboardActive =
+                keyboardActiveNotes.has(
+                  normalizeNote(note)
+                );
+
               return (
-               <button
+                <button
                   key={`${note}${octave}`}
                   className={`piano-key white ${
                     isChordNote ? "active" : ""
-                  } ${isSelected ? "selected" : ""}`}
-                  onClick={() =>
-                    onNoteToggle(`${note}${octave}`)
-                  }
+                  } ${isSelected ? "selected" : ""} ${
+                    isKeyboardActive ? "keyboard-active" : ""
+                  }`}
                   type="button"
+                  {...makeKeyHandlers(`${note}${octave}`)}
                 >
                   <span className="key-label">
                     {getDisplayNote(
@@ -190,6 +297,11 @@ function PianoKeyboard({
                   key.note
                 );
 
+              const isKeyboardActive =
+                keyboardActiveNotes.has(
+                  normalizeNote(key.note)
+                );
+
               const whiteKeyWidth =
                 100 /
                 (whiteKeys.length * octaves.length);
@@ -207,14 +319,16 @@ function PianoKeyboard({
                     isChordNote ? "active" : ""
                   } ${
                     isSelected ? "selected" : ""
+                  } ${
+                    isKeyboardActive ? "keyboard-active" : ""
                   }`}
                   style={{
                     left: `${leftPosition}%`,
                   }}
-                  onClick={() =>
-                    onNoteToggle(`${key.note}${octave}`)
-                  }
                   type="button"
+                  {...makeKeyHandlers(
+                    `${key.note}${octave}`
+                  )}
                 >
                   <span className="key-label">
                     {getDisplayNote(

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 import PianoKeyboard from "./components/PianoKeyboard";
@@ -8,6 +8,12 @@ import ChordAnalyzer from "./components/ChordAnalyzer";
 import ChordBuilder from "./components/ChordBuilder";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
+import {
+  playNote,
+  playNotes,
+  preloadAudio,
+  setAudioEnabled,
+} from "./utils/audio";
 import {
   calculateChordNotes,
   convertRootNote,
@@ -52,11 +58,20 @@ function App() {
     string[]
   >([]);
 
+  // Sound output toggle
+  const [soundOn, setSoundOn] = useState(true);
+
   // Result of the last Chord Lab build — used for the hint
   // banner only. Never switches tabs on its own.
   const [lastBuild, setLastBuild] = useState<{
     matched: boolean;
   } | null>(null);
+
+  // Start fetching the piano samples right away so the
+  // first key press already sounds like a piano.
+  useEffect(() => {
+    preloadAudio();
+  }, []);
 
   const selectedChord = chordTypes[selectedChordIndex];
 
@@ -81,6 +96,12 @@ function App() {
   const chordName =
     `${formatNoteForDisplay(displayedRootNote)}${selectedChord.symbol}`;
 
+  const handleSoundToggle = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setAudioEnabled(next);
+  };
+
   const handleAccidentalPreferenceChange = (
     preference: AccidentalPreference
   ) => {
@@ -89,6 +110,8 @@ function App() {
   };
 
   const handleNoteToggle = (note: string) => {
+      playNote(note);
+
     setSelectedNotes((current) =>
       current.includes(note)
         ? current.filter((item) => item !== note)
@@ -98,6 +121,13 @@ function App() {
 
   const handleClearSelection = () => {
     setSelectedNotes([]);
+  };
+
+  // Play the current chord in octave 4. Pitch-class names
+  // from calculateChordNotes ("C#", "E", "G") get an octave
+  // tacked on; playNotes ignores anything unparseable.
+  const handlePlayChord = () => {
+    playNotes(chordNotes.map((note) => `${note}4`));
   };
 
   // Analyzer -> selector: apply the detected chord.
@@ -159,6 +189,16 @@ function App() {
           Pick a chord, tap the keys, and watch the
           theory come alive.
         </p>
+
+        <div className="header-actions">
+          <button
+            className="sound-toggle"
+            type="button"
+            onClick={handleSoundToggle}
+          >
+            {soundOn ? "🔊 Sound on" : "🔇 Muted"}
+          </button>
+        </div>
       </header>
 
 
@@ -212,6 +252,7 @@ function App() {
               notes={chordNotes}
               intervalNames={selectedChord.intervalNames}
               intervals={selectedChord.intervals}
+              onPlay={handlePlayChord}
             />
 
           </section>
