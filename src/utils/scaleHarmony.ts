@@ -31,9 +31,17 @@ import {
 
 export interface ScaleChord extends ScaleDegree {
   rootNote: string; // display-formatted, e.g. "D", "F♯"
+  rawRootNote: string; // ASCII (#/b) root, e.g. "D", "F#"
   chordLabel: string; // e.g. "Dm9", "Gmaj7", "B°"
   notes: string[]; // display-formatted chord notes
   rawNotes: string[]; // ASCII (#/b) chord notes, for audio playback
+  // Concrete index into chordTypes (data/chords.ts) this
+  // chord was actually voiced with — never -1, even when the
+  // caller used the "natural triad" default. Lets a chord be
+  // frozen (e.g. into the progression builder) as a fully
+  // independent snapshot that no longer depends on the
+  // scale/key/chord-type controls that produced it.
+  chordTypeIndex: number;
 }
 
 // Picks the catalog chord type that matches a diatonic
@@ -64,7 +72,8 @@ function buildScaleDegreeRoots(
   return calculateChordNotes(
     preferredKeyRoot,
     scaleIntervals[scaleType],
-    scaleIntervalNames[scaleType]
+    scaleIntervalNames[scaleType],
+    preference
   );
 }
 
@@ -96,7 +105,8 @@ export function buildScaleChords(
     const chordNotes = calculateChordNotes(
       degreeRoot,
       voicing.intervals,
-      voicing.intervalNames
+      voicing.intervalNames,
+      preference
     );
 
     const displayRoot = formatNoteForDisplay(degreeRoot);
@@ -109,13 +119,62 @@ export function buildScaleChords(
     return {
       ...degree,
       rootNote: displayRoot,
+      rawRootNote: degreeRoot,
       chordLabel: label,
       notes: chordNotes.map((note) =>
         formatNoteForDisplay(note)
       ),
       rawNotes: chordNotes,
+      chordTypeIndex: chordTypes.indexOf(voicing),
     };
   });
+}
+
+// Resolves a frozen, standalone chord snapshot — a raw root
+// note + an index into chordTypes — into its display label
+// and notes under the given sharps/flats preference. This is
+// the building block for the progression builder: once a
+// chord is added there, it is stored as one of these
+// snapshots and is from then on completely independent of
+// whatever key/scale/chord-type the Progressions controls are
+// currently set to (only the sharps/flats *spelling* still
+// follows the shared preference, exactly like Explore).
+export function resolveChordSnapshot(
+  rawRootNote: string,
+  chordTypeIndex: number,
+  preference: AccidentalPreference
+): {
+  chordLabel: string;
+  notes: string[];
+  rawNotes: string[];
+} {
+  const voicing = chordTypes[chordTypeIndex];
+
+  if (!voicing) {
+    return { chordLabel: "?", notes: [], rawNotes: [] };
+  }
+
+  const preferredRoot = convertRootNote(
+    rawRootNote,
+    preference
+  );
+
+  const chordNotes = calculateChordNotes(
+    preferredRoot,
+    voicing.intervals,
+    voicing.intervalNames,
+    preference
+  );
+
+  const displayRoot = formatNoteForDisplay(preferredRoot);
+
+  return {
+    chordLabel: `${displayRoot}${voicing.symbol}`,
+    notes: chordNotes.map((note) =>
+      formatNoteForDisplay(note)
+    ),
+    rawNotes: chordNotes,
+  };
 }
 
 // The display name for a key root under the chosen

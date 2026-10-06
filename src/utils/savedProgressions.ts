@@ -2,19 +2,32 @@
 // Persists user-built chord progressions to localStorage so
 // they survive a page reload. Kept deliberately tiny (no
 // external storage/back end) — this is a local sketchpad.
+//
+// Each chord in a progression is stored as a frozen,
+// standalone snapshot (its own root note + chord-type index)
+// rather than a reference back to a scale degree. That is
+// deliberate: a scale-degree reference is only meaningful
+// relative to whatever key/scale/chord-type is currently
+// selected elsewhere in the UI, so if the user later changes
+// those controls, every chord "referencing" a degree would
+// silently change out from under them. A snapshot can't do
+// that — once a chord is added to a progression, it stays
+// exactly that chord no matter what else changes.
 // ============================================================
 
-import type { ScaleType } from "../data/scales";
+export interface ProgressionChord {
+  // Raw (ASCII #/b) root note, e.g. "C", "A#". Spelling for
+  // display still follows the shared sharps/flats preference
+  // at render time, same as everywhere else in the app.
+  rootNote: string;
+  // Index into chordTypes (src/data/chords.ts).
+  chordTypeIndex: number;
+}
 
 export interface SavedProgression {
   id: string;
   name: string;
-  rootNote: string; // raw note, e.g. "C", "A#"
-  scaleType: ScaleType;
-  // Index into chordTypes (src/data/chords.ts) — the chord
-  // type every degree was voiced with when this was saved.
-  chordTypeIndex: number;
-  degrees: number[];
+  chords: ProgressionChord[];
   createdAt: number;
 }
 
@@ -43,13 +56,14 @@ export function loadSavedProgressions(): SavedProgression[] {
     }
 
     // Entries saved by an earlier version of this feature
-    // used a "voicing" field ("triads" | "sevenths") instead
-    // of chordTypeIndex. Normalize those on load so old
-    // localStorage data doesn't crash the new UI.
-    return parsed.map((item) =>
-      typeof item.chordTypeIndex === "number"
-        ? item
-        : { ...item, chordTypeIndex: -1 }
+    // stored a key/scale/chordTypeIndex + a list of scale
+    // degrees instead of standalone chord snapshots. There is
+    // no way to losslessly recover those (we'd need to know
+    // what key/scale was active), so they're dropped rather
+    // than risk showing wrong/crashing chords.
+    return parsed.filter(
+      (item): item is SavedProgression =>
+        Array.isArray(item?.chords)
     );
   } catch {
     // Corrupt or inaccessible storage — fail soft, never
