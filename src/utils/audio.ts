@@ -138,6 +138,7 @@ export function noteToMidi(note: string): number {
 interface PlayOptions {
   when?: number; // seconds from now
   duration?: number; // seconds
+  volume?: number; // dB (0 = normal, 6 = +6dB, -3 = -3dB, etc.)
 }
 
 // Play one note like "C#4" (also accepts "Cbb3", "F##5" —
@@ -162,7 +163,7 @@ export async function playNote(
   // ("D4", "C#4") no matter the incoming accidental style.
   const cleanName = Tone.Frequency(midi, "midi").toNote();
 
-  const { when = 0, duration = 1.6 } = options;
+  const { when = 0, duration = 1.6, volume = 0 } = options;
 
   // Required by browser autoplay rules; must run inside the
   // user gesture, so it lives here and not in preloadAudio.
@@ -175,15 +176,18 @@ export async function playNote(
     // Samples still decoding (first clicks) or unavailable
     // (CDN blocked) — play the fallback so keys never go
     // silent. Once loaded, later notes use the real piano.
-    getFallback().triggerAttackRelease(
-      cleanName,
-      duration,
-      time
-    );
+    const synth = getFallback();
+    const oldVolume = synth.volume.value;
+    synth.volume.value = oldVolume + volume;
+    synth.triggerAttackRelease(cleanName, duration, time);
+    synth.volume.value = oldVolume;
     return;
   }
 
+  const oldVolume = active.volume.value;
+  active.volume.value = oldVolume + volume;
   active.triggerAttackRelease(cleanName, duration, time);
+  active.volume.value = oldVolume;
 }
 
 // Play several notes together (or arpeggiated if you pass a
@@ -229,6 +233,8 @@ export function playProgression(
 export interface TimedChord {
   notes: string[]; // pitch classes, no octave, e.g. ["C","E","G"]
   beats: number; // how many beats this chord holds for
+  isRest?: boolean; // if true, this is silence (no notes)
+  isAccented?: boolean; // if true, boost volume
 }
 
 // Play a sequence of chords back-to-back where each chord can
@@ -237,27 +243,66 @@ export interface TimedChord {
 // is what the progression builder uses once chords carry
 // their own beat counts; playProgression() above remains for
 // simpler, uniform-timing cases.
+//
+// Supports rests (isRest: true, notes ignored), swing (applies
+// a time offset to off-beat notes for a jazzier feel), and
+// accents (boosts volume on marked beats for dynamics).
 export function playTimedProgression(
   chords: TimedChord[],
-  secondsPerBeat: number
+  secondsPerBeat: number,
+  options: {
+    swingEnabled?: boolean;
+    swingRatio?: number; // e.g. 2 for 2:1 swing (typical jazz)
+    accentBoost?: number; // dB to add to accented notes, e.g. 6
+  } = {}
 ): void {
+  const { swingEnabled = false, swingRatio = 2, accentBoost = 6 } = options;
+
   let elapsed = 0;
+  let beatInMeasure = 0; // for first-measure accents
+  const beatsPerMeasure = 4; // standard assumption; could be parameterized
 
   for (const chord of chords) {
     const duration = chord.beats * secondsPerBeat;
-    const when = elapsed;
+    let beatOffset = 0;
 
-    chord.notes.forEach((note) => {
-      playNote(`${note}4`, {
-        when,
-        // Slightly short of the full duration so back-to-back
-        // chords don't bleed into each other at fast tempos,
-        // matching playProgression()'s 0.95 ratio above.
-        duration: duration * 0.95,
+    // Swing: delay off-beat notes. In 2:1 swing (most common
+    // in jazz), the second eighth-note of each pair is pushed
+    // back by 1/3 of the beat, making the first 2/3 long and
+    // the second 1/3 short. We approximate this by delaying
+    // notes that land on non-integer beats.
+    if (swingEnabled && chord.beats === 1) {
+      // Only swing single-beat chords for simplicity;
+      // multi-beat chords are unaffected. A full implementation
+      // would subdivide longer chords into 8th-note triplets.
+      const beatFraction = (elapsed / secondsPerBeat) % 1;
+      if (Math.abs(beatFraction - 0.5) < 0.01) {
+        // This is approximately the 2nd beat of a pair —
+        // swing it back by 1/3.
+        beatOffset =
+          (secondsPerBeat / swingRatio) *
+          ((swingRatio - 1) / swingRatio);
+      }
+    }
+
+    const when = elapsed + beatOffset;
+
+    if (!chord.isRest) {
+      chord.notes.forEach((note) => {
+        const volume =
+          chord.isAccented && accentBoost ? accentBoost : 0;
+
+        playNote(`${note}4`, {
+          when,
+          duration: duration * 0.95,
+          volume,
+        });
       });
-    });
+    }
+    // Rests: no notes, just advance time
 
     elapsed += duration;
+    beatInMeasure = (beatInMeasure + chord.beats) % beatsPerMeasure;
   }
 }
 
@@ -314,7 +359,12 @@ export function playProgressionLoop(
 // (plain setTimeout chain) and its tradeoffs.
 export function playTimedProgressionLoop(
   chords: TimedChord[],
-  secondsPerBeat: number
+  secondsPerBeat: number,
+  options?: {
+    swingEnabled?: boolean;
+    swingRatio?: number;
+    accentBoost?: number;
+  }
 ): ProgressionLoopHandle {
   let stopped = false;
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -333,7 +383,7 @@ export function playTimedProgressionLoop(
       return;
     }
 
-    playTimedProgression(chords, secondsPerBeat);
+    playTimedProgression(chords, secondsPerBeat, options);
     timeoutId = setTimeout(cycle, cycleMs);
   }
 

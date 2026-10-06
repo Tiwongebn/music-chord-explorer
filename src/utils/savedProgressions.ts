@@ -26,14 +26,16 @@ import { defaultTimeSignatureId } from "../data/rhythm";
 export const DEFAULT_CHORD_BEATS = 1;
 
 export interface ProgressionChord {
-  // Raw (ASCII #/b) root note, e.g. "C", "A#". Spelling for
-  // display still follows the shared sharps/flats preference
-  // at render time, same as everywhere else in the app.
-  rootNote: string;
-  // Index into chordTypes (src/data/chords.ts).
-  chordTypeIndex: number;
-  // How many beats this chord holds for before the next one
-  // starts. See rhythm.ts for the selectable range.
+  // "chord" = normal chord entry; "rest" = silence with no notes
+  type: 'chord' | 'rest';
+  // For type === 'chord': raw (ASCII #/b) root note, e.g. "C", "A#".
+  // For type === 'rest': ignored.
+  rootNote?: string;
+  // For type === 'chord': index into chordTypes (src/data/chords.ts).
+  // For type === 'rest': ignored.
+  chordTypeIndex?: number;
+  // How many beats this entry (chord or rest) holds for.
+  // See rhythm.ts for the selectable range.
   beats: number;
 }
 
@@ -46,6 +48,13 @@ export interface SavedProgression {
   // — it doesn't change playback timing, which is driven
   // purely by each chord's own beat count + the shared BPM.
   timeSignatureId: string;
+  // Swing/groove feel: when true, off-beat notes are delayed
+  // by a fraction (typically 2:1 ratio, see audio.ts).
+  swingEnabled: boolean;
+  // Accents/dynamics: "none" (no accenting), "first-beat"
+  // (boost volume on the first beat of each chord), or
+  // "first-measure" (boost on the first beat of each bar).
+  accentType: 'none' | 'first-beat' | 'first-measure';
   createdAt: number;
 }
 
@@ -86,14 +95,19 @@ export function loadSavedProgressions(): SavedProgression[] {
       )
       .map((progression) => ({
         ...progression,
-        // Entries saved before per-chord timing existed have
+    // Entries saved before per-chord timing existed have
         // no beats/timeSignatureId — normalize them here so
         // the rest of the app never has to special-case it.
+        // Similarly, entries saved before swing/accents existed
+        // get those defaults.
         timeSignatureId:
           progression.timeSignatureId ??
           defaultTimeSignatureId,
+        swingEnabled: progression.swingEnabled ?? false,
+        accentType: progression.accentType ?? 'none',
         chords: progression.chords.map((chord) => ({
           ...chord,
+          type: chord.type ?? 'chord',
           beats: chord.beats ?? DEFAULT_CHORD_BEATS,
         })),
       }));
