@@ -218,3 +218,50 @@ export function playProgression(
     });
   });
 }
+
+export interface ProgressionLoopHandle {
+  stop: () => void;
+}
+
+// Repeats `chords` back-to-back forever, one playProgression()
+// cycle after another, until stop() is called. Scheduling is
+// a plain setTimeout chain (not Tone.Transport) to match the
+// rest of this module's fire-and-forget style — good enough
+// for a "vamp while I tweak the builder" loop, where sub-ms
+// drift across cycles doesn't matter.
+export function playProgressionLoop(
+  chords: string[][],
+  chordSeconds = 0.85
+): ProgressionLoopHandle {
+  let stopped = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const cycleMs = Math.max(
+    chords.length * chordSeconds * 1000,
+    1
+  );
+
+  function cycle(): void {
+    if (stopped) {
+      return;
+    }
+
+    playProgression(chords, chordSeconds);
+    timeoutId = setTimeout(cycle, cycleMs);
+  }
+
+  if (chords.length > 0) {
+    cycle();
+  }
+
+  return {
+    stop(): void {
+      stopped = true;
+
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    },
+  };
+}

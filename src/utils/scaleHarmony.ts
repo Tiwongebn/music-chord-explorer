@@ -17,6 +17,7 @@ import {
   calculateChordNotes,
   convertRootNote,
   formatNoteForDisplay,
+  getPitchClass,
   type AccidentalPreference,
 } from "./musicTheory";
 import { chordTypes } from "../data/chords";
@@ -27,6 +28,7 @@ import {
   scaleIntervals,
   type ScaleDegree,
   type ScaleType,
+  type TriadQuality,
 } from "../data/scales";
 
 export interface ScaleChord extends ScaleDegree {
@@ -187,4 +189,82 @@ export function getDisplayKeyRoot(
   return formatNoteForDisplay(
     convertRootNote(keyRoot, preference)
   );
+}
+
+export type ChordKeyRelation =
+  | "diatonic"
+  | "borrowed"
+  | "chromatic";
+
+// Classifies a chord (by raw root note + a chordTypes index)
+// against a key, for an educational "does this chord belong
+// here?" badge in the progression builder:
+//
+//  - "chromatic": the root itself isn't one of the key's 7
+//    scale notes at all (e.g. an F# chord in C major).
+//  - "borrowed":  the root IS one of the key's scale notes,
+//    but the chosen chord's basic quality (major/minor/
+//    diminished, inferred from its 3rd/5th) doesn't match
+//    that scale degree's natural quality (e.g. a *major*
+//    chord on D in C major, where ii is naturally minor).
+//  - "diatonic":  root and quality both match the key.
+//
+// Chords with no 3rd at all (sus2/sus4) are inherently
+// neither major nor minor, so a quality mismatch is never
+// reported for them — only "chromatic" still applies.
+export function classifyChordInKey(
+  rootNote: string,
+  chordTypeIndex: number,
+  keyRoot: string,
+  scaleType: ScaleType
+): ChordKeyRelation {
+  const rootPitchClass = getPitchClass(rootNote);
+  const keyPitchClass = getPitchClass(keyRoot);
+
+  if (rootPitchClass === -1 || keyPitchClass === -1) {
+    return "diatonic";
+  }
+
+  const intervals = scaleIntervals[scaleType];
+  const degrees = scaleDegreesByType[scaleType];
+
+  const degreeIndex = intervals.findIndex(
+    (interval) =>
+      (keyPitchClass + interval) % 12 === rootPitchClass
+  );
+
+  if (degreeIndex === -1) {
+    return "chromatic";
+  }
+
+  const voicing = chordTypes[chordTypeIndex];
+
+  if (!voicing) {
+    return "diatonic";
+  }
+
+  const hasMinorThird = voicing.intervals.includes(3);
+  const hasMajorThird = voicing.intervals.includes(4);
+  const hasDiminishedFifth = voicing.intervals.includes(6);
+
+  let impliedQuality: TriadQuality | null = null;
+
+  if (hasMinorThird) {
+    impliedQuality = hasDiminishedFifth
+      ? "Diminished"
+      : "Minor";
+  } else if (hasMajorThird) {
+    impliedQuality = "Major";
+  }
+
+  const naturalQuality = degrees[degreeIndex].quality;
+
+  if (
+    impliedQuality !== null &&
+    impliedQuality !== naturalQuality
+  ) {
+    return "borrowed";
+  }
+
+  return "diatonic";
 }

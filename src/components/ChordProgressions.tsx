@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   commonProgressions,
   functionDescriptions,
+  generateRandomProgression,
   progressionMap,
   progressionsGlossary,
   type ProgressionDifficulty,
@@ -11,8 +12,10 @@ import {
 import { chordTypes } from "../data/chords";
 import {
   buildScaleChords,
+  classifyChordInKey,
   getDisplayKeyRoot,
   resolveChordSnapshot,
+  type ChordKeyRelation,
   type ScaleChord,
 } from "../utils/scaleHarmony";
 import {
@@ -20,7 +23,12 @@ import {
   getNotesByPreference,
   type AccidentalPreference,
 } from "../utils/musicTheory";
-import { playNotes, playProgression } from "../utils/audio";
+import {
+  playNotes,
+  playProgression,
+  playProgressionLoop,
+  type ProgressionLoopHandle,
+} from "../utils/audio";
 import {
   deleteProgression,
   loadSavedProgressions,
@@ -77,6 +85,20 @@ const difficultyRank: Record<ProgressionDifficulty, number> = {
   Advanced: 2,
 };
 
+// Labels/classes for the borrowed/chromatic chord badge.
+// "diatonic" chords get no badge at all (see render below).
+const relationLabel: Record<ChordKeyRelation, string> = {
+  diatonic: "",
+  borrowed: "Borrowed",
+  chromatic: "Chromatic",
+};
+
+const relationClass: Record<ChordKeyRelation, string> = {
+  diatonic: "",
+  borrowed: "relation-borrowed",
+  chromatic: "relation-chromatic",
+};
+
 function ChordProgressions({
   rootNote,
   accidentalPreference,
@@ -104,6 +126,27 @@ function ChordProgressions({
 
   const [showGlossary, setShowGlossary] = useState(false);
 
+  // Tempo for every chord-sequence playback in this tab
+  // (templates, the builder, saved progressions) — one shared
+  // control rather than a separate dial per list. Stored as
+  // seconds-per-chord internally since that's what the audio
+  // helpers expect; the UI shows it as a BPM-style value.
+  const [chordSeconds, setChordSeconds] = useState(0.85);
+
+  // Handle for the builder's currently-looping playback, if
+  // any. Non-null exactly while the loop button shows "Stop".
+  const [loopHandle, setLoopHandle] =
+    useState<ProgressionLoopHandle | null>(null);
+
+  // Mirrors loopHandle for the unmount-cleanup effect below,
+  // which needs the latest handle but must only register its
+  // cleanup once (an empty-deps effect only closes over the
+  // state from its first render otherwise).
+  const loopHandleRef = useRef<ProgressionLoopHandle | null>(
+    null
+  );
+  loopHandleRef.current = loopHandle;
+
   const [highlightedDegree, setHighlightedDegree] =
     useState<number | null>(null);
 
@@ -125,6 +168,19 @@ function ChordProgressions({
 
   useEffect(() => {
     setSavedProgressions(loadSavedProgressions());
+  }, []);
+
+  // Stop any looping playback if this tab is unmounted (e.g.
+  // the user switches to Explore or Chord Lab) — otherwise the
+  // loop would keep firing silently in the background forever.
+  // Reads loopHandleRef (always current) rather than
+  // loopHandle directly, since this effect's cleanup is only
+  // registered once and would otherwise close over whatever
+  // loopHandle was at mount time (null).
+  useEffect(() => {
+    return () => {
+      loopHandleRef.current?.stop();
+    };
   }, []);
 
   const notes = getNotesByPreference(
@@ -170,6 +226,22 @@ function ChordProgressions({
   const chordByDegree = (degree: number): ScaleChord =>
     scaleChords[degree - 1];
 
+  // Classifies a frozen builder/saved-progression chord
+  // against the currently-displayed key/scale, for the
+  // "borrowed"/"chromatic" badge. Note this always compares
+  // against whatever key is shown right now — the badge is a
+  // live, informational "does this fit THIS key?" indicator,
+  // not a judgment baked in when the chord was added.
+  const relationFor = (
+    chord: ProgressionChord
+  ): ChordKeyRelation =>
+    classifyChordInKey(
+      chord.rootNote,
+      chord.chordTypeIndex,
+      rootNote,
+      scaleType
+    );
+
   // Resolves a frozen builder/saved-progression chord
   // snapshot to its current display label + notes under the
   // live sharps/flats preference (spelling can still follow
@@ -186,26 +258,80 @@ function ChordProgressions({
     ? progressionMap[scaleType][highlightedDegree] ?? []
     : [];
 
+  // Always stop any active builder loop before anything else
+  // plays — otherwise a looping builder sequence would keep
+  // firing underneath (and eventually clashing with) a
+  // one-shot template/chord preview.
+  const stopLoop = () => {
+    setLoopHandle((current) => {
+      current?.stop();
+      return null;
+    });
+  };
+
   const handlePlayChord = (chord: ScaleChord) => {
+    stopLoop();
     playNotes(chord.rawNotes.map((note) => `${note}4`));
   };
 
   const handlePlaySnapshotList = (
     chords: ProgressionChord[]
   ) => {
+    stopLoop();
+
     const chordGroups = chords.map(
       (chord) => resolveSnapshot(chord).rawNotes
     );
 
-    playProgression(chordGroups);
+    playProgression(chordGroups, chordSeconds);
   };
 
   const handlePlayTemplate = (degrees: number[]) => {
+    stopLoop();
+
     const chordGroups = degrees.map(
       (degree) => chordByDegree(degree).rawNotes
     );
 
-    playProgression(chordGroups);
+    playProgression(chordGroups, chordSeconds);
+  };
+
+  // Toggles looped playback of the builder's current chord
+  // sequence. Starting a new loop (or any other playback)
+  // always stops a previous one first via stopLoop() above.
+  const handleToggleBuilderLoop = () => {
+    if (loopHandle) {
+      stopLoop();
+      return;
+    }
+
+    const chordGroups = builderChords.map(
+      (chord) => resolveSnapshot(chord).rawNotes
+    );
+
+    setLoopHandle(
+      playProgressionLoop(chordGroups, chordSeconds)
+    );
+  };
+
+  // Replaces the builder with a freshly randomized
+  // progression, walking the harmony graph for the scale
+  // currently shown — a quick source of inspiration, or just
+  // something fun to mash the button on.
+  const handleSurpriseMe = () => {
+    stopLoop();
+
+    const degrees = generateRandomProgression(scaleType, 4);
+
+    setBuilderChords(
+      degrees.map((degree) => {
+        const chord = chordByDegree(degree);
+        return {
+          rootNote: chord.rawRootNote,
+          chordTypeIndex: chord.chordTypeIndex,
+        };
+      })
+    );
   };
 
   const handleDegreeClick = (chord: ScaleChord) => {
@@ -220,6 +346,8 @@ function ChordProgressions({
   // is currently voiced with. From this point on it no longer
   // cares what the key/scale/chord-type controls do.
   const handleAddToBuilder = (chord: ScaleChord) => {
+    stopLoop();
+
     setBuilderChords((current) => [
       ...current,
       {
@@ -235,6 +363,8 @@ function ChordProgressions({
   const handleAddTemplateToBuilder = (
     degrees: number[]
   ) => {
+    stopLoop();
+
     setBuilderChords((current) => [
       ...current,
       ...degrees.map((degree) => {
@@ -248,6 +378,8 @@ function ChordProgressions({
   };
 
   const handleRemoveFromBuilder = (index: number) => {
+    stopLoop();
+
     setBuilderChords((current) =>
       current.filter((_, i) => i !== index)
     );
@@ -257,6 +389,8 @@ function ChordProgressions({
     index: number,
     direction: -1 | 1
   ) => {
+    stopLoop();
+
     setBuilderChords((current) => {
       const target = index + direction;
 
@@ -274,6 +408,7 @@ function ChordProgressions({
   };
 
   const handleClearBuilder = () => {
+    stopLoop();
     setBuilderChords([]);
   };
 
@@ -298,6 +433,7 @@ function ChordProgressions({
   };
 
   const handleLoadSaved = (saved: SavedProgression) => {
+    stopLoop();
     setBuilderChords(saved.chords);
   };
 
@@ -546,6 +682,42 @@ function ChordProgressions({
             </button>
           </div>
         </div>
+
+        <div className="selector-group tempo-group">
+          <label
+            className="selector-label"
+            htmlFor="prog-tempo"
+          >
+            Tempo
+          </label>
+
+          <div className="tempo-control">
+            <input
+              id="prog-tempo"
+              type="range"
+              min={300}
+              max={1500}
+              step={50}
+              // The slider reads fastest-on-the-right, so it
+              // tracks milliseconds-per-chord inverted from
+              // chordSeconds (smaller chordSeconds = faster =
+              // slider further right).
+              value={Math.round(
+                1800 - chordSeconds * 1000
+              )}
+              onChange={(event) =>
+                setChordSeconds(
+                  (1800 - Number(event.target.value)) /
+                    1000
+                )
+              }
+            />
+
+            <span className="tempo-value">
+              {Math.round(60 / chordSeconds)} BPM
+            </span>
+          </div>
+        </div>
       </div>
 
       <p className="prog-key-label">
@@ -789,8 +961,22 @@ function ChordProgressions({
       {/* CUSTOM PROGRESSION BUILDER */}
       <section className="panel builder-panel">
         <div className="builder-panel-header">
-          <p className="eyebrow">YOUR SKETCHPAD</p>
-          <h3>Progression Builder</h3>
+          <div className="builder-panel-header-top">
+            <div>
+              <p className="eyebrow">YOUR SKETCHPAD</p>
+              <h3>Progression Builder</h3>
+            </div>
+
+            <button
+              type="button"
+              className="surprise-me-btn"
+              title="Replace the builder with a random progression"
+              onClick={handleSurpriseMe}
+            >
+              🎲 Surprise me
+            </button>
+          </div>
+
           <p className="builder-section-hint">
             Click <strong>+ Add to builder</strong> on any
             chord above (as many times, in any order, as
@@ -798,7 +984,16 @@ function ChordProgressions({
             changing the key, scale, or chord type above
             afterward won't alter chords already here.
             Reorder or remove chords below, then play the
-            sequence back or save it for later.
+            sequence back, loop it, or save it for later.
+            Chords outside the current key are flagged as{" "}
+            <span className="relation-chip relation-borrowed">
+              Borrowed
+            </span>{" "}
+            or{" "}
+            <span className="relation-chip relation-chromatic">
+              Chromatic
+            </span>
+            .
           </p>
         </div>
 
@@ -811,6 +1006,7 @@ function ChordProgressions({
           <ol className="builder-slot-row">
             {builderChords.map((chord, index) => {
               const resolved = resolveSnapshot(chord);
+              const relation = relationFor(chord);
 
               return (
                 <li
@@ -824,6 +1020,15 @@ function ChordProgressions({
                   <span className="builder-slot-chord">
                     {resolved.chordLabel}
                   </span>
+
+                  {relation !== "diatonic" && (
+                    <span
+                      className={`relation-chip ${relationClass[relation]}`}
+                      title={`This chord doesn't match the ${displayKeyRoot} ${scaleType} key currently shown.`}
+                    >
+                      {relationLabel[relation]}
+                    </span>
+                  )}
 
                   <div className="builder-slot-actions">
                     <button
@@ -883,6 +1088,19 @@ function ChordProgressions({
 
           <button
             type="button"
+            className={
+              loopHandle
+                ? "play-chord loop-btn looping"
+                : "play-chord loop-btn"
+            }
+            disabled={builderChords.length === 0}
+            onClick={handleToggleBuilderLoop}
+          >
+            {loopHandle ? "■ Stop loop" : "🔁 Loop"}
+          </button>
+
+          <button
+            type="button"
             className="clear-selection"
             disabled={builderChords.length === 0}
             onClick={handleClearBuilder}
@@ -937,17 +1155,29 @@ function ChordProgressions({
                   </div>
 
                   <div className="template-chip-row">
-                    {saved.chords.map((chord, index) => (
-                      <span
-                        className="template-chip"
-                        key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
-                      >
-                        {
-                          resolveSnapshot(chord)
-                            .chordLabel
-                        }
-                      </span>
-                    ))}
+                    {saved.chords.map((chord, index) => {
+                      const relation = relationFor(chord);
+
+                      return (
+                        <span
+                          className="template-chip"
+                          key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
+                        >
+                          {
+                            resolveSnapshot(chord)
+                              .chordLabel
+                          }
+                          {relation !== "diatonic" && (
+                            <span
+                              className={`relation-chip ${relationClass[relation]}`}
+                              title={`This chord doesn't match the ${displayKeyRoot} ${scaleType} key currently shown.`}
+                            >
+                              {relationLabel[relation]}
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })}
                   </div>
 
                   <div className="saved-card-actions">
