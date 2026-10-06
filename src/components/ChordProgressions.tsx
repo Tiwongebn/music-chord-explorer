@@ -10,6 +10,7 @@ import { chordTypes } from "../data/chords";
 import {
   buildScaleChords,
   getDisplayKeyRoot,
+  resolveChordSnapshot,
   type ScaleChord,
 } from "../utils/scaleHarmony";
 import {
@@ -22,6 +23,7 @@ import {
   deleteProgression,
   loadSavedProgressions,
   saveProgression,
+  type ProgressionChord,
   type SavedProgression,
 } from "../utils/savedProgressions";
 
@@ -63,17 +65,23 @@ function ChordProgressions({
   // simplest view). Any other value is an index into
   // chordTypes — the whole key gets voiced with that one
   // chord type, exactly like Explore's chord-type dropdown.
+  // This only affects how the diatonic row above is VOICED
+  // for browsing — it has no bearing on chords already
+  // sitting in the builder below (see ProgressionChord).
   const [chordTypeIndex, setChordTypeIndex] =
     useState<number>(-1);
 
   const [highlightedDegree, setHighlightedDegree] =
     useState<number | null>(null);
 
-  // The progression the user is currently composing by
-  // clicking chords — a plain list of scale degrees (1-7),
-  // played/saved in order, duplicates and repeats allowed.
-  const [customDegrees, setCustomDegrees] = useState<
-    number[]
+  // The progression the user is composing: a plain list of
+  // frozen chord snapshots (root note + chord-type index).
+  // Each entry is fully independent of the key/scale/chord
+  // type controls above — adding a chord here "locks it in"
+  // so later changing the key, scale, or chord-type dropdown
+  // never rewrites a chord the user already placed here.
+  const [builderChords, setBuilderChords] = useState<
+    ProgressionChord[]
   >([]);
 
   const [progressionName, setProgressionName] =
@@ -119,6 +127,18 @@ function ChordProgressions({
   const chordByDegree = (degree: number): ScaleChord =>
     scaleChords[degree - 1];
 
+  // Resolves a frozen builder/saved-progression chord
+  // snapshot to its current display label + notes under the
+  // live sharps/flats preference (spelling can still follow
+  // that shared toggle — only the key/scale/chord-type no
+  // longer matters once a chord is a snapshot).
+  const resolveSnapshot = (chord: ProgressionChord) =>
+    resolveChordSnapshot(
+      chord.rootNote,
+      chord.chordTypeIndex,
+      accidentalPreference
+    );
+
   const followUps = highlightedDegree
     ? progressionMap[scaleType][highlightedDegree] ?? []
     : [];
@@ -127,9 +147,17 @@ function ChordProgressions({
     playNotes(chord.rawNotes.map((note) => `${note}4`));
   };
 
-  const handlePlayProgression = (
-    degrees: number[]
+  const handlePlaySnapshotList = (
+    chords: ProgressionChord[]
   ) => {
+    const chordGroups = chords.map(
+      (chord) => resolveSnapshot(chord).rawNotes
+    );
+
+    playProgression(chordGroups);
+  };
+
+  const handlePlayTemplate = (degrees: number[]) => {
     const chordGroups = degrees.map(
       (degree) => chordByDegree(degree).rawNotes
     );
@@ -144,21 +172,49 @@ function ChordProgressions({
     handlePlayChord(chord);
   };
 
-  const handleAddToCustom = (degree: number) => {
-    setCustomDegrees((current) => [...current, degree]);
+  // Adds a frozen snapshot of the clicked diatonic chord to
+  // the builder — its own root note + the chord-type index it
+  // is currently voiced with. From this point on it no longer
+  // cares what the key/scale/chord-type controls do.
+  const handleAddToBuilder = (chord: ScaleChord) => {
+    setBuilderChords((current) => [
+      ...current,
+      {
+        rootNote: chord.rawRootNote,
+        chordTypeIndex: chord.chordTypeIndex,
+      },
+    ]);
   };
 
-  const handleRemoveFromCustom = (index: number) => {
-    setCustomDegrees((current) =>
+  // Adds a frozen snapshot of a preset template's chord
+  // (looked up against the scale currently shown) to the
+  // builder, same independence guarantee as above.
+  const handleAddTemplateToBuilder = (
+    degrees: number[]
+  ) => {
+    setBuilderChords((current) => [
+      ...current,
+      ...degrees.map((degree) => {
+        const chord = chordByDegree(degree);
+        return {
+          rootNote: chord.rawRootNote,
+          chordTypeIndex: chord.chordTypeIndex,
+        };
+      }),
+    ]);
+  };
+
+  const handleRemoveFromBuilder = (index: number) => {
+    setBuilderChords((current) =>
       current.filter((_, i) => i !== index)
     );
   };
 
-  const handleMoveCustom = (
+  const handleMoveBuilderChord = (
     index: number,
     direction: -1 | 1
   ) => {
-    setCustomDegrees((current) => {
+    setBuilderChords((current) => {
       const target = index + direction;
 
       if (target < 0 || target >= current.length) {
@@ -174,23 +230,20 @@ function ChordProgressions({
     });
   };
 
-  const handleClearCustom = () => {
-    setCustomDegrees([]);
+  const handleClearBuilder = () => {
+    setBuilderChords([]);
   };
 
-  const handleSaveCustom = () => {
+  const handleSaveBuilder = () => {
     const name = progressionName.trim();
 
-    if (!name || customDegrees.length === 0) {
+    if (!name || builderChords.length === 0) {
       return;
     }
 
     const next = saveProgression({
       name,
-      rootNote,
-      scaleType,
-      chordTypeIndex,
-      degrees: customDegrees,
+      chords: builderChords,
     });
 
     setSavedProgressions(next);
@@ -202,44 +255,8 @@ function ChordProgressions({
   };
 
   const handleLoadSaved = (saved: SavedProgression) => {
-    onRootChange(saved.rootNote);
-    setScaleType(saved.scaleType);
-    setChordTypeIndex(saved.chordTypeIndex);
-    setCustomDegrees(saved.degrees);
-    setHighlightedDegree(null);
+    setBuilderChords(saved.chords);
   };
-
-  const handlePlaySaved = (saved: SavedProgression) => {
-    // Rebuild the chord set for the saved progression's own
-    // key/scale/chord-type so it plays back correctly even
-    // if it differs from what's currently on screen.
-    const chords = buildScaleChords(
-      saved.rootNote,
-      saved.scaleType,
-      accidentalPreference,
-      saved.chordTypeIndex === -1
-        ? undefined
-        : chordTypes[saved.chordTypeIndex]
-    );
-
-    const chordGroups = saved.degrees.map(
-      (degree) => chords[degree - 1].rawNotes
-    );
-
-    playProgression(chordGroups);
-  };
-
-  const buildChordsForSaved = (
-    saved: SavedProgression
-  ): ScaleChord[] =>
-    buildScaleChords(
-      saved.rootNote,
-      saved.scaleType,
-      accidentalPreference,
-      saved.chordTypeIndex === -1
-        ? undefined
-        : chordTypes[saved.chordTypeIndex]
-    );
 
   return (
     <section className="panel progressions-panel">
@@ -482,9 +499,7 @@ function ChordProgressions({
                 type="button"
                 className="degree-add-btn"
                 title={`Add ${chord.chordLabel} to your progression`}
-                onClick={() =>
-                  handleAddToCustom(chord.degree)
-                }
+                onClick={() => handleAddToBuilder(chord)}
               >
                 + Add to builder
               </button>
@@ -564,7 +579,7 @@ function ChordProgressions({
                       type="button"
                       className="play-chord template-play"
                       onClick={() =>
-                        handlePlayProgression(
+                        handlePlayTemplate(
                           template.degrees
                         )
                       }
@@ -575,14 +590,14 @@ function ChordProgressions({
                     <button
                       type="button"
                       className="template-use"
-                      title="Load into the progression builder"
+                      title="Add these chords to the progression builder"
                       onClick={() =>
-                        setCustomDegrees(
+                        handleAddTemplateToBuilder(
                           template.degrees
                         )
                       }
                     >
-                      Use this
+                      + Add to builder
                     </button>
                   </div>
                 </div>
@@ -617,75 +632,78 @@ function ChordProgressions({
           <p className="builder-section-hint">
             Click <strong>+ Add to builder</strong> on any
             chord above (as many times, in any order, as
-            you like), reorder or remove chords below, then
-            play it back or save it for later.
+            you like) — each one is locked in as-is, so
+            changing the key, scale, or chord type above
+            afterward won't alter chords already here.
+            Reorder or remove chords below, then play the
+            sequence back or save it for later.
           </p>
         </div>
 
-        {customDegrees.length === 0 ? (
+        {builderChords.length === 0 ? (
           <p className="hint builder-empty">
             Your progression is empty — add a chord from
             the row above to get started.
           </p>
         ) : (
           <ol className="builder-slot-row">
-            {customDegrees.map((degree, index) => (
-              <li
-                className="builder-slot"
-                key={`${degree}-${index}`}
-              >
-                <span className="builder-slot-index">
-                  {index + 1}
-                </span>
+            {builderChords.map((chord, index) => {
+              const resolved = resolveSnapshot(chord);
 
-                <span className="builder-slot-chord">
-                  {chordByDegree(degree).chordLabel}
-                </span>
+              return (
+                <li
+                  className="builder-slot"
+                  key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
+                >
+                  <span className="builder-slot-index">
+                    {index + 1}
+                  </span>
 
-                <span className="builder-slot-roman">
-                  {chordByDegree(degree).roman}
-                </span>
+                  <span className="builder-slot-chord">
+                    {resolved.chordLabel}
+                  </span>
 
-                <div className="builder-slot-actions">
-                  <button
-                    type="button"
-                    className="slot-btn"
-                    aria-label="Move left"
-                    disabled={index === 0}
-                    onClick={() =>
-                      handleMoveCustom(index, -1)
-                    }
-                  >
-                    ←
-                  </button>
+                  <div className="builder-slot-actions">
+                    <button
+                      type="button"
+                      className="slot-btn"
+                      aria-label="Move left"
+                      disabled={index === 0}
+                      onClick={() =>
+                        handleMoveBuilderChord(index, -1)
+                      }
+                    >
+                      ←
+                    </button>
 
-                  <button
-                    type="button"
-                    className="slot-btn"
-                    aria-label="Move right"
-                    disabled={
-                      index === customDegrees.length - 1
-                    }
-                    onClick={() =>
-                      handleMoveCustom(index, 1)
-                    }
-                  >
-                    →
-                  </button>
+                    <button
+                      type="button"
+                      className="slot-btn"
+                      aria-label="Move right"
+                      disabled={
+                        index === builderChords.length - 1
+                      }
+                      onClick={() =>
+                        handleMoveBuilderChord(index, 1)
+                      }
+                    >
+                      →
+                    </button>
 
-                  <button
-                    type="button"
-                    className="slot-btn slot-remove"
-                    aria-label="Remove chord"
-                    onClick={() =>
-                      handleRemoveFromCustom(index)
-                    }
-                  >
-                    ×
-                  </button>
-                </div>
-              </li>
-            ))}
+                    <button
+                      type="button"
+                      className="slot-btn slot-remove"
+                      aria-label="Remove chord"
+                      onClick={() =>
+                        handleRemoveFromBuilder(index)
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         )}
 
@@ -693,9 +711,9 @@ function ChordProgressions({
           <button
             type="button"
             className="play-chord"
-            disabled={customDegrees.length === 0}
+            disabled={builderChords.length === 0}
             onClick={() =>
-              handlePlayProgression(customDegrees)
+              handlePlaySnapshotList(builderChords)
             }
           >
             ▶ Play progression
@@ -704,8 +722,8 @@ function ChordProgressions({
           <button
             type="button"
             className="clear-selection"
-            disabled={customDegrees.length === 0}
-            onClick={handleClearCustom}
+            disabled={builderChords.length === 0}
+            onClick={handleClearBuilder}
           >
             Clear
           </button>
@@ -726,10 +744,10 @@ function ChordProgressions({
             type="button"
             className="use-detected-chord"
             disabled={
-              customDegrees.length === 0 ||
+              builderChords.length === 0 ||
               !progressionName.trim()
             }
-            onClick={handleSaveCustom}
+            onClick={handleSaveBuilder}
           >
             💾 Save
           </button>
@@ -740,11 +758,7 @@ function ChordProgressions({
             <h4>Your saved progressions</h4>
 
             <div className="saved-list">
-              {savedProgressions.map((saved) => {
-                const savedChords =
-                  buildChordsForSaved(saved);
-
-                return (
+              {savedProgressions.map((saved) => (
                 <div
                   className="saved-card"
                   key={saved.id}
@@ -753,27 +767,21 @@ function ChordProgressions({
                     <strong>{saved.name}</strong>
 
                     <span className="saved-card-key">
-                      {getDisplayKeyRoot(
-                        saved.rootNote,
-                        accidentalPreference
-                      )}{" "}
-                      {saved.scaleType} ·{" "}
-                      {saved.chordTypeIndex === -1
-                        ? "natural triads"
-                        : chordTypes[
-                            saved.chordTypeIndex
-                          ].name}
+                      {saved.chords.length} chord
+                      {saved.chords.length === 1
+                        ? ""
+                        : "s"}
                     </span>
                   </div>
 
                   <div className="template-chip-row">
-                    {saved.degrees.map((degree, index) => (
+                    {saved.chords.map((chord, index) => (
                       <span
                         className="template-chip"
-                        key={`${degree}-${index}`}
+                        key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
                       >
                         {
-                          savedChords[degree - 1]
+                          resolveSnapshot(chord)
                             .chordLabel
                         }
                       </span>
@@ -785,7 +793,9 @@ function ChordProgressions({
                       type="button"
                       className="play-chord template-play"
                       onClick={() =>
-                        handlePlaySaved(saved)
+                        handlePlaySnapshotList(
+                          saved.chords
+                        )
                       }
                     >
                       ▶ Play
@@ -812,8 +822,7 @@ function ChordProgressions({
                     </button>
                   </div>
                 </div>
-                );
-              })}
+              ))}
             </div>
           </div>
         )}
