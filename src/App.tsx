@@ -369,6 +369,9 @@ function App() {
           rootNote={rootNote}
           accidentalPreference={accidentalPreference}
           onRootChange={setRootNote}
+          onAccidentalPreferenceChange={
+            handleAccidentalPreferenceChange
+          }
         />
       )}
 

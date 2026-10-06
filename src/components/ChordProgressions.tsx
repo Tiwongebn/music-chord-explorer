@@ -6,6 +6,7 @@ import {
   progressionMap,
   type ScaleType,
 } from "../data/scales";
+import { chordTypes } from "../data/chords";
 import {
   buildScaleChords,
   getDisplayKeyRoot,
@@ -21,7 +22,6 @@ import {
   deleteProgression,
   loadSavedProgressions,
   saveProgression,
-  type ChordVoicing,
   type SavedProgression,
 } from "../utils/savedProgressions";
 
@@ -29,6 +29,9 @@ interface ChordProgressionsProps {
   rootNote: string;
   accidentalPreference: AccidentalPreference;
   onRootChange: (note: string) => void;
+  onAccidentalPreferenceChange: (
+    preference: AccidentalPreference
+  ) => void;
 }
 
 const functionClass: Record<string, string> = {
@@ -37,16 +40,31 @@ const functionClass: Record<string, string> = {
   Dominant: "fn-dominant",
 };
 
+const chordCategories = [
+  "Triads",
+  "Suspended",
+  "Sixth Chords",
+  "Seventh Chords",
+  "Extended Chords",
+  "Altered Chords",
+  "Added Tone Chords",
+];
+
 function ChordProgressions({
   rootNote,
   accidentalPreference,
   onRootChange,
+  onAccidentalPreferenceChange,
 }: ChordProgressionsProps) {
   const [scaleType, setScaleType] =
     useState<ScaleType>("major");
 
-  const [voicing, setVoicing] =
-    useState<ChordVoicing>("triads");
+  // -1 means "use each degree's natural triad" (the default,
+  // simplest view). Any other value is an index into
+  // chordTypes — the whole key gets voiced with that one
+  // chord type, exactly like Explore's chord-type dropdown.
+  const [chordTypeIndex, setChordTypeIndex] =
+    useState<number>(-1);
 
   const [highlightedDegree, setHighlightedDegree] =
     useState<number | null>(null);
@@ -72,52 +90,48 @@ function ChordProgressions({
     accidentalPreference
   );
 
+  const selectedChordType =
+    chordTypeIndex === -1
+      ? undefined
+      : chordTypes[chordTypeIndex];
+
   const scaleChords = useMemo(
     () =>
       buildScaleChords(
         rootNote,
         scaleType,
-        accidentalPreference
+        accidentalPreference,
+        selectedChordType
       ),
-    [rootNote, scaleType, accidentalPreference]
+    [
+      rootNote,
+      scaleType,
+      accidentalPreference,
+      selectedChordType,
+    ]
   );
 
   const displayKeyRoot = getDisplayKeyRoot(
     rootNote,
-    scaleType
+    accidentalPreference
   );
 
   const chordByDegree = (degree: number): ScaleChord =>
     scaleChords[degree - 1];
-
-  const labelFor = (chord: ScaleChord): string =>
-    voicing === "sevenths"
-      ? chord.seventhChordLabel
-      : chord.chordLabel;
-
-  const notesFor = (chord: ScaleChord): string[] =>
-    voicing === "sevenths" ? chord.seventhNotes : chord.notes;
-
-  const rawNotesFor = (chord: ScaleChord): string[] =>
-    voicing === "sevenths"
-      ? chord.seventhRawNotes
-      : chord.rawNotes;
 
   const followUps = highlightedDegree
     ? progressionMap[scaleType][highlightedDegree] ?? []
     : [];
 
   const handlePlayChord = (chord: ScaleChord) => {
-    playNotes(
-      rawNotesFor(chord).map((note) => `${note}4`)
-    );
+    playNotes(chord.rawNotes.map((note) => `${note}4`));
   };
 
   const handlePlayProgression = (
     degrees: number[]
   ) => {
-    const chordGroups = degrees.map((degree) =>
-      rawNotesFor(chordByDegree(degree))
+    const chordGroups = degrees.map(
+      (degree) => chordByDegree(degree).rawNotes
     );
 
     playProgression(chordGroups);
@@ -140,6 +154,26 @@ function ChordProgressions({
     );
   };
 
+  const handleMoveCustom = (
+    index: number,
+    direction: -1 | 1
+  ) => {
+    setCustomDegrees((current) => {
+      const target = index + direction;
+
+      if (target < 0 || target >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      [next[index], next[target]] = [
+        next[target],
+        next[index],
+      ];
+      return next;
+    });
+  };
+
   const handleClearCustom = () => {
     setCustomDegrees([]);
   };
@@ -155,7 +189,7 @@ function ChordProgressions({
       name,
       rootNote,
       scaleType,
-      voicing,
+      chordTypeIndex,
       degrees: customDegrees,
     });
 
@@ -170,30 +204,42 @@ function ChordProgressions({
   const handleLoadSaved = (saved: SavedProgression) => {
     onRootChange(saved.rootNote);
     setScaleType(saved.scaleType);
-    setVoicing(saved.voicing);
+    setChordTypeIndex(saved.chordTypeIndex);
     setCustomDegrees(saved.degrees);
     setHighlightedDegree(null);
   };
 
   const handlePlaySaved = (saved: SavedProgression) => {
     // Rebuild the chord set for the saved progression's own
-    // key/scale/voicing so it plays back correctly even if
-    // it differs from what's currently on screen.
+    // key/scale/chord-type so it plays back correctly even
+    // if it differs from what's currently on screen.
     const chords = buildScaleChords(
       saved.rootNote,
       saved.scaleType,
-      accidentalPreference
+      accidentalPreference,
+      saved.chordTypeIndex === -1
+        ? undefined
+        : chordTypes[saved.chordTypeIndex]
     );
 
-    const chordGroups = saved.degrees.map((degree) => {
-      const chord = chords[degree - 1];
-      return saved.voicing === "sevenths"
-        ? chord.seventhRawNotes
-        : chord.rawNotes;
-    });
+    const chordGroups = saved.degrees.map(
+      (degree) => chords[degree - 1].rawNotes
+    );
 
     playProgression(chordGroups);
   };
+
+  const buildChordsForSaved = (
+    saved: SavedProgression
+  ): ScaleChord[] =>
+    buildScaleChords(
+      saved.rootNote,
+      saved.scaleType,
+      accidentalPreference,
+      saved.chordTypeIndex === -1
+        ? undefined
+        : chordTypes[saved.chordTypeIndex]
+    );
 
   return (
     <section className="panel progressions-panel">
@@ -207,7 +253,7 @@ function ChordProgressions({
         </p>
       </div>
 
-      {/* KEY + SCALE + VOICING PICKER */}
+      {/* KEY + SCALE + CHORD TYPE + SPELLING PICKER */}
       <div className="prog-controls">
         <div className="selector-group root-group">
           <span
@@ -285,40 +331,97 @@ function ChordProgressions({
         </div>
 
         <div className="selector-group">
-          <span
+          <label
             className="selector-label"
-            id="prog-voicing-label"
+            htmlFor="prog-chord-type"
           >
             Chord type
+          </label>
+
+          <select
+            id="prog-chord-type"
+            value={chordTypeIndex}
+            onChange={(event) =>
+              setChordTypeIndex(
+                Number(event.target.value)
+              )
+            }
+          >
+            <option value={-1}>
+              Natural triad (default)
+            </option>
+
+            {chordCategories.map((category) => {
+              const categoryChords = chordTypes
+                .map((chord, index) => ({
+                  chord,
+                  index,
+                }))
+                .filter(
+                  ({ chord }) =>
+                    chord.category === category
+                );
+
+              return (
+                <optgroup
+                  key={category}
+                  label={category}
+                >
+                  {categoryChords.map(
+                    ({ chord, index }) => (
+                      <option
+                        key={chord.name}
+                        value={index}
+                      >
+                        {chord.name}
+                      </option>
+                    )
+                  )}
+                </optgroup>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="selector-group">
+          <span
+            className="selector-label"
+            id="prog-notation-label"
+          >
+            Spelling
           </span>
 
           <div
             className="segmented"
             role="group"
-            aria-labelledby="prog-voicing-label"
+            aria-labelledby="prog-notation-label"
           >
             <button
               type="button"
               className={
-                voicing === "triads"
+                accidentalPreference === "sharps"
                   ? "seg active"
                   : "seg"
               }
-              onClick={() => setVoicing("triads")}
+              onClick={() =>
+                onAccidentalPreferenceChange("sharps")
+              }
             >
-              Triads
+              ♯ Sharps
             </button>
 
             <button
               type="button"
               className={
-                voicing === "sevenths"
+                accidentalPreference === "flats"
                   ? "seg active"
                   : "seg"
               }
-              onClick={() => setVoicing("sevenths")}
+              onClick={() =>
+                onAccidentalPreferenceChange("flats")
+              }
             >
-              7th Chords
+              ♭ Flats
             </button>
           </div>
         </div>
@@ -326,6 +429,11 @@ function ChordProgressions({
 
       <p className="prog-key-label">
         Key of <strong>{displayKeyRoot} {scaleType}</strong>
+        {selectedChordType && (
+          <>
+            {" "}· voiced as <strong>{selectedChordType.name}</strong>
+          </>
+        )}
       </p>
 
       {/* DIATONIC CHORD ROW */}
@@ -354,17 +462,15 @@ function ChordProgressions({
                 onClick={() => handleDegreeClick(chord)}
               >
                 <span className="degree-roman">
-                  {voicing === "sevenths"
-                    ? chord.seventhRoman
-                    : chord.roman}
+                  {chord.roman}
                 </span>
 
                 <span className="degree-chord-name">
-                  {labelFor(chord)}
+                  {chord.chordLabel}
                 </span>
 
                 <span className="degree-notes">
-                  {notesFor(chord).join(" · ")}
+                  {chord.notes.join(" · ")}
                 </span>
 
                 <span className="degree-function">
@@ -375,12 +481,12 @@ function ChordProgressions({
               <button
                 type="button"
                 className="degree-add-btn"
-                title={`Add ${labelFor(chord)} to your progression`}
+                title={`Add ${chord.chordLabel} to your progression`}
                 onClick={() =>
                   handleAddToCustom(chord.degree)
                 }
               >
-                + Add
+                + Add to builder
               </button>
             </div>
           );
@@ -392,14 +498,14 @@ function ChordProgressions({
         {highlightedDegree ? (
           <p>
             <strong>
-              {labelFor(chordByDegree(highlightedDegree))}{" "}
+              {chordByDegree(highlightedDegree).chordLabel}{" "}
               ({chordByDegree(highlightedDegree).roman})
             </strong>{" "}
             flows naturally into{" "}
             {followUps.map((degree, index) => (
               <span key={degree}>
                 <strong>
-                  {labelFor(chordByDegree(degree))} (
+                  {chordByDegree(degree).chordLabel} (
                   {chordByDegree(degree).roman})
                 </strong>
                 {index < followUps.length - 1
@@ -416,8 +522,9 @@ function ChordProgressions({
         ) : (
           <p>
             Tap a chord above to see which chords it
-            goes well with, or hit <strong>+ Add</strong>{" "}
-            to drop it into the progression builder below.
+            goes well with, or hit{" "}
+            <strong>+ Add to builder</strong> to drop it
+            into the progression builder below.
           </p>
         )}
       </div>
@@ -487,7 +594,7 @@ function ChordProgressions({
                         className="template-chip"
                         key={`${degree}-${index}`}
                       >
-                        {labelFor(chordByDegree(degree))}
+                        {chordByDegree(degree).chordLabel}
                       </span>
                     )
                   )}
@@ -503,42 +610,83 @@ function ChordProgressions({
       </div>
 
       {/* CUSTOM PROGRESSION BUILDER */}
-      <div className="builder-section">
-        <h3>Build your own progression</h3>
-
-        <p className="builder-section-hint">
-          Click <strong>+ Add</strong> on any chord above
-          (as many times, in any order you like) to build
-          a sequence, then play it back or save it.
-        </p>
+      <section className="panel builder-panel">
+        <div className="builder-panel-header">
+          <p className="eyebrow">YOUR SKETCHPAD</p>
+          <h3>Progression Builder</h3>
+          <p className="builder-section-hint">
+            Click <strong>+ Add to builder</strong> on any
+            chord above (as many times, in any order, as
+            you like), reorder or remove chords below, then
+            play it back or save it for later.
+          </p>
+        </div>
 
         {customDegrees.length === 0 ? (
-          <p className="hint">
-            Your progression is empty — add a chord to get
-            started.
+          <p className="hint builder-empty">
+            Your progression is empty — add a chord from
+            the row above to get started.
           </p>
         ) : (
-          <div className="custom-chip-row">
+          <ol className="builder-slot-row">
             {customDegrees.map((degree, index) => (
-              <span
-                className="template-chip custom-chip"
+              <li
+                className="builder-slot"
                 key={`${degree}-${index}`}
               >
-                {labelFor(chordByDegree(degree))}
+                <span className="builder-slot-index">
+                  {index + 1}
+                </span>
 
-                <button
-                  type="button"
-                  className="chip-remove"
-                  aria-label="Remove chord"
-                  onClick={() =>
-                    handleRemoveFromCustom(index)
-                  }
-                >
-                  ×
-                </button>
-              </span>
+                <span className="builder-slot-chord">
+                  {chordByDegree(degree).chordLabel}
+                </span>
+
+                <span className="builder-slot-roman">
+                  {chordByDegree(degree).roman}
+                </span>
+
+                <div className="builder-slot-actions">
+                  <button
+                    type="button"
+                    className="slot-btn"
+                    aria-label="Move left"
+                    disabled={index === 0}
+                    onClick={() =>
+                      handleMoveCustom(index, -1)
+                    }
+                  >
+                    ←
+                  </button>
+
+                  <button
+                    type="button"
+                    className="slot-btn"
+                    aria-label="Move right"
+                    disabled={
+                      index === customDegrees.length - 1
+                    }
+                    onClick={() =>
+                      handleMoveCustom(index, 1)
+                    }
+                  >
+                    →
+                  </button>
+
+                  <button
+                    type="button"
+                    className="slot-btn slot-remove"
+                    aria-label="Remove chord"
+                    onClick={() =>
+                      handleRemoveFromCustom(index)
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         )}
 
         <div className="builder-actions">
@@ -592,7 +740,11 @@ function ChordProgressions({
             <h4>Your saved progressions</h4>
 
             <div className="saved-list">
-              {savedProgressions.map((saved) => (
+              {savedProgressions.map((saved) => {
+                const savedChords =
+                  buildChordsForSaved(saved);
+
+                return (
                 <div
                   className="saved-card"
                   key={saved.id}
@@ -603,35 +755,29 @@ function ChordProgressions({
                     <span className="saved-card-key">
                       {getDisplayKeyRoot(
                         saved.rootNote,
-                        saved.scaleType
+                        accidentalPreference
                       )}{" "}
                       {saved.scaleType} ·{" "}
-                      {saved.voicing === "sevenths"
-                        ? "7th chords"
-                        : "triads"}
+                      {saved.chordTypeIndex === -1
+                        ? "natural triads"
+                        : chordTypes[
+                            saved.chordTypeIndex
+                          ].name}
                     </span>
                   </div>
 
                   <div className="template-chip-row">
-                    {saved.degrees.map((degree, index) => {
-                      const chords = buildScaleChords(
-                        saved.rootNote,
-                        saved.scaleType,
-                        accidentalPreference
-                      );
-                      const chord = chords[degree - 1];
-
-                      return (
-                        <span
-                          className="template-chip"
-                          key={`${degree}-${index}`}
-                        >
-                          {saved.voicing === "sevenths"
-                            ? chord.seventhChordLabel
-                            : chord.chordLabel}
-                        </span>
-                      );
-                    })}
+                    {saved.degrees.map((degree, index) => (
+                      <span
+                        className="template-chip"
+                        key={`${degree}-${index}`}
+                      >
+                        {
+                          savedChords[degree - 1]
+                            .chordLabel
+                        }
+                      </span>
+                    ))}
                   </div>
 
                   <div className="saved-card-actions">
@@ -666,11 +812,12 @@ function ChordProgressions({
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
-      </div>
+      </section>
     </section>
   );
 }
