@@ -11,6 +11,14 @@ import {
 } from "../data/scales";
 import { chordTypes } from "../data/chords";
 import {
+  beatOptions,
+  defaultTimeSignatureId,
+  getTimeSignature,
+  maxBeats,
+  minBeats,
+  timeSignatures,
+} from "../data/rhythm";
+import {
   buildScaleChords,
   classifyChordInKey,
   getDisplayKeyRoot,
@@ -26,10 +34,13 @@ import {
 import {
   playNotes,
   playProgression,
-  playProgressionLoop,
+  playTimedProgression,
+  playTimedProgressionLoop,
   type ProgressionLoopHandle,
+  type TimedChord,
 } from "../utils/audio";
 import {
+  DEFAULT_CHORD_BEATS,
   deleteProgression,
   loadSavedProgressions,
   saveProgression,
@@ -132,6 +143,24 @@ function ChordProgressions({
   // seconds-per-chord internally since that's what the audio
   // helpers expect; the UI shows it as a BPM-style value.
   const [chordSeconds, setChordSeconds] = useState(0.85);
+
+  // Time signature only affects how the builder visually
+  // groups its chord slots into bars (vertical divider
+  // lines) — it does not change playback timing, which comes
+  // purely from each chord's own beat count + chordSeconds
+  // below. See data/rhythm.ts for why 6/8 isn't special-cased.
+  const [timeSignatureId, setTimeSignatureId] = useState(
+    defaultTimeSignatureId
+  );
+
+  const timeSignature = getTimeSignature(timeSignatureId);
+
+  // chordSeconds above is actually "seconds per beat" now
+  // that chords can span more than one beat — kept the same
+  // variable/slider so the tempo control's range and feel are
+  // unchanged from before per-chord timing existed (where
+  // every chord was implicitly exactly 1 beat long).
+  const secondsPerBeat = chordSeconds;
 
   // Handle for the builder's currently-looping playback, if
   // any. Non-null exactly while the loop button shows "Stop".
@@ -274,16 +303,26 @@ function ChordProgressions({
     playNotes(chord.rawNotes.map((note) => `${note}4`));
   };
 
+  // Resolves a list of frozen chord snapshots to the
+  // TimedChord[] shape playTimedProgression()/
+  // playTimedProgressionLoop() expect, preserving each
+  // chord's own beat count.
+  const toTimedChords = (
+    chords: ProgressionChord[]
+  ): TimedChord[] =>
+    chords.map((chord) => ({
+      notes: resolveSnapshot(chord).rawNotes,
+      beats: chord.beats,
+    }));
+
   const handlePlaySnapshotList = (
     chords: ProgressionChord[]
   ) => {
     stopLoop();
-
-    const chordGroups = chords.map(
-      (chord) => resolveSnapshot(chord).rawNotes
+    playTimedProgression(
+      toTimedChords(chords),
+      secondsPerBeat
     );
-
-    playProgression(chordGroups, chordSeconds);
   };
 
   const handlePlayTemplate = (degrees: number[]) => {
@@ -305,12 +344,11 @@ function ChordProgressions({
       return;
     }
 
-    const chordGroups = builderChords.map(
-      (chord) => resolveSnapshot(chord).rawNotes
-    );
-
     setLoopHandle(
-      playProgressionLoop(chordGroups, chordSeconds)
+      playTimedProgressionLoop(
+        toTimedChords(builderChords),
+        secondsPerBeat
+      )
     );
   };
 
@@ -329,6 +367,7 @@ function ChordProgressions({
         return {
           rootNote: chord.rawRootNote,
           chordTypeIndex: chord.chordTypeIndex,
+          beats: DEFAULT_CHORD_BEATS,
         };
       })
     );
@@ -353,6 +392,7 @@ function ChordProgressions({
       {
         rootNote: chord.rawRootNote,
         chordTypeIndex: chord.chordTypeIndex,
+        beats: DEFAULT_CHORD_BEATS,
       },
     ]);
   };
@@ -372,9 +412,30 @@ function ChordProgressions({
         return {
           rootNote: chord.rawRootNote,
           chordTypeIndex: chord.chordTypeIndex,
+          beats: DEFAULT_CHORD_BEATS,
         };
       }),
     ]);
+  };
+
+  // Changes how many beats a single builder chord holds for,
+  // clamped to the selectable beatOptions range.
+  const handleSetChordBeats = (
+    index: number,
+    beats: number
+  ) => {
+    stopLoop();
+
+    const clamped = Math.min(
+      Math.max(beats, minBeats),
+      maxBeats
+    );
+
+    setBuilderChords((current) =>
+      current.map((chord, i) =>
+        i === index ? { ...chord, beats: clamped } : chord
+      )
+    );
   };
 
   const handleRemoveFromBuilder = (index: number) => {
@@ -422,6 +483,7 @@ function ChordProgressions({
     const next = saveProgression({
       name,
       chords: builderChords,
+      timeSignatureId,
     });
 
     setSavedProgressions(next);
@@ -435,6 +497,7 @@ function ChordProgressions({
   const handleLoadSaved = (saved: SavedProgression) => {
     stopLoop();
     setBuilderChords(saved.chords);
+    setTimeSignatureId(saved.timeSignatureId);
   };
 
   return (
@@ -717,6 +780,29 @@ function ChordProgressions({
               {Math.round(60 / chordSeconds)} BPM
             </span>
           </div>
+        </div>
+
+        <div className="selector-group">
+          <label
+            className="selector-label"
+            htmlFor="prog-time-signature"
+          >
+            Time signature
+          </label>
+
+          <select
+            id="prog-time-signature"
+            value={timeSignatureId}
+            onChange={(event) =>
+              setTimeSignatureId(event.target.value)
+            }
+          >
+            {timeSignatures.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -1003,75 +1089,165 @@ function ChordProgressions({
             the row above to get started.
           </p>
         ) : (
-          <ol className="builder-slot-row">
-            {builderChords.map((chord, index) => {
-              const resolved = resolveSnapshot(chord);
-              const relation = relationFor(chord);
+          <>
+            <ol className="builder-slot-row">
+              {(() => {
+                // Tracks beats-so-far to know when a bar
+                // boundary falls right after a slot, so a
+                // divider line can be rendered there.
+                let beatsSoFar = 0;
 
-              return (
-                <li
-                  className="builder-slot"
-                  key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
-                >
-                  <span className="builder-slot-index">
-                    {index + 1}
-                  </span>
+                return builderChords.map((chord, index) => {
+                  const resolved = resolveSnapshot(chord);
+                  const relation = relationFor(chord);
 
-                  <span className="builder-slot-chord">
-                    {resolved.chordLabel}
-                  </span>
+                  beatsSoFar += chord.beats;
 
-                  {relation !== "diatonic" && (
-                    <span
-                      className={`relation-chip ${relationClass[relation]}`}
-                      title={`This chord doesn't match the ${displayKeyRoot} ${scaleType} key currently shown.`}
-                    >
-                      {relationLabel[relation]}
-                    </span>
-                  )}
+                  const isLast =
+                    index === builderChords.length - 1;
+                  const endsBar =
+                    !isLast &&
+                    beatsSoFar %
+                      timeSignature.beatsPerBar ===
+                      0;
 
-                  <div className="builder-slot-actions">
-                    <button
-                      type="button"
-                      className="slot-btn"
-                      aria-label="Move left"
-                      disabled={index === 0}
-                      onClick={() =>
-                        handleMoveBuilderChord(index, -1)
+                  return (
+                    <li
+                      className={
+                        endsBar
+                          ? "builder-slot bar-end"
+                          : "builder-slot"
                       }
+                      key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
                     >
-                      ←
-                    </button>
+                      <span className="builder-slot-index">
+                        {index + 1}
+                      </span>
 
-                    <button
-                      type="button"
-                      className="slot-btn"
-                      aria-label="Move right"
-                      disabled={
-                        index === builderChords.length - 1
-                      }
-                      onClick={() =>
-                        handleMoveBuilderChord(index, 1)
-                      }
-                    >
-                      →
-                    </button>
+                      <span className="builder-slot-chord">
+                        {resolved.chordLabel}
+                      </span>
 
-                    <button
-                      type="button"
-                      className="slot-btn slot-remove"
-                      aria-label="Remove chord"
-                      onClick={() =>
-                        handleRemoveFromBuilder(index)
-                      }
-                    >
-                      ×
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+                      {relation !== "diatonic" && (
+                        <span
+                          className={`relation-chip ${relationClass[relation]}`}
+                          title={`This chord doesn't match the ${displayKeyRoot} ${scaleType} key currently shown.`}
+                        >
+                          {relationLabel[relation]}
+                        </span>
+                      )}
+
+                      <div className="beats-stepper">
+                        <button
+                          type="button"
+                          className="slot-btn"
+                          aria-label="Fewer beats"
+                          disabled={chord.beats <= minBeats}
+                          onClick={() =>
+                            handleSetChordBeats(
+                              index,
+                              beatOptions[
+                                Math.max(
+                                  beatOptions.indexOf(
+                                    chord.beats
+                                  ) - 1,
+                                  0
+                                )
+                              ]
+                            )
+                          }
+                        >
+                          −
+                        </button>
+
+                        <span className="beats-value">
+                          {chord.beats}{" "}
+                          {chord.beats === 1
+                            ? "beat"
+                            : "beats"}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="slot-btn"
+                          aria-label="More beats"
+                          disabled={chord.beats >= maxBeats}
+                          onClick={() =>
+                            handleSetChordBeats(
+                              index,
+                              beatOptions[
+                                Math.min(
+                                  beatOptions.indexOf(
+                                    chord.beats
+                                  ) + 1,
+                                  beatOptions.length - 1
+                                )
+                              ]
+                            )
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="builder-slot-actions">
+                        <button
+                          type="button"
+                          className="slot-btn"
+                          aria-label="Move left"
+                          disabled={index === 0}
+                          onClick={() =>
+                            handleMoveBuilderChord(
+                              index,
+                              -1
+                            )
+                          }
+                        >
+                          ←
+                        </button>
+
+                        <button
+                          type="button"
+                          className="slot-btn"
+                          aria-label="Move right"
+                          disabled={isLast}
+                          onClick={() =>
+                            handleMoveBuilderChord(
+                              index,
+                              1
+                            )
+                          }
+                        >
+                          →
+                        </button>
+
+                        <button
+                          type="button"
+                          className="slot-btn slot-remove"
+                          aria-label="Remove chord"
+                          onClick={() =>
+                            handleRemoveFromBuilder(index)
+                          }
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </li>
+                  );
+                });
+              })()}
+            </ol>
+
+            <p className="builder-bar-hint">
+              {timeSignature.label} ·{" "}
+              {builderChords.reduce(
+                (sum, chord) => sum + chord.beats,
+                0
+              )}{" "}
+              beats total · bar lines shown every{" "}
+              {timeSignature.beatsPerBar} beats
+            </p>
+          </>
         )}
 
         <div className="builder-actions">
@@ -1167,6 +1343,12 @@ function ChordProgressions({
                             resolveSnapshot(chord)
                               .chordLabel
                           }
+                          {chord.beats !==
+                            DEFAULT_CHORD_BEATS && (
+                            <span className="beats-chip">
+                              {chord.beats}♩
+                            </span>
+                          )}
                           {relation !== "diatonic" && (
                             <span
                               className={`relation-chip ${relationClass[relation]}`}
@@ -1179,6 +1361,14 @@ function ChordProgressions({
                       );
                     })}
                   </div>
+
+                  <p className="saved-card-time-signature">
+                    {
+                      getTimeSignature(
+                        saved.timeSignatureId
+                      ).label
+                    }
+                  </p>
 
                   <div className="saved-card-actions">
                     <button

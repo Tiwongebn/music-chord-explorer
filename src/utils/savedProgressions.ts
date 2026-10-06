@@ -15,6 +15,16 @@
 // exactly that chord no matter what else changes.
 // ============================================================
 
+import { defaultTimeSignatureId } from "../data/rhythm";
+
+// How long a chord holds, in beats, before the next one
+// starts. 1 beat at this app's default ~70 BPM works out to
+// roughly the same ~0.85s a chord used to always last before
+// per-chord timing existed, so progressions saved by an
+// earlier version — which implicitly had no concept of beats
+// — sound the same once normalized to this default on load.
+export const DEFAULT_CHORD_BEATS = 1;
+
 export interface ProgressionChord {
   // Raw (ASCII #/b) root note, e.g. "C", "A#". Spelling for
   // display still follows the shared sharps/flats preference
@@ -22,12 +32,20 @@ export interface ProgressionChord {
   rootNote: string;
   // Index into chordTypes (src/data/chords.ts).
   chordTypeIndex: number;
+  // How many beats this chord holds for before the next one
+  // starts. See rhythm.ts for the selectable range.
+  beats: number;
 }
 
 export interface SavedProgression {
   id: string;
   name: string;
   chords: ProgressionChord[];
+  // One of rhythm.ts's timeSignatures ids (e.g. "4-4"). Only
+  // affects how the builder visually groups chords into bars
+  // — it doesn't change playback timing, which is driven
+  // purely by each chord's own beat count + the shared BPM.
+  timeSignatureId: string;
   createdAt: number;
 }
 
@@ -61,10 +79,24 @@ export function loadSavedProgressions(): SavedProgression[] {
     // no way to losslessly recover those (we'd need to know
     // what key/scale was active), so they're dropped rather
     // than risk showing wrong/crashing chords.
-    return parsed.filter(
-      (item): item is SavedProgression =>
-        Array.isArray(item?.chords)
-    );
+    return parsed
+      .filter(
+        (item): item is SavedProgression =>
+          Array.isArray(item?.chords)
+      )
+      .map((progression) => ({
+        ...progression,
+        // Entries saved before per-chord timing existed have
+        // no beats/timeSignatureId — normalize them here so
+        // the rest of the app never has to special-case it.
+        timeSignatureId:
+          progression.timeSignatureId ??
+          defaultTimeSignatureId,
+        chords: progression.chords.map((chord) => ({
+          ...chord,
+          beats: chord.beats ?? DEFAULT_CHORD_BEATS,
+        })),
+      }));
   } catch {
     // Corrupt or inaccessible storage — fail soft, never
     // crash the Progressions tab over a parsing error.
