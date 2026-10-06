@@ -199,10 +199,17 @@ export function playNotes(
   });
 }
 
-// Play a sequence of chords back-to-back, one every
-// `chordSeconds`. `chords` is a list of pitch-class groups
-// (no octave, e.g. [["C","E","G"], ["F","A","C"]]) — an
-// octave number is appended automatically.
+// Play a sequence of equal-length chords back-to-back, one
+// every `chordSeconds`. `chords` is a list of pitch-class
+// groups (no octave, e.g. [["C","E","G"], ["F","A","C"]]) —
+// an octave number is appended automatically.
+//
+// This is the simple, uniform-timing sibling of
+// playTimedProgression() below — kept around because several
+// call sites (single-chord previews that happen to reuse this
+// path, tests, etc.) don't need per-chord beat lengths and
+// shouldn't have to construct a beats array just to play a
+// flat sequence.
 export function playProgression(
   chords: string[][],
   chordSeconds = 0.85
@@ -217,6 +224,41 @@ export function playProgression(
       });
     });
   });
+}
+
+export interface TimedChord {
+  notes: string[]; // pitch classes, no octave, e.g. ["C","E","G"]
+  beats: number; // how many beats this chord holds for
+}
+
+// Play a sequence of chords back-to-back where each chord can
+// hold for a different number of beats (see TimedChord) at a
+// shared tempo. `secondsPerBeat` is typically 60 / bpm. This
+// is what the progression builder uses once chords carry
+// their own beat counts; playProgression() above remains for
+// simpler, uniform-timing cases.
+export function playTimedProgression(
+  chords: TimedChord[],
+  secondsPerBeat: number
+): void {
+  let elapsed = 0;
+
+  for (const chord of chords) {
+    const duration = chord.beats * secondsPerBeat;
+    const when = elapsed;
+
+    chord.notes.forEach((note) => {
+      playNote(`${note}4`, {
+        when,
+        // Slightly short of the full duration so back-to-back
+        // chords don't bleed into each other at fast tempos,
+        // matching playProgression()'s 0.95 ratio above.
+        duration: duration * 0.95,
+      });
+    });
+
+    elapsed += duration;
+  }
 }
 
 export interface ProgressionLoopHandle {
@@ -247,6 +289,51 @@ export function playProgressionLoop(
     }
 
     playProgression(chords, chordSeconds);
+    timeoutId = setTimeout(cycle, cycleMs);
+  }
+
+  if (chords.length > 0) {
+    cycle();
+  }
+
+  return {
+    stop(): void {
+      stopped = true;
+
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    },
+  };
+}
+
+// Loop variant of playTimedProgression() — same per-chord
+// beat-length support, repeated until stop() is called. See
+// playProgressionLoop() above for the scheduling approach
+// (plain setTimeout chain) and its tradeoffs.
+export function playTimedProgressionLoop(
+  chords: TimedChord[],
+  secondsPerBeat: number
+): ProgressionLoopHandle {
+  let stopped = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const totalBeats = chords.reduce(
+    (sum, chord) => sum + chord.beats,
+    0
+  );
+  const cycleMs = Math.max(
+    totalBeats * secondsPerBeat * 1000,
+    1
+  );
+
+  function cycle(): void {
+    if (stopped) {
+      return;
+    }
+
+    playTimedProgression(chords, secondsPerBeat);
     timeoutId = setTimeout(cycle, cycleMs);
   }
 

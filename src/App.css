@@ -1243,6 +1243,7 @@ select {
 .builder-slot-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: stretch;
   gap: 10px;
   margin: 0 0 20px;
   padding: 0;
@@ -1654,4 +1655,66 @@ select {
   background: #fff0f4;
   color: #a8233f;
   border: 2px solid var(--pink);
+}
+
+
+/* =========================
+    TIMING & RHYTHM
+========================= */
+
+/* Bar-end divider between builder slots */
+
+.builder-slot.bar-end {
+  margin-right: 14px;
+  padding-right: 12px;
+  border-right: 3px double var(--ink);
+}
+
+.builder-bar-hint {
+  margin: 0 0 18px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+/* Per-chord beats stepper */
+
+.beats-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(36, 30, 61, 0.2);
+}
+
+.beats-value {
+  min-width: 48px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+/* Non-default beat count shown on saved-progression chips */
+
+.beats-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(36, 30, 61, 0.1);
+  font-size: 0.6rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.saved-card-time-signature {
+  margin: 8px 0 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.5;
 }
