@@ -1718,3 +1718,23 @@ select {
   text-transform: uppercase;
   opacity: 0.5;
 }
+
+
+/* =========================
+    RESTS, SWING, ACCENTS
+========================= */
+
+.builder-slot.rest-slot {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.builder-slot-chord.rest {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  opacity: 0.6;
+}
+
+/* Swing button uses standard segmented control styling */
+
+/* Accents select uses standard select styling */

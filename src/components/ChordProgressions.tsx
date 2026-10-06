@@ -162,6 +162,16 @@ function ChordProgressions({
   // every chord was implicitly exactly 1 beat long).
   const secondsPerBeat = chordSeconds;
 
+  // Swing/groove feel: when enabled, off-beat notes are delayed
+  // slightly for a jazzier sound (typically 2:1 ratio).
+  const [swingEnabled, setSwingEnabled] = useState(false);
+
+  // Accents/dynamics: controls whether and how beats are
+  // emphasized with slightly louder volume.
+  const [accentType, setAccentType] = useState<
+    'none' | 'first-beat' | 'first-measure'
+  >('none');
+
   // Handle for the builder's currently-looping playback, if
   // any. Non-null exactly while the loop button shows "Stop".
   const [loopHandle, setLoopHandle] =
@@ -257,31 +267,41 @@ function ChordProgressions({
 
   // Classifies a frozen builder/saved-progression chord
   // against the currently-displayed key/scale, for the
-  // "borrowed"/"chromatic" badge. Note this always compares
-  // against whatever key is shown right now — the badge is a
-  // live, informational "does this fit THIS key?" indicator,
-  // not a judgment baked in when the chord was added.
+  // "borrowed"/"chromatic" badge. Rests always classify as
+  // diatonic (they have no harmonic content).
   const relationFor = (
     chord: ProgressionChord
-  ): ChordKeyRelation =>
-    classifyChordInKey(
-      chord.rootNote,
-      chord.chordTypeIndex,
+  ): ChordKeyRelation => {
+    if (chord.type === 'rest') {
+      return 'diatonic';
+    }
+
+    return classifyChordInKey(
+      chord.rootNote!,
+      chord.chordTypeIndex!,
       rootNote,
       scaleType
     );
+  };
 
   // Resolves a frozen builder/saved-progression chord
   // snapshot to its current display label + notes under the
-  // live sharps/flats preference (spelling can still follow
-  // that shared toggle — only the key/scale/chord-type no
-  // longer matters once a chord is a snapshot).
-  const resolveSnapshot = (chord: ProgressionChord) =>
-    resolveChordSnapshot(
-      chord.rootNote,
-      chord.chordTypeIndex,
+  // live sharps/flats preference. Only valid for chords, not
+  // rests (which have no harmonic content).
+  const resolveSnapshot = (chord: ProgressionChord) => {
+    if (chord.type === 'rest') {
+      return {
+        chordLabel: '(rest)',
+        rawNotes: [],
+      };
+    }
+
+    return resolveChordSnapshot(
+      chord.rootNote!,
+      chord.chordTypeIndex!,
       accidentalPreference
     );
+  };
 
   const followUps = highlightedDegree
     ? progressionMap[scaleType][highlightedDegree] ?? []
@@ -306,23 +326,42 @@ function ChordProgressions({
   // Resolves a list of frozen chord snapshots to the
   // TimedChord[] shape playTimedProgression()/
   // playTimedProgressionLoop() expect, preserving each
-  // chord's own beat count.
+  // chord's own beat count and including accent markers.
   const toTimedChords = (
     chords: ProgressionChord[]
-  ): TimedChord[] =>
-    chords.map((chord) => ({
-      notes: resolveSnapshot(chord).rawNotes,
-      beats: chord.beats,
-    }));
+  ): TimedChord[] => {
+    let beatInMeasure = 0;
+    const beatsPerMeasure = timeSignature.beatsPerBar;
+
+    return chords.map((chord) => {
+      const isFirstBeat =
+        beatInMeasure === 0 && chord.type === 'chord';
+      const shouldAccent =
+        (accentType === 'first-beat' && isFirstBeat) ||
+        (accentType === 'first-measure' && beatInMeasure === 0);
+
+      beatInMeasure = (beatInMeasure + chord.beats) % beatsPerMeasure;
+
+      return {
+        notes:
+          chord.type === 'chord'
+            ? resolveSnapshot(chord).rawNotes
+            : [],
+        beats: chord.beats,
+        isRest: chord.type === 'rest',
+        isAccented: shouldAccent,
+      };
+    });
+  };
 
   const handlePlaySnapshotList = (
     chords: ProgressionChord[]
   ) => {
     stopLoop();
-    playTimedProgression(
-      toTimedChords(chords),
-      secondsPerBeat
-    );
+    playTimedProgression(toTimedChords(chords), secondsPerBeat, {
+      swingEnabled,
+      accentBoost: accentType === 'none' ? 0 : 5,
+    });
   };
 
   const handlePlayTemplate = (degrees: number[]) => {
@@ -347,7 +386,11 @@ function ChordProgressions({
     setLoopHandle(
       playTimedProgressionLoop(
         toTimedChords(builderChords),
-        secondsPerBeat
+        secondsPerBeat,
+        {
+          swingEnabled,
+          accentBoost: accentType === 'none' ? 0 : 5,
+        }
       )
     );
   };
@@ -365,6 +408,7 @@ function ChordProgressions({
       degrees.map((degree) => {
         const chord = chordByDegree(degree);
         return {
+          type: 'chord' as const,
           rootNote: chord.rawRootNote,
           chordTypeIndex: chord.chordTypeIndex,
           beats: DEFAULT_CHORD_BEATS,
@@ -390,6 +434,7 @@ function ChordProgressions({
     setBuilderChords((current) => [
       ...current,
       {
+        type: 'chord' as const,
         rootNote: chord.rawRootNote,
         chordTypeIndex: chord.chordTypeIndex,
         beats: DEFAULT_CHORD_BEATS,
@@ -410,6 +455,7 @@ function ChordProgressions({
       ...degrees.map((degree) => {
         const chord = chordByDegree(degree);
         return {
+          type: 'chord' as const,
           rootNote: chord.rawRootNote,
           chordTypeIndex: chord.chordTypeIndex,
           beats: DEFAULT_CHORD_BEATS,
@@ -435,6 +481,33 @@ function ChordProgressions({
       current.map((chord, i) =>
         i === index ? { ...chord, beats: clamped } : chord
       )
+    );
+  };
+
+  // Toggles between chord and rest at a given index.
+  const handleToggleRest = (index: number) => {
+    stopLoop();
+
+    setBuilderChords((current) =>
+      current.map((chord, i) => {
+        if (i !== index) return chord;
+
+        if (chord.type === 'rest') {
+          // Convert rest back to a default chord
+          return {
+            type: 'chord' as const,
+            rootNote: 'C',
+            chordTypeIndex: 0,
+            beats: chord.beats,
+          };
+        } else {
+          // Convert chord to rest (drop root/chordType)
+          return {
+            type: 'rest' as const,
+            beats: chord.beats,
+          };
+        }
+      })
     );
   };
 
@@ -484,6 +557,8 @@ function ChordProgressions({
       name,
       chords: builderChords,
       timeSignatureId,
+      swingEnabled,
+      accentType,
     });
 
     setSavedProgressions(next);
@@ -498,6 +573,8 @@ function ChordProgressions({
     stopLoop();
     setBuilderChords(saved.chords);
     setTimeSignatureId(saved.timeSignatureId);
+    setSwingEnabled(saved.swingEnabled);
+    setAccentType(saved.accentType);
   };
 
   return (
@@ -804,6 +881,62 @@ function ChordProgressions({
             ))}
           </select>
         </div>
+
+        <div className="selector-group">
+          <span
+            className="selector-label"
+            id="prog-groove-label"
+          >
+            Groove
+          </span>
+
+          <div
+            className="segmented"
+            role="group"
+            aria-labelledby="prog-groove-label"
+          >
+            <button
+              type="button"
+              className={
+                swingEnabled ? "seg active" : "seg"
+              }
+              onClick={() => setSwingEnabled(!swingEnabled)}
+              title="Add swing/shuffle feel to the groove"
+            >
+              {swingEnabled ? "🎷 Swing on" : "🎷 Swing off"}
+            </button>
+          </div>
+        </div>
+
+        <div className="selector-group">
+          <label
+            className="selector-label"
+            htmlFor="prog-accents"
+          >
+            Accents
+          </label>
+
+          <select
+            id="prog-accents"
+            value={accentType}
+            onChange={(event) =>
+              setAccentType(
+                event.target.value as
+                  | 'none'
+                  | 'first-beat'
+                  | 'first-measure'
+              )
+            }
+          >
+            <option value="none">None</option>
+            <option value="first-beat">
+              First beat of each chord
+            </option>
+            <option value="first-measure">
+              First beat of each bar
+            </option>
+          </select>
+        </div>
       </div>
 
       <p className="prog-key-label">
@@ -1068,10 +1201,13 @@ function ChordProgressions({
             chord above (as many times, in any order, as
             you like) — each one is locked in as-is, so
             changing the key, scale, or chord type above
-            afterward won't alter chords already here.
-            Reorder or remove chords below, then play the
-            sequence back, loop it, or save it for later.
-            Chords outside the current key are flagged as{" "}
+            afterward won't alter chords already here. You
+            can also add <strong>rests</strong> for
+            silence, toggle swing/shuffle feel, and add
+            accents for dynamics. Reorder or remove chords
+            below, then play the sequence back, loop it,
+            or save it for later. Chords outside the
+            current key are flagged as{" "}
             <span className="relation-chip relation-borrowed">
               Borrowed
             </span>{" "}
@@ -1098,8 +1234,8 @@ function ChordProgressions({
                 let beatsSoFar = 0;
 
                 return builderChords.map((chord, index) => {
-                  const resolved = resolveSnapshot(chord);
-                  const relation = relationFor(chord);
+                  const resolved = chord.type === 'chord' ? resolveSnapshot(chord) : null;
+                  const relation = chord.type === 'chord' ? relationFor(chord) : 'diatonic';
 
                   beatsSoFar += chord.beats;
 
@@ -1111,30 +1247,44 @@ function ChordProgressions({
                       timeSignature.beatsPerBar ===
                       0;
 
+                  const isRest = chord.type === 'rest';
+
                   return (
                     <li
                       className={
-                        endsBar
-                          ? "builder-slot bar-end"
-                          : "builder-slot"
+                        isRest
+                          ? endsBar
+                            ? "builder-slot rest-slot bar-end"
+                            : "builder-slot rest-slot"
+                          : endsBar
+                            ? "builder-slot bar-end"
+                            : "builder-slot"
                       }
-                      key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
+                      key={`${chord.type}-${index}`}
                     >
                       <span className="builder-slot-index">
                         {index + 1}
                       </span>
 
-                      <span className="builder-slot-chord">
-                        {resolved.chordLabel}
-                      </span>
-
-                      {relation !== "diatonic" && (
-                        <span
-                          className={`relation-chip ${relationClass[relation]}`}
-                          title={`This chord doesn't match the ${displayKeyRoot} ${scaleType} key currently shown.`}
-                        >
-                          {relationLabel[relation]}
+                      {isRest ? (
+                        <span className="builder-slot-chord rest">
+                          (rest)
                         </span>
+                      ) : (
+                        <>
+                          <span className="builder-slot-chord">
+                            {resolved!.chordLabel}
+                          </span>
+
+                          {relation !== "diatonic" && (
+                            <span
+                              className={`relation-chip ${relationClass[relation]}`}
+                              title={`This chord doesn't match the ${displayKeyRoot} ${scaleType} key currently shown.`}
+                            >
+                              {relationLabel[relation]}
+                            </span>
+                          )}
+                        </>
                       )}
 
                       <div className="beats-stepper">
@@ -1191,6 +1341,21 @@ function ChordProgressions({
                       </div>
 
                       <div className="builder-slot-actions">
+                        <button
+                          type="button"
+                          className="slot-btn"
+                          title={
+                            isRest
+                              ? "Convert to chord"
+                              : "Convert to rest"
+                          }
+                          onClick={() =>
+                            handleToggleRest(index)
+                          }
+                        >
+                          {isRest ? "𝄽" : "𝄽"}
+                        </button>
+
                         <button
                           type="button"
                           className="slot-btn"
@@ -1273,6 +1438,24 @@ function ChordProgressions({
             onClick={handleToggleBuilderLoop}
           >
             {loopHandle ? "■ Stop loop" : "🔁 Loop"}
+          </button>
+
+          <button
+            type="button"
+            className="clear-selection"
+            title="Add a rest (silence) to the progression"
+            onClick={() => {
+              stopLoop();
+              setBuilderChords((current) => [
+                ...current,
+                {
+                  type: 'rest' as const,
+                  beats: DEFAULT_CHORD_BEATS,
+                },
+              ]);
+            }}
+          >
+            𝄽 Add rest
           </button>
 
           <button
