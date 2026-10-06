@@ -4,6 +4,8 @@ import {
   commonProgressions,
   functionDescriptions,
   progressionMap,
+  progressionsGlossary,
+  type ProgressionDifficulty,
   type ScaleType,
 } from "../data/scales";
 import { chordTypes } from "../data/chords";
@@ -42,15 +44,38 @@ const functionClass: Record<string, string> = {
   Dominant: "fn-dominant",
 };
 
-const chordCategories = [
+// Shown by default — the categories a newcomer is likely to
+// recognize. The rest (Suspended, Extended, Altered, Added
+// Tone) are hidden behind "Show advanced chord types" so the
+// dropdown doesn't overwhelm a first-time visitor with things
+// like "Dominant 7th Sharp 9" before they've met a plain 7th
+// chord.
+const basicChordCategories = [
   "Triads",
-  "Suspended",
   "Sixth Chords",
   "Seventh Chords",
+];
+
+const advancedChordCategories = [
+  "Suspended",
   "Extended Chords",
   "Altered Chords",
   "Added Tone Chords",
 ];
+
+const difficultyClass: Record<ProgressionDifficulty, string> = {
+  Beginner: "difficulty-beginner",
+  Intermediate: "difficulty-intermediate",
+  Advanced: "difficulty-advanced",
+};
+
+// Easiest-first ordering so a newcomer's eye lands on
+// Beginner-friendly progressions before Advanced ones.
+const difficultyRank: Record<ProgressionDifficulty, number> = {
+  Beginner: 0,
+  Intermediate: 1,
+  Advanced: 2,
+};
 
 function ChordProgressions({
   rootNote,
@@ -70,6 +95,14 @@ function ChordProgressions({
   // sitting in the builder below (see ProgressionChord).
   const [chordTypeIndex, setChordTypeIndex] =
     useState<number>(-1);
+
+  // Keeps the "advanced" chord categories (Suspended,
+  // Extended, Altered, Added Tone) collapsed by default so
+  // newcomers see a short, familiar list first.
+  const [showAdvancedChordTypes, setShowAdvancedChordTypes] =
+    useState(false);
+
+  const [showGlossary, setShowGlossary] = useState(false);
 
   const [highlightedDegree, setHighlightedDegree] =
     useState<number | null>(null);
@@ -122,6 +155,16 @@ function ChordProgressions({
   const displayKeyRoot = getDisplayKeyRoot(
     rootNote,
     accidentalPreference
+  );
+
+  const sortedTemplates = useMemo(
+    () =>
+      [...commonProgressions[scaleType]].sort(
+        (a, b) =>
+          difficultyRank[a.difficulty] -
+          difficultyRank[b.difficulty]
+      ),
+    [scaleType]
   );
 
   const chordByDegree = (degree: number): ScaleChord =>
@@ -368,7 +411,7 @@ function ChordProgressions({
               Natural triad (default)
             </option>
 
-            {chordCategories.map((category) => {
+            {basicChordCategories.map((category) => {
               const categoryChords = chordTypes
                 .map((chord, index) => ({
                   chord,
@@ -397,7 +440,68 @@ function ChordProgressions({
                 </optgroup>
               );
             })}
+
+            {showAdvancedChordTypes &&
+              advancedChordCategories.map((category) => {
+                const categoryChords = chordTypes
+                  .map((chord, index) => ({
+                    chord,
+                    index,
+                  }))
+                  .filter(
+                    ({ chord }) =>
+                      chord.category === category
+                  );
+
+                return (
+                  <optgroup
+                    key={category}
+                    label={category}
+                  >
+                    {categoryChords.map(
+                      ({ chord, index }) => (
+                        <option
+                          key={chord.name}
+                          value={index}
+                        >
+                          {chord.name}
+                        </option>
+                      )
+                    )}
+                  </optgroup>
+                );
+              })}
           </select>
+
+          <button
+            type="button"
+            className="advanced-toggle"
+            onClick={() =>
+              setShowAdvancedChordTypes((current) => {
+                const next = !current;
+
+                // Hiding the advanced categories while one of
+                // their chord types is selected would leave
+                // the <select> pointing at an option that no
+                // longer exists — fall back to the default.
+                if (
+                  !next &&
+                  chordTypeIndex !== -1 &&
+                  advancedChordCategories.includes(
+                    chordTypes[chordTypeIndex].category
+                  )
+                ) {
+                  setChordTypeIndex(-1);
+                }
+
+                return next;
+              })
+            }
+          >
+            {showAdvancedChordTypes
+              ? "− Hide advanced chord types"
+              : "+ Show advanced chord types"}
+          </button>
         </div>
 
         <div className="selector-group">
@@ -452,6 +556,48 @@ function ChordProgressions({
           </>
         )}
       </p>
+
+      {/* RAW SCALE STRIP — shows where the chords below come
+          from: the plain notes of the scale, numbered by
+          scale degree, before any chords are built on them. */}
+      <div
+        className="scale-strip"
+        aria-label={`Notes of the ${displayKeyRoot} ${scaleType} scale`}
+      >
+        {scaleChords.map((chord) => (
+          <div className="scale-note" key={chord.degree}>
+            <span className="scale-note-degree">
+              {chord.degree}
+            </span>
+            <span className="scale-note-name">
+              {chord.rootNote}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* GLOSSARY DISCLOSURE */}
+      <button
+        type="button"
+        className="glossary-toggle"
+        onClick={() => setShowGlossary((current) => !current)}
+        aria-expanded={showGlossary}
+      >
+        {showGlossary
+          ? "− Hide term explanations"
+          : "❓ What do these terms mean?"}
+      </button>
+
+      {showGlossary && (
+        <dl className="glossary-list">
+          {progressionsGlossary.map((entry) => (
+            <div className="glossary-entry" key={entry.term}>
+              <dt>{entry.term}</dt>
+              <dd>{entry.explanation}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       {/* DIATONIC CHORD ROW */}
       <div className="degree-row">
@@ -563,16 +709,32 @@ function ChordProgressions({
       {/* READY-MADE PROGRESSIONS */}
       <div className="progression-templates">
         <h3>Progressions worth stealing</h3>
+        <p className="progression-templates-hint">
+          Sorted easiest first — try a{" "}
+          <span className="difficulty-chip difficulty-beginner">
+            Beginner
+          </span>{" "}
+          one if you're just starting out.
+        </p>
 
         <div className="template-grid">
-          {commonProgressions[scaleType].map(
+          {sortedTemplates.map(
             (template) => (
               <div
                 className="template-card"
                 key={template.name}
               >
                 <div className="template-card-head">
-                  <h4>{template.name}</h4>
+                  <h4>
+                    {template.name}
+                    <span
+                      className={`difficulty-chip ${
+                        difficultyClass[template.difficulty]
+                      }`}
+                    >
+                      {template.difficulty}
+                    </span>
+                  </h4>
 
                   <div className="template-card-actions">
                     <button

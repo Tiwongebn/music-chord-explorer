@@ -1101,6 +1101,10 @@ select {
 }
 
 .template-card-head h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin: 0;
   font-size: 1.05rem;
 }
@@ -1404,4 +1408,144 @@ select {
   background: var(--red);
   color: #ffffff;
   transform: translateY(-1px);
+}
+
+
+/* =========================
+    BEGINNER-FRIENDLY ADDITIONS
+========================= */
+
+/* Advanced chord-type disclosure (progressive disclosure) */
+
+.advanced-toggle {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0.3rem 0;
+  border: none;
+  background: none;
+  color: var(--purple-deep);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.advanced-toggle:hover {
+  color: var(--purple);
+}
+
+/* Raw scale strip */
+
+.scale-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.scale-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.35rem 0.7rem;
+  border: 2px solid rgba(36, 30, 61, 0.25);
+  border-radius: 999px;
+  background: #fffdf7;
+}
+
+.scale-note-degree {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(36, 30, 61, 0.1);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.scale-note-name {
+  font-weight: 700;
+}
+
+/* Glossary disclosure */
+
+.glossary-toggle {
+  display: inline-block;
+  margin: 0 0 18px;
+  padding: 0.45rem 0.9rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.glossary-toggle:hover {
+  background: var(--yellow);
+  transform: translateY(-1px);
+}
+
+.glossary-list {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 0 0 24px;
+  padding: 18px 20px;
+  border: 2px dashed rgba(36, 30, 61, 0.3);
+  border-radius: 14px;
+  background: #fffdf7;
+}
+
+.glossary-entry dt {
+  margin: 0 0 4px;
+  font-weight: 800;
+  color: var(--purple-deep);
+}
+
+.glossary-entry dd {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* Difficulty chips */
+
+.progression-templates-hint {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+.difficulty-chip {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.difficulty-chip.difficulty-beginner {
+  background: #e9fbf3;
+  color: #0a7d57;
+  border: 2px solid var(--green);
+}
+
+.difficulty-chip.difficulty-intermediate {
+  background: #fff3e0;
+  color: #a35b00;
+  border: 2px solid var(--yellow);
+}
+
+.difficulty-chip.difficulty-advanced {
+  background: #fff0f4;
+  color: #a8233f;
+  border: 2px solid var(--pink);
 }

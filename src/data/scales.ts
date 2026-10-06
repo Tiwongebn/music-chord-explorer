@@ -126,10 +126,18 @@ export const progressionMap: Record<
   },
 };
 
+export type ProgressionDifficulty =
+  | "Beginner"
+  | "Intermediate"
+  | "Advanced";
+
 export interface ProgressionTemplate {
   name: string;
   degrees: number[];
   vibe: string;
+  // Rough guide for newcomers deciding what to try first —
+  // not a strict rule, just an ordering hint on the cards.
+  difficulty: ProgressionDifficulty;
 }
 
 export const commonProgressions: Record<
@@ -141,26 +149,31 @@ export const commonProgressions: Record<
       name: "Classic Cadence",
       degrees: [1, 4, 5, 1],
       vibe: "Strong and resolved — the backbone of countless songs (I–IV–V–I).",
+      difficulty: "Beginner",
     },
     {
       name: "Pop Progression",
       degrees: [1, 5, 6, 4],
       vibe: "The sound of hundreds of pop hits (I–V–vi–IV).",
+      difficulty: "Beginner",
     },
     {
       name: "50s Progression",
       degrees: [1, 6, 4, 5],
       vibe: "Doo-wop and ballad staple (I–vi–IV–V).",
-    },
-    {
-      name: "Jazz Turnaround",
-      degrees: [2, 5, 1],
-      vibe: "The backbone of jazz harmony (ii–V–I).",
+      difficulty: "Beginner",
     },
     {
       name: "Plagal \"Amen\"",
       degrees: [4, 1],
       vibe: "Gentle, hymn-like resolution (IV–I).",
+      difficulty: "Beginner",
+    },
+    {
+      name: "Jazz Turnaround",
+      degrees: [2, 5, 1],
+      vibe: "The backbone of jazz harmony (ii–V–I).",
+      difficulty: "Intermediate",
     },
   ],
   minor: [
@@ -168,21 +181,25 @@ export const commonProgressions: Record<
       name: "Minor Cadence",
       degrees: [1, 4, 5, 1],
       vibe: "Natural minor's answer to I–IV–V (i–iv–v–i).",
+      difficulty: "Beginner",
     },
     {
       name: "Andalusian Cadence",
       degrees: [1, 7, 6, 5],
       vibe: "Dramatic descending flamenco/rock move (i–VII–VI–v).",
+      difficulty: "Intermediate",
     },
     {
       name: "Epic Lift",
       degrees: [6, 7, 1],
       vibe: "Soaring, cinematic rise into the tonic (VI–VII–i).",
+      difficulty: "Intermediate",
     },
     {
       name: "Minor Turnaround",
       degrees: [2, 5, 1],
-      vibe: "Jazz minor ii–V–i.",
+      vibe: "Jazz minor ii°–V–i.",
+      difficulty: "Advanced",
     },
   ],
 };
@@ -198,3 +215,64 @@ export const functionDescriptions: Record<
   Dominant:
     "Strong pull. Creates tension that wants to resolve back to the Tonic.",
 };
+
+// ============================================================
+// Beginner glossary — short, plain-English explanations of
+// the terms used throughout the Progressions tab (roman
+// numerals, chord symbols, harmonic function). Shown behind
+// a collapsible "What do these terms mean?" disclosure so it
+// never gets in the way of users who already know the theory.
+// ============================================================
+
+export interface GlossaryEntry {
+  term: string;
+  explanation: string;
+}
+
+export const progressionsGlossary: GlossaryEntry[] = [
+  {
+    term: "Roman numerals (I, ii, V, vii°…)",
+    explanation:
+      "A shorthand for a chord's position in the scale, not a fixed note — \"I\" always means \"built on the 1st note of the key,\" whether that's C major or F♯ major.",
+  },
+  {
+    term: "Capital vs. lowercase (IV vs. iv)",
+    explanation:
+      "Capital numerals (I, IV, V) are major chords. Lowercase numerals (ii, iii, vi) are minor chords. A ° (like vii°) marks a diminished chord.",
+  },
+  {
+    term: "Scale degree",
+    explanation:
+      "Just the position of a note in the scale, counted from 1. In C major, C is degree 1, D is degree 2, E is degree 3, and so on.",
+  },
+  {
+    term: "Diatonic",
+    explanation:
+      "\"Belongs to the current key.\" The 7 chords in the chord row are the diatonic chords of whatever key is selected — built only from that key's own notes.",
+  },
+  {
+    term: "Chord symbols (m, dim, maj7, m7♭5…)",
+    explanation:
+      "Letters/symbols after a chord's root tell you its quality: \"m\" = minor, \"dim\" = diminished, \"maj7\" = major 7th, \"m7♭5\" = half-diminished 7th, and so on.",
+  },
+  {
+    term: "Tonic",
+    explanation:
+      "The \"home\" chord of the key (degree I or i). It sounds resolved and stable — most progressions start and end here.",
+  },
+  {
+    term: "Subdominant",
+    explanation:
+      "A chord (degree IV or ii, for example) that gently pulls away from home, usually heading toward the Dominant or back to the Tonic.",
+  },
+  {
+    term: "Dominant",
+    explanation:
+      "A chord (degree V, for example) with a strong pull back to the Tonic — it creates the tension that makes a resolution feel satisfying.",
+  },
+  {
+    term: "Cadence",
+    explanation:
+      "A short chord sequence that ends a musical phrase, usually by resolving to the Tonic — e.g. V–I is one of the most common cadences.",
+  },
+];
