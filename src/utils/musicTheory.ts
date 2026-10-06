@@ -272,6 +272,47 @@ export function getNotesByPreference(
     : flatNotes;
 }
 
+// Resolves any note spelling (including unusual ones that
+// calculateChordNotes can produce, like "E#", "Cbb", "F##")
+// to its pitch class 0-11 (C=0 ... B=11). Spelling-independent
+// by design — "C#" and "Db" both return 1 — which is exactly
+// what's needed to compare two notes that might be spelled
+// differently but sound identical (e.g. detecting whether a
+// chord's root belongs to a given key).
+export function getPitchClass(note: string): number {
+  const letter = note.charAt(0).toUpperCase();
+
+  const naturalValues: Record<string, number> = {
+    C: 0,
+    D: 2,
+    E: 4,
+    F: 5,
+    G: 7,
+    A: 9,
+    B: 11,
+  };
+
+  const base = naturalValues[letter];
+
+  if (base === undefined) {
+    return -1;
+  }
+
+  let offset = 0;
+
+  for (const character of note.slice(1)) {
+    if (character === "#") {
+      offset++;
+    }
+
+    if (character === "b") {
+      offset--;
+    }
+  }
+
+  return ((base + offset) % 12 + 12) % 12;
+}
+
 export function convertRootNote(
   note: string,
   preference: AccidentalPreference

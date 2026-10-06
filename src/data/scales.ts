@@ -204,6 +204,42 @@ export const commonProgressions: Record<
   ],
 };
 
+// Walks the progressionMap harmony graph to generate a
+// plausible random progression of `length` scale degrees,
+// always starting AND ending on the Tonic (degree 1) so the
+// result actually resolves like a real progression instead
+// of trailing off mid-phrase. Every step except the very last
+// follows a real progressionMap edge from the current chord;
+// the final chord is always forced to the Tonic regardless of
+// whether the second-to-last chord's own suggested-next list
+// happens to include it — virtually any chord can cadence
+// home (e.g. vi -> I is a textbook resolution even though vi's
+// *typical* next move favors ii/IV/V), so this is a reasonable
+// simplification rather than a graph-adherence bug.
+// `length` must be >= 2 or the start/end-on-Tonic guarantee
+// can't hold; shorter requests are clamped up to 2.
+export function generateRandomProgression(
+  scaleType: ScaleType,
+  length = 4
+): number[] {
+  const safeLength = Math.max(length, 2);
+  const graph = progressionMap[scaleType];
+
+  const degrees: number[] = [1];
+
+  for (let step = 1; step < safeLength - 1; step++) {
+    const current = degrees[degrees.length - 1];
+    const options = graph[current] ?? [1];
+    const next =
+      options[Math.floor(Math.random() * options.length)];
+    degrees.push(next);
+  }
+
+  degrees.push(1);
+
+  return degrees;
+}
+
 export const functionDescriptions: Record<
   ChordFunction,
   string
@@ -274,5 +310,10 @@ export const progressionsGlossary: GlossaryEntry[] = [
     term: "Cadence",
     explanation:
       "A short chord sequence that ends a musical phrase, usually by resolving to the Tonic — e.g. V–I is one of the most common cadences.",
+  },
+  {
+    term: "Borrowed / chromatic chord",
+    explanation:
+      "A chord that doesn't quite belong to the current key — either its root note isn't in the scale (\"chromatic\"), or its quality doesn't match what that scale degree naturally is (\"borrowed\"). Neither is a mistake — they're common songwriting tools — but they're flagged in the builder so you know you've stepped outside the key.",
   },
 ];

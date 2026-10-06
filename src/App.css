@@ -1250,6 +1250,7 @@ select {
 }
 
 .builder-slot {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1408,6 +1409,111 @@ select {
   background: var(--red);
   color: #ffffff;
   transform: translateY(-1px);
+}
+
+
+/* =========================
+    PLAYBACK & FEEDBACK ADDITIONS
+========================= */
+
+/* Tempo slider */
+
+.tempo-group {
+  min-width: 180px;
+}
+
+.tempo-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tempo-control input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 100px;
+  accent-color: var(--purple);
+  cursor: pointer;
+}
+
+.tempo-value {
+  min-width: 64px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Builder header top row (title + Surprise me button) */
+
+.builder-panel-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.surprise-me-btn {
+  padding: 0.6rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--yellow);
+  box-shadow: var(--shadow-sm);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.surprise-me-btn:hover {
+  background: #ffe08a;
+  transform: translateY(-2px) rotate(-1deg);
+}
+
+/* Loop toggle */
+
+.loop-btn.looping {
+  background: var(--pink);
+  animation: loop-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes loop-pulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow-sm);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 107, 157, 0.35);
+  }
+}
+
+/* Borrowed / chromatic relation chips */
+
+.relation-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.relation-chip.relation-borrowed {
+  background: #fff3e0;
+  color: #a35b00;
+  border: 2px solid var(--yellow);
+}
+
+.relation-chip.relation-chromatic {
+  background: #fff0f4;
+  color: #a8233f;
+  border: 2px solid var(--pink);
+}
+
+.builder-slot .relation-chip {
+  margin-left: 0;
 }
 
 
