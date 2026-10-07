@@ -55,6 +55,11 @@ export interface SavedProgression {
   // (boost volume on the first beat of each chord), or
   // "first-measure" (boost on the first beat of each bar).
   accentType: 'none' | 'first-beat' | 'first-measure';
+  // Rhythmic pattern for articulation (e.g. "arpeggio-up",
+  // "strum-down", "block"). See data/patterns.ts for the
+  // full catalog. Determines when notes fire within each
+  // chord's duration.
+  patternId: string;
   createdAt: number;
 }
 
@@ -98,13 +103,14 @@ export function loadSavedProgressions(): SavedProgression[] {
     // Entries saved before per-chord timing existed have
         // no beats/timeSignatureId — normalize them here so
         // the rest of the app never has to special-case it.
-        // Similarly, entries saved before swing/accents existed
-        // get those defaults.
+        // Similarly, entries saved before swing/accents/patterns
+        // existed get those defaults.
         timeSignatureId:
           progression.timeSignatureId ??
           defaultTimeSignatureId,
         swingEnabled: progression.swingEnabled ?? false,
         accentType: progression.accentType ?? 'none',
+        patternId: progression.patternId ?? 'block',
         chords: progression.chords.map((chord) => ({
           ...chord,
           type: chord.type ?? 'chord',

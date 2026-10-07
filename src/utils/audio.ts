@@ -14,6 +14,7 @@
 // ============================================================
 
 import * as Tone from "tone";
+import { applyPattern, RhythmPattern } from "../data/patterns";
 
 let enabled = true;
 
@@ -245,8 +246,9 @@ export interface TimedChord {
 // simpler, uniform-timing cases.
 //
 // Supports rests (isRest: true, notes ignored), swing (applies
-// a time offset to off-beat notes for a jazzier feel), and
-// accents (boosts volume on marked beats for dynamics).
+// a time offset to off-beat notes for a jazzier feel), accents
+// (boosts volume on marked beats for dynamics), and patterns
+// (applies rhythmic articulation like strums or arpeggios).
 export function playTimedProgression(
   chords: TimedChord[],
   secondsPerBeat: number,
@@ -254,9 +256,15 @@ export function playTimedProgression(
     swingEnabled?: boolean;
     swingRatio?: number; // e.g. 2 for 2:1 swing (typical jazz)
     accentBoost?: number; // dB to add to accented notes, e.g. 6
+    pattern?: RhythmPattern; // rhythmic pattern to apply
   } = {}
 ): void {
-  const { swingEnabled = false, swingRatio = 2, accentBoost = 6 } = options;
+  const {
+    swingEnabled = false,
+    swingRatio = 2,
+    accentBoost = 6,
+    pattern = undefined,
+  } = options;
 
   let elapsed = 0;
   let beatInMeasure = 0; // for first-measure accents
@@ -288,16 +296,64 @@ export function playTimedProgression(
     const when = elapsed + beatOffset;
 
     if (!chord.isRest) {
-      chord.notes.forEach((note) => {
-        const volume =
-          chord.isAccented && accentBoost ? accentBoost : 0;
+      // Apply pattern if provided; otherwise play all notes at once
+      if (pattern && chord.notes.length > 0) {
+        const patternEvents = applyPattern(
+          chord.notes,
+          duration,
+          pattern
+        );
 
-        playNote(`${note}4`, {
-          when,
-          duration: duration * 0.95,
-          volume,
+        for (const event of patternEvents) {
+          const eventTime = when + event.offsetSeconds;
+          const notesToPlay = event.noteIndices.map(
+            (idx) => chord.notes[idx]
+          );
+
+          if (event.staggerMs && event.staggerMs > 0) {
+            // Play with stagger (e.g. strum)
+            notesToPlay.forEach((note, index) => {
+              const volume =
+                chord.isAccented && accentBoost
+                  ? accentBoost
+                  : 0;
+
+              playNote(`${note}4`, {
+                when:
+                  eventTime + (index * event.staggerMs!) / 1000,
+                duration: duration * 0.95,
+                volume,
+              });
+            });
+          } else {
+            // Play simultaneously
+            notesToPlay.forEach((note) => {
+              const volume =
+                chord.isAccented && accentBoost
+                  ? accentBoost
+                  : 0;
+
+              playNote(`${note}4`, {
+                when: eventTime,
+                duration: duration * 0.95,
+                volume,
+              });
+            });
+          }
+        }
+      } else {
+        // No pattern: play all notes at once (block pattern)
+        chord.notes.forEach((note) => {
+          const volume =
+            chord.isAccented && accentBoost ? accentBoost : 0;
+
+          playNote(`${note}4`, {
+            when,
+            duration: duration * 0.95,
+            volume,
+          });
         });
-      });
+      }
     }
     // Rests: no notes, just advance time
 
@@ -364,6 +420,7 @@ export function playTimedProgressionLoop(
     swingEnabled?: boolean;
     swingRatio?: number;
     accentBoost?: number;
+    pattern?: RhythmPattern;
   }
 ): ProgressionLoopHandle {
   let stopped = false;
