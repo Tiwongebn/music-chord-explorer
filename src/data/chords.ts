@@ -532,4 +532,278 @@ export const chordTypes: ChordType[] = [
       "Major 13th",
     ],
   },
+
+  {
+    name: "Suspended 2nd Add 9",
+    symbol: "sus2(add9)",
+    category: "Added Tone Chords",
+    intervals: [0, 2, 7, 14],
+    intervalNames: [
+      "Root",
+      "Major 2nd",
+      "Perfect 5th",
+      "Major 9th",
+    ],
+  },
+
+  {
+    name: "Major 7th Sharp 11",
+    symbol: "maj7♯11",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 18],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Augmented 11th",
+    ],
+  },
+
+  {
+    name: "Dominant 9th Flat 5",
+    symbol: "9♭5",
+    category: "Altered Chords",
+    intervals: [0, 4, 6, 10, 14],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Diminished 5th",
+      "Minor 7th",
+      "Major 9th",
+    ],
+  },
+
+  {
+    name: "Major 9th Add 13",
+    symbol: "maj9(add13)",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 14, 21],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Major 9th",
+      "Major 13th",
+    ],
+  },
+
+  {
+    name: "Dominant 9th Add 13",
+    symbol: "9(add13)",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 10, 14, 21],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Major 13th",
+    ],
+  },
+
+  {
+    name: "Minor 9th Add 13",
+    symbol: "m9(add13)",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 10, 14, 21],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Major 13th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Sharp 5 Flat 9",
+    symbol: "7♯5♭9",
+    category: "Altered Chords",
+    intervals: [0, 4, 8, 10, 13],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Augmented 5th",
+      "Minor 7th",
+      "Minor 9th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Flat 5 Flat 9",
+    symbol: "7♭5♭9",
+    category: "Altered Chords",
+    intervals: [0, 4, 6, 10, 13],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Diminished 5th",
+      "Minor 7th",
+      "Minor 9th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Flat 5 Sharp 9",
+    symbol: "7♭5♯9",
+    category: "Altered Chords",
+    intervals: [0, 4, 6, 10, 15],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Diminished 5th",
+      "Minor 7th",
+      "Augmented 9th",
+    ],
+  },
+
+  {
+    name: "Minor 7th Flat 5 Add 11",
+    symbol: "m7♭5(add11)",
+    category: "Extended Chords",
+    intervals: [0, 3, 6, 10, 17],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Diminished 5th",
+      "Minor 7th",
+      "Perfect 11th",
+    ],
+  },
+
+  {
+    name: "Minor 7th Add 11",
+    symbol: "m7(add11)",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 10, 17],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Perfect 11th",
+    ],
+  },
+
+  {
+    name: "Dominant 7th Add 11",
+    symbol: "7(add11)",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 10, 17],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Perfect 11th",
+    ],
+  },
+
+  {
+    name: "Major 7th Add 11",
+    symbol: "maj7(add11)",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 17],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Perfect 11th",
+    ],
+  },
+
+  {
+    name: "Major 9th Sharp 11",
+    symbol: "maj9♯11",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 14, 18],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Major 9th",
+      "Augmented 11th",
+    ],
+  },
+
+  {
+    name: "Dominant 9th Sharp 11",
+    symbol: "9♯11",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 10, 14, 18],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Augmented 11th",
+    ],
+  },
+
+  {
+    name: "Minor 9th Sharp 11",
+    symbol: "m9♯11",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 10, 14, 18],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Augmented 11th",
+    ],
+  },
+
+  {
+    name: "Dominant 9th Flat 13",
+    symbol: "9♭13",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 10, 14, 20],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Minor 13th",
+    ],
+  },
+
+  {
+    name: "Major 9th Flat 13",
+    symbol: "maj9♭13",
+    category: "Extended Chords",
+    intervals: [0, 4, 7, 11, 14, 20],
+    intervalNames: [
+      "Root",
+      "Major 3rd",
+      "Perfect 5th",
+      "Major 7th",
+      "Major 9th",
+      "Minor 13th",
+    ],
+  },
+
+  {
+    name: "Minor 9th Flat 13",
+    symbol: "m9♭13",
+    category: "Extended Chords",
+    intervals: [0, 3, 7, 10, 14, 20],
+    intervalNames: [
+      "Root",
+      "Minor 3rd",
+      "Perfect 5th",
+      "Minor 7th",
+      "Major 9th",
+      "Minor 13th",
+    ],
+  },
 ];
