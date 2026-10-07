@@ -15,8 +15,6 @@
 //   getDefaultStyleId()          fallback style
 // ============================================================
 
-import { TimedChord } from "../utils/audio";
-
 export interface BassEvent {
   // Offset in seconds from the start of the chord's duration
   offsetSeconds: number;

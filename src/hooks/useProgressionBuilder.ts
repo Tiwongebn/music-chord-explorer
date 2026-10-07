@@ -22,7 +22,7 @@ import {
   getPattern,
 } from "../data/patterns";
 import type { ScaleChord } from "../utils/scaleHarmony";
-import { TimeSignature } from "../data/rhythm";
+import type { TimeSignatureOption } from "../data/rhythm";
 
 export interface UseProgressionBuilderReturn {
   builderChords: ProgressionChord[];
@@ -53,7 +53,7 @@ export interface UseProgressionBuilderReturn {
 export function useProgressionBuilder(
   scaleType: ScaleType,
   chordByDegree: (degree: number) => ScaleChord,
-  timeSignature: TimeSignature,
+  timeSignature: TimeSignatureOption,
   swingEnabled: boolean,
   accentType: 'none' | 'first-beat' | 'first-measure',
   patternId: string,
