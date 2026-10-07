@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  commonProgressions,
-  functionDescriptions,
   generateRandomProgression,
   progressionMap,
-  progressionsGlossary,
   type ProgressionDifficulty,
   type ScaleType,
 } from "../data/scales";
@@ -24,14 +21,9 @@ import {
   getDefaultPatternId,
 } from "../data/patterns";
 import {
-  getStyles,
   getStyle,
   getDefaultStyleId,
-  getStylesByCategory,
 } from "../data/playStyles";
-import {
-  getBackingTrack,
-} from "../data/backingTrack";
 import {
   buildScaleChords,
   classifyChordInKey,
@@ -95,20 +87,6 @@ const advancedChordCategories = [
   "Altered Chords",
   "Added Tone Chords",
 ];
-
-const difficultyClass: Record<ProgressionDifficulty, string> = {
-  Beginner: "difficulty-beginner",
-  Intermediate: "difficulty-intermediate",
-  Advanced: "difficulty-advanced",
-};
-
-// Easiest-first ordering so a newcomer's eye lands on
-// Beginner-friendly progressions before Advanced ones.
-const difficultyRank: Record<ProgressionDifficulty, number> = {
-  Beginner: 0,
-  Intermediate: 1,
-  Advanced: 2,
-};
 
 // Labels/classes for the borrowed/chromatic chord badge.
 // "diatonic" chords get no badge at all (see render below).
@@ -194,13 +172,6 @@ function ChordProgressions({
     getDefaultPatternId()
   );
 
-  // Play style: genre preset that bundles pattern, tempo, swing,
-  // accents, and bass layer. When a user picks a style, it auto-sets
-  // pattern/tempo/swing/accents. Individual controls remain overridable.
-  const [styleId, setStyleId] = useState(
-    getDefaultStyleId()
-  );
-
   // Handle for the builder's currently-looping playback, if
   // any. Non-null exactly while the loop button shows "Stop".
   const [loopHandle, setLoopHandle] =
@@ -279,16 +250,6 @@ function ChordProgressions({
   const displayKeyRoot = getDisplayKeyRoot(
     rootNote,
     accidentalPreference
-  );
-
-  const sortedTemplates = useMemo(
-    () =>
-      [...commonProgressions[scaleType]].sort(
-        (a, b) =>
-          difficultyRank[a.difficulty] -
-          difficultyRank[b.difficulty]
-      ),
-    [scaleType]
   );
 
   const chordByDegree = (degree: number): ScaleChord =>
@@ -379,7 +340,6 @@ function ChordProgressions({
         beats: chord.beats,
         isRest: chord.type === 'rest',
         isAccented: shouldAccent,
-        rootNote: chord.type === 'chord' ? chord.rootNote : undefined,
       };
     });
   };
@@ -389,14 +349,12 @@ function ChordProgressions({
   ) => {
     stopLoop();
     const pattern = getPattern(patternId);
-    const style = getStyle(styleId);
-    const backingTrack = getBackingTrack(styleId);
+    const style = getStyle(getDefaultStyleId());
     playTimedProgression(toTimedChords(chords), secondsPerBeat, {
       swingEnabled,
       accentBoost: accentType === 'none' ? 0 : 5,
       pattern,
       bassLayer: style?.bassLayer,
-      backingTrack,
     });
   };
 
@@ -420,8 +378,7 @@ function ChordProgressions({
     }
 
     const pattern = getPattern(patternId);
-    const style = getStyle(styleId);
-    const backingTrack = getBackingTrack(styleId);
+    const style = getStyle(getDefaultStyleId());
 
     setLoopHandle(
       playTimedProgressionLoop(
@@ -432,7 +389,6 @@ function ChordProgressions({
           accentBoost: accentType === 'none' ? 0 : 5,
           pattern,
           bassLayer: style?.bassLayer,
-          backingTrack,
         }
       )
     );
@@ -1002,46 +958,6 @@ function ChordProgressions({
         <div className="selector-group">
           <label
             className="selector-label"
-            htmlFor="prog-style"
-          >
-            Backing Style
-          </label>
-
-          <select
-            id="prog-style"
-            value={styleId}
-            onChange={(event) => {
-              handleApplyStyle(event.target.value);
-            }}
-          >
-            {Array.from(
-              new Set(getStyles().map((s) => s.category))
-            )
-              .sort()
-              .map((category) => (
-                <optgroup
-                  key={category}
-                  label={category}
-                >
-                  {getStylesByCategory(
-                    category as any
-                  ).map((style) => (
-                    <option
-                      key={style.id}
-                      value={style.id}
-                      title={style.description}
-                    >
-                      {style.label}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-          </select>
-        </div>
-
-        <div className="selector-group">
-          <label
-            className="selector-label"
             htmlFor="prog-pattern"
           >
             Pattern
@@ -1217,86 +1133,6 @@ function ChordProgressions({
             {functionDescriptions[fn]}
           </div>
         ))}
-      </div>
-
-      {/* READY-MADE PROGRESSIONS */}
-      <div className="progression-templates">
-        <h3>Progressions worth stealing</h3>
-        <p className="progression-templates-hint">
-          Sorted easiest first — try a{" "}
-          <span className="difficulty-chip difficulty-beginner">
-            Beginner
-          </span>{" "}
-          one if you're just starting out.
-        </p>
-
-        <div className="template-grid">
-          {sortedTemplates.map(
-            (template) => (
-              <div
-                className="template-card"
-                key={template.name}
-              >
-                <div className="template-card-head">
-                  <h4>
-                    {template.name}
-                    <span
-                      className={`difficulty-chip ${
-                        difficultyClass[template.difficulty]
-                      }`}
-                    >
-                      {template.difficulty}
-                    </span>
-                  </h4>
-
-                  <div className="template-card-actions">
-                    <button
-                      type="button"
-                      className="play-chord template-play"
-                      onClick={() =>
-                        handlePlayTemplate(
-                          template.degrees
-                        )
-                      }
-                    >
-                      ▶ Play
-                    </button>
-
-                    <button
-                      type="button"
-                      className="template-use"
-                      title="Add these chords to the progression builder"
-                      onClick={() =>
-                        handleAddTemplateToBuilder(
-                          template.degrees
-                        )
-                      }
-                    >
-                      + Add to builder
-                    </button>
-                  </div>
-                </div>
-
-                <div className="template-chip-row">
-                  {template.degrees.map(
-                    (degree, index) => (
-                      <span
-                        className="template-chip"
-                        key={`${degree}-${index}`}
-                      >
-                        {chordByDegree(degree).chordLabel}
-                      </span>
-                    )
-                  )}
-                </div>
-
-                <p className="template-vibe">
-                  {template.vibe}
-                </p>
-              </div>
-            )
-          )}
-        </div>
       </div>
 
       {/* CUSTOM PROGRESSION BUILDER */}

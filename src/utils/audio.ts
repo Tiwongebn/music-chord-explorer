@@ -16,8 +16,6 @@
 import * as Tone from "tone";
 import { applyPattern } from "../data/patterns";
 import type { RhythmPattern } from "../data/patterns";
-import { playDrumHits, playAccompanimentNotes } from "./backingTrackPlayer";
-import type { BackingTrack } from "../data/backingTrack";
 
 let enabled = true;
 
@@ -267,7 +265,6 @@ export function playTimedProgression(
       beats: number,
       durationSeconds: number
     ) => any[]; // bass layer function
-    backingTrack?: BackingTrack; // full rhythm section (drums + accompaniment)
   } = {}
 ): void {
   const {
@@ -276,7 +273,6 @@ export function playTimedProgression(
     accentBoost = 6,
     pattern = undefined,
     bassLayer = undefined,
-    backingTrack = undefined,
   } = options;
 
   let elapsed = 0;
@@ -337,24 +333,6 @@ export function playTimedProgression(
           );
         }
       }
-    }
-
-    // Play backing track (drums + accompaniment) if provided
-    if (backingTrack && !chord.isRest && chord.rootNote) {
-      // Get drum pattern and play the hits
-      const drumPattern = backingTrack.drumPattern(duration);
-      playDrumHits(drumPattern.hits, when);
-
-      // Get accompaniment pattern and play the notes
-      const accompPattern = backingTrack.accompanimentPattern(
-        chord.notes,
-        duration
-      );
-      playAccompanimentNotes(
-        accompPattern.notes,
-        chord.rootNote,
-        when
-      );
     }
 
     if (!chord.isRest) {
@@ -513,7 +491,6 @@ export function playTimedProgressionLoop(
       beats: number,
       durationSeconds: number
     ) => any[];
-    backingTrack?: BackingTrack;
   }
 ): ProgressionLoopHandle {
   let stopped = false;
