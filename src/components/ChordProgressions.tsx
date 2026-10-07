@@ -30,6 +30,9 @@ import {
   getStylesByCategory,
 } from "../data/playStyles";
 import {
+  getBackingTrack,
+} from "../data/backingTrack";
+import {
   buildScaleChords,
   classifyChordInKey,
   getDisplayKeyRoot,
@@ -376,6 +379,7 @@ function ChordProgressions({
         beats: chord.beats,
         isRest: chord.type === 'rest',
         isAccented: shouldAccent,
+        rootNote: chord.type === 'chord' ? chord.rootNote : undefined,
       };
     });
   };
@@ -386,11 +390,13 @@ function ChordProgressions({
     stopLoop();
     const pattern = getPattern(patternId);
     const style = getStyle(styleId);
+    const backingTrack = getBackingTrack(styleId);
     playTimedProgression(toTimedChords(chords), secondsPerBeat, {
       swingEnabled,
       accentBoost: accentType === 'none' ? 0 : 5,
       pattern,
       bassLayer: style?.bassLayer,
+      backingTrack,
     });
   };
 
@@ -415,6 +421,7 @@ function ChordProgressions({
 
     const pattern = getPattern(patternId);
     const style = getStyle(styleId);
+    const backingTrack = getBackingTrack(styleId);
 
     setLoopHandle(
       playTimedProgressionLoop(
@@ -425,6 +432,7 @@ function ChordProgressions({
           accentBoost: accentType === 'none' ? 0 : 5,
           pattern,
           bassLayer: style?.bassLayer,
+          backingTrack,
         }
       )
     );
