@@ -14,7 +14,8 @@
 // ============================================================
 
 import * as Tone from "tone";
-import { applyPattern, RhythmPattern } from "../data/patterns";
+import { applyPattern } from "../data/patterns";
+import type { RhythmPattern } from "../data/patterns";
 
 let enabled = true;
 
