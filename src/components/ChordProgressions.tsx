@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  functionDescriptions,
   generateRandomProgression,
   progressionMap,
-  type ProgressionDifficulty,
+  progressionsGlossary,
   type ScaleType,
 } from "../data/scales";
 import { chordTypes } from "../data/chords";
@@ -39,7 +40,6 @@ import {
 } from "../utils/musicTheory";
 import {
   playNotes,
-  playProgression,
   playTimedProgression,
   playTimedProgressionLoop,
   type ProgressionLoopHandle,
@@ -358,16 +358,6 @@ function ChordProgressions({
     });
   };
 
-  const handlePlayTemplate = (degrees: number[]) => {
-    stopLoop();
-
-    const chordGroups = degrees.map(
-      (degree) => chordByDegree(degree).rawNotes
-    );
-
-    playProgression(chordGroups, chordSeconds);
-  };
-
   // Toggles looped playback of the builder's current chord
   // sequence. Starting a new loop (or any other playback)
   // always stops a previous one first via stopLoop() above.
@@ -438,28 +428,6 @@ function ChordProgressions({
         chordTypeIndex: chord.chordTypeIndex,
         beats: DEFAULT_CHORD_BEATS,
       },
-    ]);
-  };
-
-  // Adds a frozen snapshot of a preset template's chord
-  // (looked up against the scale currently shown) to the
-  // builder, same independence guarantee as above.
-  const handleAddTemplateToBuilder = (
-    degrees: number[]
-  ) => {
-    stopLoop();
-
-    setBuilderChords((current) => [
-      ...current,
-      ...degrees.map((degree) => {
-        const chord = chordByDegree(degree);
-        return {
-          type: 'chord' as const,
-          rootNote: chord.rawRootNote,
-          chordTypeIndex: chord.chordTypeIndex,
-          beats: DEFAULT_CHORD_BEATS,
-        };
-      }),
     ]);
   };
 
@@ -559,7 +527,7 @@ function ChordProgressions({
       swingEnabled,
       accentType,
       patternId,
-      styleId,
+      styleId: getDefaultStyleId(),
     });
 
     setSavedProgressions(next);
@@ -577,21 +545,6 @@ function ChordProgressions({
     setSwingEnabled(saved.swingEnabled);
     setAccentType(saved.accentType);
     setPatternId(saved.patternId);
-    setStyleId(saved.styleId);
-  };
-
-  // Apply a play style: auto-set pattern, tempo, swing, accents
-  // from the style preset. Individual controls remain overridable
-  // after selection.
-  const handleApplyStyle = (styleIdToApply: string) => {
-    const style = getStyle(styleIdToApply);
-    if (!style) return;
-
-    setStyleId(styleIdToApply);
-    setPatternId(style.patternId);
-    setChordSeconds(style.defaultSecondsPerBeat);
-    setSwingEnabled(style.swingEnabled);
-    setAccentType(style.accentType);
   };
 
   return (
