@@ -16,6 +16,7 @@
 // ============================================================
 
 import { defaultTimeSignatureId } from "../data/rhythm";
+import { getDefaultStyleId } from "../data/playStyles";
 
 // How long a chord holds, in beats, before the next one
 // starts. 1 beat at this app's default ~70 BPM works out to
@@ -60,6 +61,10 @@ export interface SavedProgression {
   // full catalog. Determines when notes fire within each
   // chord's duration.
   patternId: string;
+  // Genre-based play style (e.g. "jazz-swing", "rock-power").
+  // See data/playStyles.ts for the catalog. Bundles pattern,
+  // tempo, swing, accents, and bass layer.
+  styleId: string;
   createdAt: number;
 }
 
@@ -100,10 +105,10 @@ export function loadSavedProgressions(): SavedProgression[] {
       )
       .map((progression) => ({
         ...progression,
-    // Entries saved before per-chord timing existed have
+        // Entries saved before per-chord timing existed have
         // no beats/timeSignatureId — normalize them here so
         // the rest of the app never has to special-case it.
-        // Similarly, entries saved before swing/accents/patterns
+        // Similarly, entries saved before swing/accents/patterns/styles
         // existed get those defaults.
         timeSignatureId:
           progression.timeSignatureId ??
@@ -111,6 +116,7 @@ export function loadSavedProgressions(): SavedProgression[] {
         swingEnabled: progression.swingEnabled ?? false,
         accentType: progression.accentType ?? 'none',
         patternId: progression.patternId ?? 'block',
+        styleId: progression.styleId ?? getDefaultStyleId(),
         chords: progression.chords.map((chord) => ({
           ...chord,
           type: chord.type ?? 'chord',

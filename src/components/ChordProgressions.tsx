@@ -24,6 +24,12 @@ import {
   getDefaultPatternId,
 } from "../data/patterns";
 import {
+  getStyles,
+  getStyle,
+  getDefaultStyleId,
+  getStylesByCategory,
+} from "../data/playStyles";
+import {
   buildScaleChords,
   classifyChordInKey,
   getDisplayKeyRoot,
@@ -183,6 +189,13 @@ function ChordProgressions({
   // the whole progression.
   const [patternId, setPatternId] = useState(
     getDefaultPatternId()
+  );
+
+  // Play style: genre preset that bundles pattern, tempo, swing,
+  // accents, and bass layer. When a user picks a style, it auto-sets
+  // pattern/tempo/swing/accents. Individual controls remain overridable.
+  const [styleId, setStyleId] = useState(
+    getDefaultStyleId()
   );
 
   // Handle for the builder's currently-looping playback, if
@@ -372,10 +385,12 @@ function ChordProgressions({
   ) => {
     stopLoop();
     const pattern = getPattern(patternId);
+    const style = getStyle(styleId);
     playTimedProgression(toTimedChords(chords), secondsPerBeat, {
       swingEnabled,
       accentBoost: accentType === 'none' ? 0 : 5,
       pattern,
+      bassLayer: style?.bassLayer,
     });
   };
 
@@ -399,6 +414,7 @@ function ChordProgressions({
     }
 
     const pattern = getPattern(patternId);
+    const style = getStyle(styleId);
 
     setLoopHandle(
       playTimedProgressionLoop(
@@ -408,6 +424,7 @@ function ChordProgressions({
           swingEnabled,
           accentBoost: accentType === 'none' ? 0 : 5,
           pattern,
+          bassLayer: style?.bassLayer,
         }
       )
     );
@@ -578,6 +595,7 @@ function ChordProgressions({
       swingEnabled,
       accentType,
       patternId,
+      styleId,
     });
 
     setSavedProgressions(next);
@@ -595,6 +613,21 @@ function ChordProgressions({
     setSwingEnabled(saved.swingEnabled);
     setAccentType(saved.accentType);
     setPatternId(saved.patternId);
+    setStyleId(saved.styleId);
+  };
+
+  // Apply a play style: auto-set pattern, tempo, swing, accents
+  // from the style preset. Individual controls remain overridable
+  // after selection.
+  const handleApplyStyle = (styleIdToApply: string) => {
+    const style = getStyle(styleIdToApply);
+    if (!style) return;
+
+    setStyleId(styleIdToApply);
+    setPatternId(style.patternId);
+    setChordSeconds(style.defaultSecondsPerBeat);
+    setSwingEnabled(style.swingEnabled);
+    setAccentType(style.accentType);
   };
 
   return (
@@ -955,6 +988,46 @@ function ChordProgressions({
             <option value="first-measure">
               First beat of each bar
             </option>
+          </select>
+        </div>
+
+        <div className="selector-group">
+          <label
+            className="selector-label"
+            htmlFor="prog-style"
+          >
+            Backing Style
+          </label>
+
+          <select
+            id="prog-style"
+            value={styleId}
+            onChange={(event) => {
+              handleApplyStyle(event.target.value);
+            }}
+          >
+            {Array.from(
+              new Set(getStyles().map((s) => s.category))
+            )
+              .sort()
+              .map((category) => (
+                <optgroup
+                  key={category}
+                  label={category}
+                >
+                  {getStylesByCategory(
+                    category as any
+                  ).map((style) => (
+                    <option
+                      key={style.id}
+                      value={style.id}
+                      title={style.description}
+                    >
+                      {style.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
           </select>
         </div>
 

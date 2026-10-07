@@ -237,6 +237,7 @@ export interface TimedChord {
   beats: number; // how many beats this chord holds for
   isRest?: boolean; // if true, this is silence (no notes)
   isAccented?: boolean; // if true, boost volume
+  rootNote?: string; // optional root note for bass layer (e.g. "C")
 }
 
 // Play a sequence of chords back-to-back where each chord can
@@ -248,8 +249,9 @@ export interface TimedChord {
 //
 // Supports rests (isRest: true, notes ignored), swing (applies
 // a time offset to off-beat notes for a jazzier feel), accents
-// (boosts volume on marked beats for dynamics), and patterns
-// (applies rhythmic articulation like strums or arpeggios).
+// (boosts volume on marked beats for dynamics), patterns
+// (applies rhythmic articulation like strums or arpeggios),
+// and bass layer (plays root notes underneath at specific times).
 export function playTimedProgression(
   chords: TimedChord[],
   secondsPerBeat: number,
@@ -258,6 +260,11 @@ export function playTimedProgression(
     swingRatio?: number; // e.g. 2 for 2:1 swing (typical jazz)
     accentBoost?: number; // dB to add to accented notes, e.g. 6
     pattern?: RhythmPattern; // rhythmic pattern to apply
+    bassLayer?: (
+      rootNote: string,
+      beats: number,
+      durationSeconds: number
+    ) => any[]; // bass layer function
   } = {}
 ): void {
   const {
@@ -265,6 +272,7 @@ export function playTimedProgression(
     swingRatio = 2,
     accentBoost = 6,
     pattern = undefined,
+    bassLayer = undefined,
   } = options;
 
   let elapsed = 0;
@@ -295,6 +303,37 @@ export function playTimedProgression(
     }
 
     const when = elapsed + beatOffset;
+
+    // Play bass layer if provided
+    if (
+      bassLayer &&
+      chord.rootNote &&
+      !chord.isRest
+    ) {
+      const bassEvents = bassLayer(
+        chord.rootNote,
+        chord.beats,
+        duration
+      );
+
+      for (const bassEvent of bassEvents) {
+        for (const beatOffset of bassEvent.beatOffsets) {
+          const beatDuration = duration / chord.beats;
+          const bassWhen =
+            when +
+            bassEvent.offsetSeconds +
+            beatOffset * beatDuration;
+          const bassVolume = bassEvent.volume ?? -2;
+
+          playBassNote(
+            chord.rootNote,
+            bassWhen,
+            bassEvent.noteDuration,
+            bassVolume
+          );
+        }
+      }
+    }
 
     if (!chord.isRest) {
       // Apply pattern if provided; otherwise play all notes at once
@@ -367,6 +406,31 @@ export interface ProgressionLoopHandle {
   stop: () => void;
 }
 
+// Helper: play a bass note (2 octaves below the chord)
+function playBassNote(
+  rootNote: string,
+  when: number,
+  duration: number,
+  volume: number = -2
+): void {
+  if (!rootNote) return;
+
+  const midiNote = noteToMidi(`${rootNote}4`);
+  if (Number.isNaN(midiNote)) return;
+
+  // Bass: 2 octaves down
+  const bassNote = Tone.Frequency(
+    midiNote - 24,
+    "midi"
+  ).toNote();
+
+  playNote(bassNote, {
+    when,
+    duration,
+    volume,
+  });
+}
+
 // Repeats `chords` back-to-back forever, one playProgression()
 // cycle after another, until stop() is called. Scheduling is
 // a plain setTimeout chain (not Tone.Transport) to match the
@@ -422,6 +486,11 @@ export function playTimedProgressionLoop(
     swingRatio?: number;
     accentBoost?: number;
     pattern?: RhythmPattern;
+    bassLayer?: (
+      rootNote: string,
+      beats: number,
+      durationSeconds: number
+    ) => any[];
   }
 ): ProgressionLoopHandle {
   let stopped = false;
