@@ -46,7 +46,7 @@ const blockPattern: RhythmPattern = {
   id: "block",
   label: "Block",
   description: "All notes at once (traditional/percussive)",
-  events: (notes, duration) => [
+  events: (notes) => [
     {
       offsetSeconds: 0,
       noteIndices: notes.map((_, i) => i), // all notes
@@ -83,12 +83,10 @@ const arpeggioDownPattern: RhythmPattern = {
     const noteCount = notes.length;
     const timeBetweenNotes = duration / noteCount;
 
-    return notes
-      .map((_, index) => ({
-        offsetSeconds: index * timeBetweenNotes,
-        noteIndices: [noteCount - 1 - index], // reverse order
-      }))
-      .reverse(); // play in time order (so highest is first)
+    return notes.map((_, index) => ({
+      offsetSeconds: index * timeBetweenNotes,
+      noteIndices: [noteCount - 1 - index], // highest to lowest
+    }));
   },
 };
 
@@ -101,23 +99,26 @@ const arpeggioUpDownPattern: RhythmPattern = {
     if (notes.length === 0) return [];
 
     const noteCount = notes.length;
-    const fullCycle = noteCount * 2 - 2; // up and down without repeating top/bottom
-    const timeBetweenNotes = duration / fullCycle;
 
-    const upPhase = notes.map((_, index) => ({
-      offsetSeconds: index * timeBetweenNotes,
-      noteIndices: [index],
+    // A one-note chord has no meaningful direction change.
+    // For larger chords, visit every note upward, then descend
+    // through the interior notes without repeating the endpoints.
+    const noteOrder =
+      noteCount === 1
+        ? [0]
+        : [
+            ...notes.map((_, index) => index),
+            ...Array.from(
+              { length: noteCount - 2 },
+              (_, index) => noteCount - 2 - index
+            ),
+          ];
+    const timeBetweenNotes = duration / noteOrder.length;
+
+    return noteOrder.map((noteIndex, eventIndex) => ({
+      offsetSeconds: eventIndex * timeBetweenNotes,
+      noteIndices: [noteIndex],
     }));
-
-    const downPhase = notes
-      .slice(1, -1) // skip top and bottom to avoid repeat
-      .reverse()
-      .map((_, index) => ({
-        offsetSeconds: (noteCount - 1 + index) * timeBetweenNotes,
-        noteIndices: [noteCount - 2 - index],
-      }));
-
-    return [...upPhase, ...downPhase];
   },
 };
 
@@ -203,8 +204,8 @@ const syncopatedPattern: RhythmPattern = {
         noteIndices: notes.map((_, i) => i),
       },
       {
-        offsetSeconds: half * 1.5, // the "and" of beat 2: subset (typically bass)
-        noteIndices: [notes.length - 1], // lowest note
+        offsetSeconds: half * 1.5, // off-beat pulse within the chord
+        noteIndices: [0], // lowest note
       },
     ];
   },
@@ -227,13 +228,16 @@ const charlestonPattern: RhythmPattern = {
       },
       {
         offsetSeconds: quarter * 1, // beat 2
-        noteIndices: notes
-          .slice(0, Math.ceil(notes.length / 2))
-          .reverse(),
+        noteIndices: Array.from(
+          {
+            length: Math.ceil(notes.length / 2),
+          },
+          (_, index) => Math.ceil(notes.length / 2) - 1 - index
+        ),
       },
       {
-        offsetSeconds: quarter * 2.5, // the "and" of beat 2
-        noteIndices: [notes[notes.length - 1]],
+        offsetSeconds: quarter * 2.5, // off-beat pulse
+        noteIndices: [0], // lowest note
       },
     ];
   },
