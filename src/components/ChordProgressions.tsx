@@ -19,6 +19,11 @@ import {
   timeSignatures,
 } from "../data/rhythm";
 import {
+  getPatterns,
+  getPattern,
+  getDefaultPatternId,
+} from "../data/patterns";
+import {
   buildScaleChords,
   classifyChordInKey,
   getDisplayKeyRoot,
@@ -171,6 +176,14 @@ function ChordProgressions({
   const [accentType, setAccentType] = useState<
     'none' | 'first-beat' | 'first-measure'
   >('none');
+
+  // Rhythmic pattern: controls the articulation (arpeggios,
+  // strums, syncopation, etc.) that determines when notes
+  // fire within each chord's duration. Applied globally to
+  // the whole progression.
+  const [patternId, setPatternId] = useState(
+    getDefaultPatternId()
+  );
 
   // Handle for the builder's currently-looping playback, if
   // any. Non-null exactly while the loop button shows "Stop".
@@ -358,9 +371,11 @@ function ChordProgressions({
     chords: ProgressionChord[]
   ) => {
     stopLoop();
+    const pattern = getPattern(patternId);
     playTimedProgression(toTimedChords(chords), secondsPerBeat, {
       swingEnabled,
       accentBoost: accentType === 'none' ? 0 : 5,
+      pattern,
     });
   };
 
@@ -383,6 +398,8 @@ function ChordProgressions({
       return;
     }
 
+    const pattern = getPattern(patternId);
+
     setLoopHandle(
       playTimedProgressionLoop(
         toTimedChords(builderChords),
@@ -390,6 +407,7 @@ function ChordProgressions({
         {
           swingEnabled,
           accentBoost: accentType === 'none' ? 0 : 5,
+          pattern,
         }
       )
     );
@@ -559,6 +577,7 @@ function ChordProgressions({
       timeSignatureId,
       swingEnabled,
       accentType,
+      patternId,
     });
 
     setSavedProgressions(next);
@@ -575,6 +594,7 @@ function ChordProgressions({
     setTimeSignatureId(saved.timeSignatureId);
     setSwingEnabled(saved.swingEnabled);
     setAccentType(saved.accentType);
+    setPatternId(saved.patternId);
   };
 
   return (
@@ -937,6 +957,27 @@ function ChordProgressions({
             </option>
           </select>
         </div>
+
+        <div className="selector-group">
+          <label
+            className="selector-label"
+            htmlFor="prog-pattern"
+          >
+            Pattern
+          </label>
+
+          <select
+            id="prog-pattern"
+            value={patternId}
+            onChange={(event) => setPatternId(event.target.value)}
+          >
+            {getPatterns().map((pattern) => (
+              <option key={pattern.id} value={pattern.id}>
+                {pattern.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <p className="prog-key-label">
@@ -1203,10 +1244,12 @@ function ChordProgressions({
             changing the key, scale, or chord type above
             afterward won't alter chords already here. You
             can also add <strong>rests</strong> for
-            silence, toggle swing/shuffle feel, and add
-            accents for dynamics. Reorder or remove chords
-            below, then play the sequence back, loop it,
-            or save it for later. Chords outside the
+            silence, toggle swing/shuffle feel, add accents
+            for dynamics, and choose a rhythmic pattern
+            (arpeggios, strums, syncopation, etc.) to
+            articulate how notes fire. Reorder or remove
+            chords below, then play the sequence back, loop
+            it, or save it for later. Chords outside the
             current key are flagged as{" "}
             <span className="relation-chip relation-borrowed">
               Borrowed
