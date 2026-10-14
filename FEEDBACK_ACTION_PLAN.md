@@ -91,12 +91,13 @@ RECOMMENDED: Option A + C (responsive sizing + option to hide)
 
 ---
 
-### 2️⃣ Advanced Controls Need Tooltips - QUICK WIN
+### 2️⃣ Advanced Controls Need Tooltips - QUICK WIN ✅ DONE (commit `b2fbefc`)
 
 **Problem**: "Swing" and "Accents" controls confuse beginners  
 **Users Affected**: 1 mention but blocks understanding  
 **Severity**: Medium - Prevents advanced feature discovery  
 **Effort**: Low (HTML title attributes)  
+**Status**: Implemented — added a hoverable/focusable "ⓘ" help icon next to the Tempo, Groove (Swing), Accents, and Pattern labels in `ChordProgressions.tsx`, each with a plain-language `title` tooltip, plus matching `title` attributes on the underlying input/select elements themselves.
 
 **Current State**:
 ```
@@ -243,12 +244,13 @@ Cons: Less discoverable for advanced users
 
 ---
 
-### 4️⃣ Increase Mobile Font Size - ACCESSIBILITY
+### 4️⃣ Increase Mobile Font Size - ACCESSIBILITY ✅ DONE (commit `b2fbefc`)
 
 **Problem**: Text labels are readable but small on mobile  
 **Users Affected**: 1 mention from mobile user  
 **Severity**: Low-Medium (accessibility concern)  
 **Effort**: Low (CSS media query)  
+**Status**: Implemented — extended the existing `@media (max-width: 700px)` block in `App.css` to bump `.selector-label`, fieldset `legend`, `.tempo-value`, `.degree-roman`, `select`, `.root-pill`, `.seg`, and `.builder-save-input` to 0.95–1rem on mobile (the small `.degree-function` pill badge got a smaller, proportional bump to 0.72rem to avoid overflow).
 
 **Current State**:
 ```
@@ -282,9 +284,9 @@ Recommendation: 16px minimum for mobile readability
 ## Implementation Timeline
 
 ### Week 1: Foundation (Oct 17-23)
+- [x] Add tooltips (High Priority #2) — shipped `b2fbefc`
+- [x] Increase mobile font size (High Priority #4) — shipped `b2fbefc`
 - [ ] Implement collapsible control groups (High Priority #3)
-- [ ] Add tooltips (High Priority #2)
-- [ ] Increase mobile font size (High Priority #4)
 
 ### Week 2: Polish (Oct 24-30)
 - [ ] Implement responsive piano keyboard (High Priority #1)

@@ -458,10 +458,10 @@ These would be nice but are not critical:
 ## Next Steps
 
 ### Immediate Actions (This Sprint)
-1. [x] Implement mobile piano keyboard improvements (larger touch targets)
-2. [x] Add tooltips for "Swing" and "Accents" controls
-3. [x] Reduce mobile scrolling with collapsible/accordion controls
-4. [x] Increase mobile text label sizes
+1. [ ] Implement mobile piano keyboard improvements (larger touch targets)
+2. [x] Add tooltips for "Swing", "Accents", "Tempo" and "Pattern" controls — shipped `b2fbefc` (Oct 16)
+3. [ ] Reduce mobile scrolling with collapsible/accordion controls
+4. [x] Increase mobile text label sizes — shipped `b2fbefc` (Oct 16)
 
 ### Follow-Up Testing
 - [ ] Re-test mobile experience after improvements
