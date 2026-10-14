@@ -263,6 +263,44 @@ input:focus-visible {
   margin-left: -8px;
 }
 
+/* The legend's inner button is the actual collapse/expand
+   control on mobile (see .control-group-content below). On
+   desktop/tablet it's deliberately styled to look identical
+   to a plain static <legend> label — no border, no pointer,
+   inherited everything — because the fieldsets are always
+   fully expanded there and nothing should hint at
+   interactivity that doesn't apply at that width. */
+.control-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: inherit;
+  cursor: default;
+}
+
+.control-group-chevron {
+  display: none;
+}
+
+/* Base (desktop/tablet) layout for the content wrapper now
+   sitting between the fieldset and its .selector-group
+   children — mirrors the flex column + gap the fieldset
+   itself used to provide directly, so adding this wrapper
+   for the mobile accordion (below) doesn't change spacing
+   above the 700px breakpoint. */
+.control-group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .harmony-group {
   border-color: var(--purple);
   background: #f4edff;
@@ -975,6 +1013,50 @@ select {
     width: 18px;
     height: 18px;
     font-size: 0.85rem;
+  }
+
+  /* Collapsible Progressions control groups: feedback
+     testing found the Harmony Selection + Playback & Groove
+     fieldsets, stacked vertically, required excessive
+     scrolling on phones. Below this breakpoint the legend
+     becomes a real tap target (full-width, visible chevron,
+     pointer cursor) that toggles .is-collapsed on the
+     content wrapper. Desktop/tablet never apply
+     .is-collapsed in the first place (React still toggles
+     the class, but nothing below reads it above 700px). */
+  .control-group-toggle {
+    width: 100%;
+    cursor: pointer;
+    justify-content: space-between;
+  }
+
+  .control-group-chevron {
+    display: inline-block;
+    font-size: 0.8rem;
+  }
+
+  /* max-height (rather than the common grid-template-rows
+     1fr/0fr trick) because .control-group-content has
+     several .selector-group children, each of which would
+     get its own implicit grid row that the "fr" trick can't
+     collapse — max-height collapses the whole block
+     regardless of how many children it holds. The 2000px
+     ceiling is just "comfortably taller than this content
+     will ever be," not a measured value. */
+  .control-group-content {
+    max-height: 2000px;
+    overflow: hidden;
+    opacity: 1;
+    transition:
+      max-height 0.25s ease,
+      opacity 0.2s ease,
+      margin-top 0.25s ease;
+  }
+
+  .control-group-content.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: -16px;
   }
 }
 

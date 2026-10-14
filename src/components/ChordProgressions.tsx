@@ -129,6 +129,22 @@ function ChordProgressions({
 
   const [showGlossary, setShowGlossary] = useState(false);
 
+  // Mobile-only accordion state for the two Progressions
+  // control fieldsets below. Desktop/tablet always render
+  // both groups fully expanded regardless of these values —
+  // the collapse behavior only takes visual effect under the
+  // existing 700px breakpoint (see .control-group-content in
+  // App.css) — because testers only reported excessive
+  // scrolling through "quite tall" stacked fieldsets on
+  // phones, not on larger screens. Harmony Selection starts
+  // open since picking a key/scale is the primary action on
+  // this tab; Playback & Groove starts collapsed since it's
+  // the secondary, less-frequently-touched section.
+  const [isHarmonyGroupOpen, setIsHarmonyGroupOpen] =
+    useState(true);
+  const [isPlaybackGroupOpen, setIsPlaybackGroupOpen] =
+    useState(false);
+
   // Tempo for every chord-sequence playback in this tab
   // (templates, the builder, saved progressions) — one shared
   // control rather than a separate dial per list. Stored as
@@ -563,8 +579,41 @@ function ChordProgressions({
       <div className="prog-controls">
         
         <fieldset className="control-group harmony-group">
-          <legend>Harmony Selection</legend>
-          
+          <legend>
+            {/* On mobile this becomes a real tap target that
+                collapses/expands the fieldset content below,
+                to cut down on scrolling through both groups
+                stacked vertically. On desktop/tablet
+                .control-group-toggle is styled to look like
+                a plain static legend (no pointer cursor,
+                chevron hidden) and clicking it is a harmless
+                no-op since .is-collapsed only has a visual
+                effect under the mobile breakpoint — see
+                App.css. */}
+            <button
+              type="button"
+              className="control-group-toggle"
+              aria-expanded={isHarmonyGroupOpen}
+              aria-controls="harmony-group-content"
+              onClick={() =>
+                setIsHarmonyGroupOpen((current) => !current)
+              }
+            >
+              Harmony Selection
+              <span className="control-group-chevron" aria-hidden="true">
+                {isHarmonyGroupOpen ? "▾" : "▸"}
+              </span>
+            </button>
+          </legend>
+
+          <div
+            id="harmony-group-content"
+            className={
+              isHarmonyGroupOpen
+                ? "control-group-content"
+                : "control-group-content is-collapsed"
+            }
+          >
           <div className="selector-group root-group">
             <span
               className="selector-label"
@@ -792,11 +841,35 @@ function ChordProgressions({
               </button>
             </div>
           </div>
+          </div>
         </fieldset>
 
         <fieldset className="control-group playback-group">
-          <legend>Playback & Groove</legend>
+          <legend>
+            <button
+              type="button"
+              className="control-group-toggle"
+              aria-expanded={isPlaybackGroupOpen}
+              aria-controls="playback-group-content"
+              onClick={() =>
+                setIsPlaybackGroupOpen((current) => !current)
+              }
+            >
+              Playback & Groove
+              <span className="control-group-chevron" aria-hidden="true">
+                {isPlaybackGroupOpen ? "▾" : "▸"}
+              </span>
+            </button>
+          </legend>
 
+          <div
+            id="playback-group-content"
+            className={
+              isPlaybackGroupOpen
+                ? "control-group-content"
+                : "control-group-content is-collapsed"
+            }
+          >
           <div className="selector-group tempo-group">
             <label
               className="selector-label"
@@ -958,6 +1031,7 @@ function ChordProgressions({
                 </option>
               ))}
             </select>
+          </div>
           </div>
         </fieldset>
 
