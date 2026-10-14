@@ -554,6 +554,13 @@ select {
     PIANO
 ========================= */
 
+.piano-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .piano-section h2 {
   margin: 0 0 4px;
   font-size: 1.6rem;
@@ -564,9 +571,36 @@ select {
   content: "🎹 ";
 }
 
+/* Hide/Show keyboard toggle — styled to be invisible above
+   the mobile breakpoint (no border, no pointer, same text
+   color/size as the rest of the panel) since the keyboard
+   is never collapsed on desktop/tablet. Reuses
+   .control-group-chevron from the Progressions accordion so
+   the ▾/▸ glyph is sized/positioned consistently app-wide. */
+.piano-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: default;
+}
+
 .piano-description {
   margin: 0 0 18px;
   opacity: 0.7;
+}
+
+/* Base (desktop/tablet) layout for the collapsible wrapper
+   around .piano-wrapper — no visual effect above the mobile
+   breakpoint, where it's always fully expanded. */
+.piano-keys-content {
+  overflow: visible;
 }
 
 .piano-wrapper {
@@ -971,8 +1005,17 @@ select {
     padding: 20px;
   }
 
+  /* Piano touch targets: feedback testing found keys too
+     small to tap reliably on phones (~30px wide white keys,
+     below the ~44px WCAG touch-target minimum). 21 white
+     keys (7 notes × 3 octaves) at a wider min-width works
+     out to roughly 46-48px per key once the 3px inter-key
+     gaps are subtracted — still wider than the previous
+     720px, which .piano-wrapper already handles via
+     horizontal scroll (overflow-x: auto), so this trades a
+     bit more scrolling for keys that are actually tappable. */
   .piano-keyboard {
-    min-width: 720px;
+    min-width: 1050px;
     height: 220px;
   }
 
@@ -1057,6 +1100,48 @@ select {
     max-height: 0;
     opacity: 0;
     margin-top: -16px;
+  }
+
+  /* Collapsible piano keyboard: even with the wider keys
+     above, mobile testers (Sam) suggested making the piano
+     optional/collapsible rather than always taking up
+     screen space. "Hide/Show keyboard" becomes a real,
+     bordered tap target here; .piano-keys-content collapses
+     the same way .control-group-content does above. The
+     "Your notes" summary below the keyboard is a sibling,
+     not a child, of .piano-keys-content, so it stays
+     visible even while the keys are hidden. */
+  .piano-section-head {
+    align-items: flex-start;
+  }
+
+  .piano-toggle {
+    padding: 0.4rem 0.8rem;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+  }
+
+  .piano-toggle:hover {
+    background: var(--yellow);
+  }
+
+  .piano-keys-content {
+    max-height: 2000px;
+    overflow: hidden;
+    opacity: 1;
+    transition:
+      max-height 0.25s ease,
+      opacity 0.2s ease,
+      margin-top 0.25s ease;
+  }
+
+  .piano-keys-content.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: -10px;
   }
 }
 

@@ -143,6 +143,17 @@ function PianoKeyboard({
   const [keyboardActiveNotes, setKeyboardActiveNotes] =
     useState<Set<string>>(new Set());
 
+  // Mobile-only disclosure for the keys themselves (not the
+  // "Your notes" summary below, which stays visible either
+  // way). Defaults open so first-time behavior is unchanged;
+  // this just gives mobile users — who reported the keyboard
+  // feels cramped — a way to tuck it away once they've made
+  // their picks. Desktop/tablet always render the keys
+  // regardless of this value (see .piano-toggle/.piano-keys-content
+  // in App.css, which only react to it under the mobile
+  // breakpoint).
+  const [isPianoOpen, setIsPianoOpen] = useState(true);
+
   // Safety net: release the drag flag if the pointer is
   // released anywhere outside the piano keys.
   useEffect(() => {
@@ -231,7 +242,28 @@ function PianoKeyboard({
 
   return (
     <section className="piano-section">
-      <h2>Tap the keys</h2>
+      <div className="piano-section-head">
+        <h2>Tap the keys</h2>
+
+        {/* Toggle is rendered on every screen size for a
+            consistent DOM/aria story, but .piano-toggle is
+            styled to be visually inert (no border, no
+            pointer) above the mobile breakpoint — see
+            App.css — so desktop/tablet users never notice
+            it's there. */}
+        <button
+          type="button"
+          className="piano-toggle"
+          aria-expanded={isPianoOpen}
+          aria-controls="piano-keys-content"
+          onClick={() => setIsPianoOpen((current) => !current)}
+        >
+          {isPianoOpen ? "Hide keyboard" : "Show keyboard"}
+          <span className="control-group-chevron" aria-hidden="true">
+            {isPianoOpen ? "▾" : "▸"}
+          </span>
+        </button>
+      </div>
 
       <p className="piano-description">
         Purple keys = the chord above · yellow keys =
@@ -239,6 +271,14 @@ function PianoKeyboard({
         <kbd>W</kbd>/<kbd>E</kbd>/<kbd>T</kbd>/<kbd>Y</kbd>/<kbd>U</kbd> = keyboard
       </p>
 
+      <div
+        id="piano-keys-content"
+        className={
+          isPianoOpen
+            ? "piano-keys-content"
+            : "piano-keys-content is-collapsed"
+        }
+      >
       <div className="piano-wrapper">
         <div className="piano-keyboard">
 
@@ -342,6 +382,7 @@ function PianoKeyboard({
           )}
 
         </div>
+      </div>
       </div>
 
       {/* SELECTED NOTES */}
