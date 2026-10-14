@@ -458,10 +458,12 @@ These would be nice but are not critical:
 ## Next Steps
 
 ### Immediate Actions (This Sprint)
-1. [ ] Implement mobile piano keyboard improvements (larger touch targets) — Week 2
+1. [x] Implement mobile piano keyboard improvements (larger touch targets + hide/show toggle) — shipped `80bd8cb` (Oct 16)
 2. [x] Add tooltips for "Swing", "Accents", "Tempo" and "Pattern" controls — shipped `b2fbefc` (Oct 16)
 3. [x] Reduce mobile scrolling with collapsible/accordion controls — shipped `5952be8` (Oct 16)
 4. [x] Increase mobile text label sizes — shipped `b2fbefc` (Oct 16)
+
+**All 4 high-priority items from the feedback analysis are now implemented.** Next step is re-testing on real mobile devices (see Follow-Up Testing below) rather than further implementation.
 
 ### Follow-Up Testing
 - [ ] Re-test mobile experience after improvements

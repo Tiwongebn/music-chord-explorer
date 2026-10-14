@@ -1,7 +1,7 @@
 # UI Redesign - Feedback Action Plan
 
 **Created**: October 16, 2026  
-**Status**: Ready for Implementation  
+**Status**: ✅ All 4 high-priority code changes implemented (ahead of schedule) — now in validation phase  
 **Priority**: Mobile improvements are critical  
 
 ---
@@ -12,7 +12,7 @@
 
 🎯 **Main opportunity**: Improve mobile experience (currently 3.5/5 vs. 4.5/5 on desktop).
 
-📅 **Timeline**: 2-week sprint to address high-priority items.
+📅 **Timeline**: 2-week sprint to address high-priority items — **all 4 shipped in commits `b2fbefc`, `5952be8`, `80bd8cb`**. Remaining work is real-device validation, not implementation.
 
 ---
 
@@ -31,12 +31,16 @@
 
 ## High-Priority Action Items
 
-### 1️⃣ Mobile Piano Keyboard - FIX REQUIRED
+### 1️⃣ Mobile Piano Keyboard - FIX REQUIRED ✅ DONE (commit `80bd8cb`)
 
 **Problem**: Piano keys too small to tap on mobile  
 **Users Affected**: 3 mentions (60% of mobile/tablet testers)  
 **Severity**: High - Blocks core feature (playing chords)  
 **Effort**: Low-Medium (CSS + responsive sizing)  
+**Status**: Implemented using the recommended "Option A + C" combo:
+- **Option A (bigger keys)**: raised `.piano-keyboard` mobile `min-width` from 720px to 1050px, which (with 21 white keys across 3 octaves and the existing 3px gaps) brings white keys to ~46-48px — above the 44px WCAG touch-target minimum, up from ~30px. Black keys scale automatically since they're already percentage-positioned.
+- **Option C (collapsible)**: added a "Hide/Show keyboard" toggle next to the "Tap the keys" heading (mirroring the Progressions accordion pattern from Week 1) so mobile users can tuck the keys away once they've made their note picks. The "Your notes" summary stays visible either way.
+- Both are mobile-only: on desktop/tablet the toggle renders as plain, non-interactive text and key sizing is untouched.
 
 **Current State**:
 ```
@@ -289,11 +293,13 @@ Recommendation: 16px minimum for mobile readability
 - [x] Increase mobile font size (High Priority #4) — shipped `b2fbefc`
 - [x] Implement collapsible control groups (High Priority #3) — shipped `5952be8`
 
-### Week 2: Polish (Oct 24-30)
-- [ ] Implement responsive piano keyboard (High Priority #1)
+### Week 2: Polish (Oct 24-30) — Implementation ✅ COMPLETE (ahead of schedule)
+- [x] Implement responsive piano keyboard (High Priority #1) — shipped `80bd8cb`
 - [ ] Mobile testing with actual devices
 - [ ] Re-engage mobile user (Sam) for feedback
 - [ ] Accessibility audit (WAVE, Lighthouse)
+
+**All 4 high-priority code changes from this plan are now shipped.** What remains in Week 2/3 is validation (real-device testing, re-engaging testers, accessibility audit), not further implementation.
 
 ### Week 3: Review & Deploy (Oct 31+)
 - [ ] Address any issues from mobile testing
