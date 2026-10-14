@@ -803,6 +803,13 @@ function ChordProgressions({
               htmlFor="prog-tempo"
             >
               Tempo
+              <span
+                className="help-icon"
+                tabIndex={0}
+                title="Controls how fast the progression plays, in beats per minute (BPM). Drag right for faster, left for slower."
+              >
+                ⓘ
+              </span>
             </label>
 
             <div className="tempo-control">
@@ -812,6 +819,7 @@ function ChordProgressions({
                 min={300}
                 max={1500}
                 step={50}
+                title="Drag to change playback speed (BPM)"
                 value={Math.round(
                   1800 - chordSeconds * 1000
                 )}
@@ -858,6 +866,13 @@ function ChordProgressions({
               id="prog-groove-label"
             >
               Groove
+              <span
+                className="help-icon"
+                tabIndex={0}
+                title="Swing adds a loose, shuffled triplet feel to the rhythm — like jazz or blues — instead of a straight, even beat."
+              >
+                ⓘ
+              </span>
             </span>
 
             <div
@@ -871,7 +886,7 @@ function ChordProgressions({
                   swingEnabled ? "seg active" : "seg"
                 }
                 onClick={() => setSwingEnabled(!swingEnabled)}
-                title="Add swing/shuffle feel to the groove"
+                title="Swing adds a shuffled, triplet-like feel to the rhythm instead of a straight beat. Click to toggle on/off."
               >
                 {swingEnabled ? "🎷 Swing on" : "🎷 Swing off"}
               </button>
@@ -884,11 +899,19 @@ function ChordProgressions({
               htmlFor="prog-accents"
             >
               Accents
+              <span
+                className="help-icon"
+                tabIndex={0}
+                title="Emphasizes (plays louder) certain beats to create rhythmic variation — e.g. the first beat of every chord, or just the first beat of every bar."
+              >
+                ⓘ
+              </span>
             </label>
 
             <select
               id="prog-accents"
               value={accentType}
+              title="Choose which beats play louder for rhythmic emphasis"
               onChange={(event) =>
                 setAccentType(
                   event.target.value as
@@ -914,11 +937,19 @@ function ChordProgressions({
               htmlFor="prog-pattern"
             >
               Pattern
+              <span
+                className="help-icon"
+                tabIndex={0}
+                title="Choose how notes within each chord are played — e.g. all at once, strummed, arpeggiated (one at a time), or syncopated — to change the rhythmic feel."
+              >
+                ⓘ
+              </span>
             </label>
 
             <select
               id="prog-pattern"
               value={patternId}
+              title="Choose the strumming or playing pattern for this progression"
               onChange={(event) => setPatternId(event.target.value)}
             >
               {getPatterns().map((pattern) => (
