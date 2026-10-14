@@ -189,8 +189,109 @@ input:focus-visible {
 
 
 /* =========================
-    CHORD SELECTOR
+    EXPLORE TAB LAYOUT
 ========================= */
+
+.explore-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 28px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+.explore-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.explore-controls h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.explore-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chord-display-panel {
+  order: 1;
+}
+
+.piano-panel {
+  order: 2;
+  margin-top: 0;
+}
+
+.tips-card {
+  order: 3;
+}
+
+@media (max-width: 1000px) {
+  .explore-wrapper {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* =========================
+    PROGRESSIONS: CONTROL GROUPS
+========================= */
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 2px dashed rgba(36, 30, 61, 0.25);
+  border-radius: 14px;
+  background: #fffaf0;
+  margin-bottom: 20px;
+}
+
+.control-group legend {
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  padding: 0 8px;
+  margin-left: -8px;
+}
+
+.harmony-group {
+  border-color: var(--purple);
+  background: #f4edff;
+}
+
+.harmony-group legend {
+  color: var(--purple-deep);
+}
+
+.playback-group {
+  border-color: var(--blue);
+  background: #e6f7ff;
+}
+
+.playback-group legend {
+  color: var(--blue);
+}
+
+@media (max-width: 900px) {
+  .prog-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .control-group {
+    margin-bottom: 0;
+  }
+}
 
 .chord-selector {
   display: flex;

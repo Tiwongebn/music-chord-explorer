@@ -245,52 +245,23 @@ function App() {
         <>
 
           {/* =========================
-              HERO: PICK + SEE THE CHORD
+              LEFT PANEL: CONTROLS
           ========================== */}
-          <section className="panel hero-card">
+          <div className="explore-wrapper">
+            <section className="panel explore-controls">
+              <h2>Pick a chord</h2>
 
-            <ChordSelector
-              rootNote={rootNote}
-              chordTypeIndex={selectedChordIndex}
-              accidentalPreference={accidentalPreference}
-              onRootChange={setRootNote}
-              onChordTypeChange={setSelectedChordIndex}
-              onAccidentalPreferenceChange={
-                handleAccidentalPreferenceChange
-              }
-            />
-
-            <ChordDisplay
-              chordName={chordName}
-              notes={chordNotes}
-              intervalNames={selectedChord.intervalNames}
-              intervals={selectedChord.intervals}
-              onPlay={handlePlayChord}
-            />
-
-          </section>
-
-
-          {/* =========================
-              PIANO STAGE
-          ========================== */}
-          <section className="panel piano-panel">
-
-            <PianoKeyboard
-              chordNotes={chordNotes}
-              accidentalPreference={accidentalPreference}
-              selectedNotes={selectedNotes}
-              onNoteToggle={handleNoteToggle}
-              onClearSelection={handleClearSelection}
-            />
-
-          </section>
-
-
-          {/* =========================
-              ANALYZER + THEORY BITES
-          ========================== */}
-          <div className="duo-grid">
+              <ChordSelector
+                rootNote={rootNote}
+                chordTypeIndex={selectedChordIndex}
+                accidentalPreference={accidentalPreference}
+                onRootChange={setRootNote}
+                onChordTypeChange={setSelectedChordIndex}
+                onAccidentalPreferenceChange={
+                  handleAccidentalPreferenceChange
+                }
+              />
+            </section>
 
             <ChordAnalyzer
               selectedNotes={selectedNotes}
@@ -298,9 +269,35 @@ function App() {
                 handleUseDetectedChord
               }
             />
+          </div>
+
+          {/* =========================
+              RIGHT PANEL: CHORD + PIANO
+          ========================== */}
+          <div className="explore-stage">
+
+            <section className="panel chord-display-panel">
+              <ChordDisplay
+                chordName={chordName}
+                notes={chordNotes}
+                intervalNames={selectedChord.intervalNames}
+                intervals={selectedChord.intervals}
+                onPlay={handlePlayChord}
+              />
+            </section>
+
+            <section className="panel piano-panel">
+              <PianoKeyboard
+                chordNotes={chordNotes}
+                accidentalPreference={accidentalPreference}
+                selectedNotes={selectedNotes}
+                onNoteToggle={handleNoteToggle}
+                onClearSelection={handleClearSelection}
+              />
+            </section>
 
             <aside className="panel tips-card">
-              <h2>Quick theory bites</h2>
+              <h2>💡 Quick theory bites</h2>
 
               <ul className="tip-list">
                 <li>

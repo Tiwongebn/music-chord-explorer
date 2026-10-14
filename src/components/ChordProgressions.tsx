@@ -561,134 +561,107 @@ function ChordProgressions({
 
       {/* KEY + SCALE + CHORD TYPE + SPELLING PICKER */}
       <div className="prog-controls">
-        <div className="selector-group root-group">
-          <span
-            className="selector-label"
-            id="prog-root-label"
-          >
-            Key
-          </span>
+        
+        <fieldset className="control-group harmony-group">
+          <legend>Harmony Selection</legend>
+          
+          <div className="selector-group root-group">
+            <span
+              className="selector-label"
+              id="prog-root-label"
+            >
+              Key
+            </span>
 
-          <div
-            className="root-pills"
-            role="group"
-            aria-labelledby="prog-root-label"
-          >
-            {notes.map((note) => (
+            <div
+              className="root-pills"
+              role="group"
+              aria-labelledby="prog-root-label"
+            >
+              {notes.map((note) => (
+                <button
+                  key={note}
+                  type="button"
+                  className={
+                    rootNote === note
+                      ? "root-pill active"
+                      : "root-pill"
+                  }
+                  onClick={() => onRootChange(note)}
+                >
+                  {formatNoteForDisplay(note)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="selector-group">
+            <span
+              className="selector-label"
+              id="prog-scale-label"
+            >
+              Scale
+            </span>
+
+            <div
+              className="segmented"
+              role="group"
+              aria-labelledby="prog-scale-label"
+            >
               <button
-                key={note}
                 type="button"
                 className={
-                  rootNote === note
-                    ? "root-pill active"
-                    : "root-pill"
+                  scaleType === "major"
+                    ? "seg active"
+                    : "seg"
                 }
-                onClick={() => onRootChange(note)}
+                onClick={() => {
+                  setScaleType("major");
+                  setHighlightedDegree(null);
+                }}
               >
-                {formatNoteForDisplay(note)}
+                Major
               </button>
-            ))}
+
+              <button
+                type="button"
+                className={
+                  scaleType === "minor"
+                    ? "seg active"
+                    : "seg"
+                }
+                onClick={() => {
+                  setScaleType("minor");
+                  setHighlightedDegree(null);
+                }}
+              >
+                Minor
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="selector-group">
-          <span
-            className="selector-label"
-            id="prog-scale-label"
-          >
-            Scale
-          </span>
-
-          <div
-            className="segmented"
-            role="group"
-            aria-labelledby="prog-scale-label"
-          >
-            <button
-              type="button"
-              className={
-                scaleType === "major"
-                  ? "seg active"
-                  : "seg"
-              }
-              onClick={() => {
-                setScaleType("major");
-                setHighlightedDegree(null);
-              }}
+          <div className="selector-group">
+            <label
+              className="selector-label"
+              htmlFor="prog-chord-type"
             >
-              Major
-            </button>
+              Chord type
+            </label>
 
-            <button
-              type="button"
-              className={
-                scaleType === "minor"
-                  ? "seg active"
-                  : "seg"
+            <select
+              id="prog-chord-type"
+              value={chordTypeIndex}
+              onChange={(event) =>
+                setChordTypeIndex(
+                  Number(event.target.value)
+                )
               }
-              onClick={() => {
-                setScaleType("minor");
-                setHighlightedDegree(null);
-              }}
             >
-              Minor
-            </button>
-          </div>
-        </div>
+              <option value={-1}>
+                Natural triad (default)
+              </option>
 
-        <div className="selector-group">
-          <label
-            className="selector-label"
-            htmlFor="prog-chord-type"
-          >
-            Chord type
-          </label>
-
-          <select
-            id="prog-chord-type"
-            value={chordTypeIndex}
-            onChange={(event) =>
-              setChordTypeIndex(
-                Number(event.target.value)
-              )
-            }
-          >
-            <option value={-1}>
-              Natural triad (default)
-            </option>
-
-            {basicChordCategories.map((category) => {
-              const categoryChords = chordTypes
-                .map((chord, index) => ({
-                  chord,
-                  index,
-                }))
-                .filter(
-                  ({ chord }) =>
-                    chord.category === category
-                );
-
-              return (
-                <optgroup
-                  key={category}
-                  label={category}
-                >
-                  {categoryChords.map(
-                    ({ chord, index }) => (
-                      <option
-                        key={chord.name}
-                        value={index}
-                      >
-                        {chord.name}
-                      </option>
-                    )
-                  )}
-                </optgroup>
-              );
-            })}
-
-            {showAdvancedChordTypes &&
-              advancedChordCategories.map((category) => {
+              {basicChordCategories.map((category) => {
                 const categoryChords = chordTypes
                   .map((chord, index) => ({
                     chord,
@@ -717,217 +690,246 @@ function ChordProgressions({
                   </optgroup>
                 );
               })}
-          </select>
 
-          <button
-            type="button"
-            className="advanced-toggle"
-            onClick={() =>
-              setShowAdvancedChordTypes((current) => {
-                const next = !current;
+              {showAdvancedChordTypes &&
+                advancedChordCategories.map((category) => {
+                  const categoryChords = chordTypes
+                    .map((chord, index) => ({
+                      chord,
+                      index,
+                    }))
+                    .filter(
+                      ({ chord }) =>
+                        chord.category === category
+                    );
 
-                // Hiding the advanced categories while one of
-                // their chord types is selected would leave
-                // the <select> pointing at an option that no
-                // longer exists — fall back to the default.
-                if (
-                  !next &&
-                  chordTypeIndex !== -1 &&
-                  advancedChordCategories.includes(
-                    chordTypes[chordTypeIndex].category
-                  )
-                ) {
-                  setChordTypeIndex(-1);
-                }
-
-                return next;
-              })
-            }
-          >
-            {showAdvancedChordTypes
-              ? "− Hide advanced chord types"
-              : "+ Show advanced chord types"}
-          </button>
-        </div>
-
-        <div className="selector-group">
-          <span
-            className="selector-label"
-            id="prog-notation-label"
-          >
-            Spelling
-          </span>
-
-          <div
-            className="segmented"
-            role="group"
-            aria-labelledby="prog-notation-label"
-          >
-            <button
-              type="button"
-              className={
-                accidentalPreference === "sharps"
-                  ? "seg active"
-                  : "seg"
-              }
-              onClick={() =>
-                onAccidentalPreferenceChange("sharps")
-              }
-            >
-              ♯ Sharps
-            </button>
+                  return (
+                    <optgroup
+                      key={category}
+                      label={category}
+                    >
+                      {categoryChords.map(
+                        ({ chord, index }) => (
+                          <option
+                            key={chord.name}
+                            value={index}
+                          >
+                            {chord.name}
+                          </option>
+                        )
+                      )}
+                    </optgroup>
+                  );
+                })}
+            </select>
 
             <button
               type="button"
-              className={
-                accidentalPreference === "flats"
-                  ? "seg active"
-                  : "seg"
-              }
+              className="advanced-toggle"
               onClick={() =>
-                onAccidentalPreferenceChange("flats")
+                setShowAdvancedChordTypes((current) => {
+                  const next = !current;
+
+                  if (
+                    !next &&
+                    chordTypeIndex !== -1 &&
+                    advancedChordCategories.includes(
+                      chordTypes[chordTypeIndex].category
+                    )
+                  ) {
+                    setChordTypeIndex(-1);
+                  }
+
+                  return next;
+                })
               }
             >
-              ♭ Flats
+              {showAdvancedChordTypes
+                ? "− Hide advanced chord types"
+                : "+ Show advanced chord types"}
             </button>
           </div>
-        </div>
 
-        <div className="selector-group tempo-group">
-          <label
-            className="selector-label"
-            htmlFor="prog-tempo"
-          >
-            Tempo
-          </label>
+          <div className="selector-group">
+            <span
+              className="selector-label"
+              id="prog-notation-label"
+            >
+              Spelling
+            </span>
 
-          <div className="tempo-control">
-            <input
-              id="prog-tempo"
-              type="range"
-              min={300}
-              max={1500}
-              step={50}
-              // The slider reads fastest-on-the-right, so it
-              // tracks milliseconds-per-chord inverted from
-              // chordSeconds (smaller chordSeconds = faster =
-              // slider further right).
-              value={Math.round(
-                1800 - chordSeconds * 1000
-              )}
+            <div
+              className="segmented"
+              role="group"
+              aria-labelledby="prog-notation-label"
+            >
+              <button
+                type="button"
+                className={
+                  accidentalPreference === "sharps"
+                    ? "seg active"
+                    : "seg"
+                }
+                onClick={() =>
+                  onAccidentalPreferenceChange("sharps")
+                }
+              >
+                ♯ Sharps
+              </button>
+
+              <button
+                type="button"
+                className={
+                  accidentalPreference === "flats"
+                    ? "seg active"
+                    : "seg"
+                }
+                onClick={() =>
+                  onAccidentalPreferenceChange("flats")
+                }
+              >
+                ♭ Flats
+              </button>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset className="control-group playback-group">
+          <legend>Playback & Groove</legend>
+
+          <div className="selector-group tempo-group">
+            <label
+              className="selector-label"
+              htmlFor="prog-tempo"
+            >
+              Tempo
+            </label>
+
+            <div className="tempo-control">
+              <input
+                id="prog-tempo"
+                type="range"
+                min={300}
+                max={1500}
+                step={50}
+                value={Math.round(
+                  1800 - chordSeconds * 1000
+                )}
+                onChange={(event) =>
+                  setChordSeconds(
+                    (1800 - Number(event.target.value)) /
+                      1000
+                  )
+                }
+              />
+
+              <span className="tempo-value">
+                {Math.round(60 / chordSeconds)} BPM
+              </span>
+            </div>
+          </div>
+
+          <div className="selector-group">
+            <label
+              className="selector-label"
+              htmlFor="prog-time-signature"
+            >
+              Time signature
+            </label>
+
+            <select
+              id="prog-time-signature"
+              value={timeSignatureId}
               onChange={(event) =>
-                setChordSeconds(
-                  (1800 - Number(event.target.value)) /
-                    1000
+                setTimeSignatureId(event.target.value)
+              }
+            >
+              {timeSignatures.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="selector-group">
+            <span
+              className="selector-label"
+              id="prog-groove-label"
+            >
+              Groove
+            </span>
+
+            <div
+              className="segmented"
+              role="group"
+              aria-labelledby="prog-groove-label"
+            >
+              <button
+                type="button"
+                className={
+                  swingEnabled ? "seg active" : "seg"
+                }
+                onClick={() => setSwingEnabled(!swingEnabled)}
+                title="Add swing/shuffle feel to the groove"
+              >
+                {swingEnabled ? "🎷 Swing on" : "🎷 Swing off"}
+              </button>
+            </div>
+          </div>
+
+          <div className="selector-group">
+            <label
+              className="selector-label"
+              htmlFor="prog-accents"
+            >
+              Accents
+            </label>
+
+            <select
+              id="prog-accents"
+              value={accentType}
+              onChange={(event) =>
+                setAccentType(
+                  event.target.value as
+                    | 'none'
+                    | 'first-beat'
+                    | 'first-measure'
                 )
               }
-            />
-
-            <span className="tempo-value">
-              {Math.round(60 / chordSeconds)} BPM
-            </span>
-          </div>
-        </div>
-
-        <div className="selector-group">
-          <label
-            className="selector-label"
-            htmlFor="prog-time-signature"
-          >
-            Time signature
-          </label>
-
-          <select
-            id="prog-time-signature"
-            value={timeSignatureId}
-            onChange={(event) =>
-              setTimeSignatureId(event.target.value)
-            }
-          >
-            {timeSignatures.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="selector-group">
-          <span
-            className="selector-label"
-            id="prog-groove-label"
-          >
-            Groove
-          </span>
-
-          <div
-            className="segmented"
-            role="group"
-            aria-labelledby="prog-groove-label"
-          >
-            <button
-              type="button"
-              className={
-                swingEnabled ? "seg active" : "seg"
-              }
-              onClick={() => setSwingEnabled(!swingEnabled)}
-              title="Add swing/shuffle feel to the groove"
             >
-              {swingEnabled ? "🎷 Swing on" : "🎷 Swing off"}
-            </button>
-          </div>
-        </div>
-
-        <div className="selector-group">
-          <label
-            className="selector-label"
-            htmlFor="prog-accents"
-          >
-            Accents
-          </label>
-
-          <select
-            id="prog-accents"
-            value={accentType}
-            onChange={(event) =>
-              setAccentType(
-                event.target.value as
-                  | 'none'
-                  | 'first-beat'
-                  | 'first-measure'
-              )
-            }
-          >
-            <option value="none">None</option>
-            <option value="first-beat">
-              First beat of each chord
-            </option>
-            <option value="first-measure">
-              First beat of each bar
-            </option>
-          </select>
-        </div>
-
-        <div className="selector-group">
-          <label
-            className="selector-label"
-            htmlFor="prog-pattern"
-          >
-            Pattern
-          </label>
-
-          <select
-            id="prog-pattern"
-            value={patternId}
-            onChange={(event) => setPatternId(event.target.value)}
-          >
-            {getPatterns().map((pattern) => (
-              <option key={pattern.id} value={pattern.id}>
-                {pattern.label}
+              <option value="none">None</option>
+              <option value="first-beat">
+                First beat of each chord
               </option>
-            ))}
-          </select>
-        </div>
+              <option value="first-measure">
+                First beat of each bar
+              </option>
+            </select>
+          </div>
+
+          <div className="selector-group">
+            <label
+              className="selector-label"
+              htmlFor="prog-pattern"
+            >
+              Pattern
+            </label>
+
+            <select
+              id="prog-pattern"
+              value={patternId}
+              onChange={(event) => setPatternId(event.target.value)}
+            >
+              {getPatterns().map((pattern) => (
+                <option key={pattern.id} value={pattern.id}>
+                  {pattern.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </fieldset>
+
       </div>
 
       <p className="prog-key-label">
