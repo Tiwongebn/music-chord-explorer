@@ -139,12 +139,13 @@ Discoverability: Trial and error
 
 ---
 
-### 3️⃣ Reduce Mobile Scrolling - USABILITY IMPROVEMENT
+### 3️⃣ Reduce Mobile Scrolling - USABILITY IMPROVEMENT ✅ DONE (commit `5952be8`)
 
 **Problem**: Controls stack vertically on mobile, require excessive scrolling  
 **Users Affected**: 2 mentions (40% of mobile/tablet testers)  
 **Severity**: High - Friction in core workflow  
 **Effort**: Medium (layout restructuring)  
+**Status**: Implemented using the recommended "Option A: Collapsible Control Groups" approach. Each fieldset's `<legend>` is now a real toggle button (with `aria-expanded`/`aria-controls` and a ▾/▸ chevron) that shows/hides its content via a `max-height`/`opacity` transition, scoped entirely to the existing 700px mobile breakpoint. Harmony Selection defaults open (primary action), Playback & Groove defaults collapsed (secondary). Desktop/tablet layout and spacing are untouched.
 
 **Current State**:
 ```
@@ -283,10 +284,10 @@ Recommendation: 16px minimum for mobile readability
 
 ## Implementation Timeline
 
-### Week 1: Foundation (Oct 17-23)
+### Week 1: Foundation (Oct 17-23) — ✅ COMPLETE
 - [x] Add tooltips (High Priority #2) — shipped `b2fbefc`
 - [x] Increase mobile font size (High Priority #4) — shipped `b2fbefc`
-- [ ] Implement collapsible control groups (High Priority #3)
+- [x] Implement collapsible control groups (High Priority #3) — shipped `5952be8`
 
 ### Week 2: Polish (Oct 24-30)
 - [ ] Implement responsive piano keyboard (High Priority #1)
