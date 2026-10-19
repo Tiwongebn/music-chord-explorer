@@ -9,7 +9,6 @@ import {
   type SavedProgression,
 } from "../utils/savedProgressions";
 import {
-  playTimedProgression,
   playTimedProgressionLoop,
   type ProgressionLoopHandle,
   type TimedChord,
@@ -21,6 +20,7 @@ import {
 import {
   getPattern,
 } from "../data/patterns";
+import { getDefaultStyleId } from "../data/playStyles";
 import type { ScaleChord } from "../utils/scaleHarmony";
 import type { TimeSignatureOption } from "../data/rhythm";
 
@@ -319,6 +319,7 @@ export function useProgressionBuilder(
       swingEnabled,
       accentType,
       patternId,
+      styleId: getDefaultStyleId(),
     });
 
     setSavedProgressions(next);

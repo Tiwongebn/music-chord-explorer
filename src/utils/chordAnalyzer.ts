@@ -20,7 +20,7 @@ interface ChordPattern {
 
 // Derive chord patterns from the single source of truth (chordTypes)
 // sorted by length (longest patterns first for more specific matching)
-const sortedPatterns = chordTypes
+const sortedPatterns: ChordPattern[] = chordTypes
   .map((chord) => ({
     intervals: chord.intervals,
     symbol: chord.symbol,

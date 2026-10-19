@@ -159,11 +159,6 @@ function walkingBass(
   ];
 }
 
-// NO BASS: silent bass layer (for styles that don't want bass)
-function noBass(): BassEvent[] {
-  return [];
-}
-
 // ---- Style catalog ----
 
 const playStyles: PlayStyle[] = [
@@ -354,7 +349,7 @@ const playStyles: PlayStyle[] = [
     defaultSecondsPerBeat: 0.75, // ~80 BPM
     swingEnabled: false,
     accentType: "none",
-    bassLayer: (_, beats, duration) => [
+    bassLayer: (_, _beats, duration) => [
       {
         offsetSeconds: 0,
         beatOffsets: [0],

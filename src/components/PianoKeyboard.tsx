@@ -1,4 +1,9 @@
-import { useRef, useEffect, useState } from "react";
+import {
+  useRef,
+  useEffect,
+  useState,
+  type PointerEvent,
+} from "react";
 import {
   formatNoteForDisplay,
   type AccidentalPreference,
@@ -221,7 +226,7 @@ function PianoKeyboard({
   function makeKeyHandlers(noteWithOctave: string) {
     return {
       onPointerDown: (
-        e: React.PointerEvent<HTMLButtonElement>
+        e: PointerEvent<HTMLButtonElement>
       ) => {
         // Release capture so pointer-enter fires on
         // adjacent keys while dragging.
