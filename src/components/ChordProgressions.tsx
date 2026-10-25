@@ -569,9 +569,8 @@ function ChordProgressions({
         <p className="eyebrow">HARMONY MAP</p>
         <h2>Chord Progressions</h2>
         <p className="subtitle-left">
-          See every chord that naturally belongs to a
-          key, which chords it flows into, and build your
-          own progression from them.
+          Pick a key, see its chords, and build a
+          progression from them.
         </p>
       </div>
 
@@ -1134,9 +1133,10 @@ function ChordProgressions({
                 type="button"
                 className="degree-add-btn"
                 title={`Add ${chord.chordLabel} to your progression`}
+                aria-label={`Add ${chord.chordLabel} to your progression`}
                 onClick={() => handleAddToBuilder(chord)}
               >
-                + Add to builder
+                + Add
               </button>
             </div>
           );
@@ -1171,15 +1171,16 @@ function ChordProgressions({
           </p>
         ) : (
           <p>
-            Tap a chord above to see which chords it
-            goes well with, or hit{" "}
-            <strong>+ Add to builder</strong> to drop it
-            into the progression builder below.
+            Tap a chord to see what it flows into, or
+            hit <strong>+ Add</strong> to put it in your
+            progression.
           </p>
         )}
       </div>
 
-      {/* FUNCTION LEGEND */}
+      {/* FUNCTION LEGEND — colour key only; each function's
+          description shows in the hint above once a chord
+          is tapped, and in the glossary. */}
       <div className="function-legend">
         {(
           ["Tonic", "Subdominant", "Dominant"] as const
@@ -1189,8 +1190,7 @@ function ChordProgressions({
             key={fn}
           >
             <span className="legend-dot" />
-            <strong>{fn}</strong> —{" "}
-            {functionDescriptions[fn]}
+            <span title={functionDescriptions[fn]}>{fn}</span>
           </div>
         ))}
       </div>
@@ -1215,33 +1215,47 @@ function ChordProgressions({
           </div>
 
           <p className="builder-section-hint">
-            Click <strong>+ Add to builder</strong> on any
-            chord above (as many times, in any order, as
-            you like) — each one is locked in as-is, so
-            changing the key, scale, or chord type above
-            afterward won't alter chords already here. You
-            can also add <strong>rests</strong> for
-            silence, toggle swing/shuffle feel, add accents
-            for dynamics, and choose a rhythmic pattern
-            (arpeggios, strums, syncopation, etc.) to
-            articulate how notes fire. Reorder or remove
-            chords below, then play the sequence back, loop
-            it, or save it for later. Chords outside the
-            current key are flagged as{" "}
-            <span className="relation-chip relation-borrowed">
-              Borrowed
-            </span>{" "}
-            or{" "}
-            <span className="relation-chip relation-chromatic">
-              Chromatic
-            </span>
-            .
+            Add chords with <strong>+ Add</strong>, then
+            play, loop or save your progression.
           </p>
+
+          <details className="builder-help">
+            <summary>How it works</summary>
+
+            <ul>
+              <li>
+                Add any chord as many times as you like.
+                Each one is locked in, so changing the
+                key or chord type later won't alter it.
+              </li>
+              <li>
+                Add <strong>rests</strong> for silence,
+                and use Playback &amp; Groove for swing,
+                accents and rhythm patterns.
+              </li>
+              <li>
+                Reorder, resize or remove chords with the
+                buttons on each one.
+              </li>
+              <li>
+                Chords outside the current key are flagged
+                as{" "}
+                <span className="relation-chip relation-borrowed">
+                  Borrowed
+                </span>{" "}
+                or{" "}
+                <span className="relation-chip relation-chromatic">
+                  Chromatic
+                </span>
+                .
+              </li>
+            </ul>
+          </details>
         </div>
 
         {builderChords.length === 0 ? (
           <p className="hint builder-empty">
-            Your progression is empty — add a chord from
+            Your progression is empty. Add a chord from
             the row above to get started.
           </p>
         ) : (
