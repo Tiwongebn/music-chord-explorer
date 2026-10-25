@@ -56,6 +56,7 @@ function ChordSelector({
             <button
               key={note}
               type="button"
+              aria-pressed={rootNote === note}
               className={
                 rootNote === note
                   ? "root-pill active"
@@ -137,6 +138,7 @@ function ChordSelector({
         >
           <button
             type="button"
+            aria-pressed={accidentalPreference === "sharps"}
             className={
               accidentalPreference === "sharps"
                 ? "seg active"
@@ -151,6 +153,7 @@ function ChordSelector({
 
           <button
             type="button"
+            aria-pressed={accidentalPreference === "flats"}
             className={
               accidentalPreference === "flats"
                 ? "seg active"

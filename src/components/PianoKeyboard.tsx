@@ -145,6 +145,11 @@ function PianoKeyboard({
   onClearSelection,
 }: PianoKeyboardProps) {
   const isPointerDown = useRef(false);
+  // What the current press/drag does: "add" if it started on
+  // an unselected key, "remove" otherwise. Dragging across
+  // keys then only applies that one action, so sliding back
+  // over a key never undoes it by accident.
+  const dragAction = useRef<"add" | "remove">("add");
   const [keyboardActiveNotes, setKeyboardActiveNotes] =
     useState<Set<string>>(new Set());
 
@@ -166,8 +171,15 @@ function PianoKeyboard({
       isPointerDown.current = false;
     };
     window.addEventListener("pointerup", handlePointerUp);
-    return () =>
+    // Fired when the browser takes over a touch to scroll.
+    window.addEventListener("pointercancel", handlePointerUp);
+    return () => {
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener(
+        "pointercancel",
+        handlePointerUp
+      );
+    };
   }, []);
 
   // Keyboard → piano key mapping
@@ -177,17 +189,22 @@ function PianoKeyboard({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement ||
+        (e.target instanceof HTMLElement &&
+          e.target.isContentEditable)
       )
         return;
+
+      // Leave browser shortcuts (Ctrl+L, Cmd+D, …) alone.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       const note = keyboardMap[e.key.toLowerCase()];
       if (!note || pressedKeys.has(e.key)) return;
 
       pressedKeys.add(e.key);
-      const noteWithoutOctave = removeOctave(note);
       setKeyboardActiveNotes((prev) =>
-        new Set([...prev, normalizeNote(noteWithoutOctave)])
+        new Set([...prev, note])
       );
       onNoteToggle(note);
     };
@@ -196,10 +213,9 @@ function PianoKeyboard({
       pressedKeys.delete(e.key);
       const note = keyboardMap[e.key.toLowerCase()];
       if (!note) return;
-      const noteWithoutOctave = removeOctave(note);
       setKeyboardActiveNotes((prev) => {
         const next = new Set(prev);
-        next.delete(normalizeNote(noteWithoutOctave));
+        next.delete(note);
         return next;
       });
     };
@@ -216,10 +232,10 @@ function PianoKeyboard({
     normalizeNote
   );
 
-  const normalizedSelectedNotes =
-    selectedNotes
-      .map(removeOctave)
-      .map(normalizeNote);
+  // Selection is per key (with octave), so tapping C4 only
+  // lights C4 — not every C on the keyboard.
+  const isKeySelected = (noteWithOctave: string) =>
+    selectedNotes.includes(noteWithOctave);
 
   const octaves = [3, 4, 5];
 
@@ -232,10 +248,22 @@ function PianoKeyboard({
         // adjacent keys while dragging.
         e.currentTarget.releasePointerCapture(e.pointerId);
         isPointerDown.current = true;
+        dragAction.current = isKeySelected(noteWithOctave)
+          ? "remove"
+          : "add";
         onNoteToggle(noteWithOctave);
       },
       onPointerEnter: () => {
-        if (isPointerDown.current) {
+        if (!isPointerDown.current) {
+          return;
+        }
+
+        const selected = isKeySelected(noteWithOctave);
+
+        if (
+          (dragAction.current === "add" && !selected) ||
+          (dragAction.current === "remove" && selected)
+        ) {
           onNoteToggle(noteWithOctave);
         }
       },
@@ -293,13 +321,12 @@ function PianoKeyboard({
               const isChordNote =
                 normalizedChordNotes.includes(note);
 
-              const isSelected =
-                normalizedSelectedNotes.includes(note);
+              const isSelected = isKeySelected(
+                `${note}${octave}`
+              );
 
               const isKeyboardActive =
-                keyboardActiveNotes.has(
-                  normalizeNote(note)
-                );
+                keyboardActiveNotes.has(`${note}${octave}`);
 
               return (
                 <button
@@ -310,6 +337,11 @@ function PianoKeyboard({
                     isKeyboardActive ? "keyboard-active" : ""
                   }`}
                   type="button"
+                  aria-label={`${getDisplayNote(
+                    note,
+                    accidentalPreference
+                  )}${octave}`}
+                  aria-pressed={isSelected}
                   {...makeKeyHandlers(`${note}${octave}`)}
                 >
                   <span className="key-label">
@@ -337,14 +369,13 @@ function PianoKeyboard({
                   key.note
                 );
 
-              const isSelected =
-                normalizedSelectedNotes.includes(
-                  key.note
-                );
+              const isSelected = isKeySelected(
+                `${key.note}${octave}`
+              );
 
               const isKeyboardActive =
                 keyboardActiveNotes.has(
-                  normalizeNote(key.note)
+                  `${key.note}${octave}`
                 );
 
               const whiteKeyWidth =
@@ -371,6 +402,11 @@ function PianoKeyboard({
                     left: `${leftPosition}%`,
                   }}
                   type="button"
+                  aria-label={`${getDisplayNote(
+                    key.note,
+                    accidentalPreference
+                  )}${octave}`}
+                  aria-pressed={isSelected}
                   {...makeKeyHandlers(
                     `${key.note}${octave}`
                   )}
@@ -406,7 +442,11 @@ function PianoKeyboard({
                 className="selected-note"
                 key={note}
               >
-                {formatNoteForDisplay(note)}
+                {getDisplayNote(
+                  removeOctave(note),
+                  accidentalPreference
+                )}
+                {note.slice(removeOctave(note).length)}
               </span>
             ))}
           </div>

@@ -1,8 +1,14 @@
 import { analyzeChord } from "../utils/chordAnalyzer";
 import { detectInversion } from "../utils/inversionAnalyzer";
+import {
+  convertRootNote,
+  formatNoteForDisplay,
+  type AccidentalPreference,
+} from "../utils/musicTheory";
 
 interface ChordAnalyzerProps {
   selectedNotes: string[];
+  accidentalPreference: AccidentalPreference;
   onUseDetectedChord: () => void;
 }
 
@@ -10,8 +16,22 @@ function removeOctave(note: string): string {
   return note.replace(/\d+$/, "");
 }
 
+// "C#4" -> "D♭4" when flats are preferred.
+function displayNote(
+  note: string,
+  preference: AccidentalPreference
+): string {
+  const pitchClass = removeOctave(note);
+  const octave = note.slice(pitchClass.length);
+
+  return `${formatNoteForDisplay(
+    convertRootNote(pitchClass, preference)
+  )}${octave}`;
+}
+
 function ChordAnalyzer({
   selectedNotes,
+  accidentalPreference,
   onUseDetectedChord,
 }: ChordAnalyzerProps) {
   const pitchClasses = selectedNotes.map(
@@ -29,14 +49,14 @@ function ChordAnalyzer({
     : null;
 
   return (
-    <section className="chord-analyzer">
+    <section className="chord-analyzer" aria-live="polite">
 
       <h2>Chord Analyzer</h2>
 
       {selectedNotes.length === 0 ? (
         <p>
-          Select notes on the piano to analyze
-          the chord.
+          Tap two or more keys on the piano above
+          and the chord name shows up here.
         </p>
       ) : detectedChord ? (
         <div className="detected-chord">
@@ -46,8 +66,13 @@ function ChordAnalyzer({
           </p>
 
           <h3>
-            {detectedChord.root}
-            {detectedChord.symbol}
+            {formatNoteForDisplay(
+              convertRootNote(
+                detectedChord.root,
+                accidentalPreference
+              )
+            )}
+            {formatNoteForDisplay(detectedChord.symbol)}
           </h3>
 
           <p className="chord-type">
@@ -70,7 +95,10 @@ function ChordAnalyzer({
                   className="analyzed-note"
                   key={note}
                 >
-                  {note}
+                  {displayNote(
+                    note,
+                    accidentalPreference
+                  )}
                 </span>
               ))}
             </div>
@@ -78,12 +106,12 @@ function ChordAnalyzer({
           </div>
 
           <button
-  className="use-detected-chord"
-  type="button"
-  onClick={onUseDetectedChord}
->
-  Use This Chord
-</button>
+            className="use-detected-chord"
+            type="button"
+            onClick={onUseDetectedChord}
+          >
+            Use This Chord
+          </button>
 
         </div>
       ) : (
