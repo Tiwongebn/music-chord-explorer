@@ -5,21 +5,46 @@ import {
   chordExtensions,
   chordAlterations,
 } from "../data/chordBuilder";
+import {
+  formatNoteForDisplay,
+  getNotesByPreference,
+  type AccidentalPreference,
+} from "../utils/musicTheory";
 
 interface BuiltChord {
   intervals: number[];
+  intervalNames: string[];
   symbol: string;
   name: string;
 }
 
+// Diminished and augmented triads change the 5th, not
+// just the 3rd.
+const fifthByQuality: Record<
+  string,
+  { interval: number; name: string }
+> = {
+  diminished: { interval: 6, name: "Diminished 5th" },
+  augmented: { interval: 8, name: "Augmented 5th" },
+};
+
+const perfectFifth = { interval: 7, name: "Perfect 5th" };
+
+// 9ths, 11ths and 13ths sit an octave above the root.
+function isCompound(intervalName: string): boolean {
+  return /\b(9|11|13)th\b/.test(intervalName);
+}
+
 interface ChordBuilderProps {
   rootNote: string;
+  accidentalPreference: AccidentalPreference;
   onRootChange: (root: string) => void;
   onChordBuild?: (chord: BuiltChord) => void;
 }
 
 function ChordBuilder({
   rootNote,
+  accidentalPreference,
   onRootChange,
   onChordBuild,
 }: ChordBuilderProps) {
@@ -64,21 +89,46 @@ function ChordBuilder({
         selectedAlterations.includes(alteration.id)
       );
 
-    const intervals = [
-      0,
-      selectedQuality?.interval ?? 4,
-      7,
-      ...extensions.map(
-        (extension) => extension.interval
-      ),
-      ...alterations.map(
-        (alteration) => alteration.interval
-      ),
+    const fifth =
+      fifthByQuality[quality] ?? perfectFifth;
+
+    // ♭5 / ♯5 replace the 5th instead of sitting next to it.
+    const hasAlteredFifth = alterations.some(
+      (alteration) =>
+        alteration.id === "b5" || alteration.id === "#5"
+    );
+
+    const parts = [
+      { interval: 0, name: "Root" },
+      {
+        interval: selectedQuality?.interval ?? 4,
+        name: selectedQuality?.intervalName ?? "Major 3rd",
+      },
+      ...(hasAlteredFifth ? [] : [fifth]),
+      ...[...extensions, ...alterations].map((item) => ({
+        interval: isCompound(item.intervalName)
+          ? item.interval + 12
+          : item.interval,
+        name: item.intervalName,
+      })),
     ];
 
-    const uniqueIntervals = [
-      ...new Set(intervals),
-    ].sort((a, b) => a - b);
+    // Drop duplicates that land on the same pitch class
+    // (e.g. 6th and 13th), keeping the first one.
+    const seen = new Set<number>();
+
+    const uniqueParts = parts
+      .filter((part) => {
+        const pitchClass = part.interval % 12;
+
+        if (seen.has(pitchClass)) {
+          return false;
+        }
+
+        seen.add(pitchClass);
+        return true;
+      })
+      .sort((a, b) => a.interval - b.interval);
 
     let symbol =
   selectedQuality?.symbol ?? "";
@@ -122,13 +172,15 @@ const alterationSymbols =
 symbol += alterationSymbols.join("");
 
 return {
-  intervals: uniqueIntervals,
+  intervals: uniqueParts.map((part) => part.interval),
+  intervalNames: uniqueParts.map((part) => part.name),
   symbol,
   name: `${selectedQuality?.label ?? "Major"} Chord`,
   extensions,
   alterations,
 };
   }, [
+    quality,
     selectedQuality,
     selectedExtensions,
     selectedAlterations,
@@ -171,18 +223,13 @@ return {
             onRootChange(event.target.value)
           }
         >
-          <option value="C">C</option>
-          <option value="C#">C#</option>
-          <option value="D">D</option>
-          <option value="D#">D#</option>
-          <option value="E">E</option>
-          <option value="F">F</option>
-          <option value="F#">F#</option>
-          <option value="G">G</option>
-          <option value="G#">G#</option>
-          <option value="A">A</option>
-          <option value="A#">A#</option>
-          <option value="B">B</option>
+          {getNotesByPreference(
+            accidentalPreference
+          ).map((note) => (
+            <option key={note} value={note}>
+              {formatNoteForDisplay(note)}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -287,26 +334,6 @@ return {
 
       </div>
 
-
-      {/* RESULT */}
-
-      <div className="builder-result">
-
-        <h3>Chord Structure</h3>
-
-        <p>
-          Root: <strong>{rootNote}</strong>
-        </p>
-
-        <p>
-          Intervals:
-        </p>
-
-        <p>
-          {builtChord.intervals.join(" → ")}
-        </p>
-
-      </div>
 
     </section>
   );

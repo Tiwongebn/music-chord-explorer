@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 
 import PianoKeyboard from "./components/PianoKeyboard";
@@ -23,6 +23,18 @@ import {
 } from "./utils/musicTheory";
 
 type Mode = "explore" | "build" | "progressions";
+
+interface LabChord {
+  intervals: number[];
+  intervalNames: string[];
+  symbol: string;
+}
+
+const modes: { id: Mode; label: string }[] = [
+  { id: "explore", label: "🎹 Explore" },
+  { id: "build", label: "🧪 Chord Lab" },
+  { id: "progressions", label: "🗺️ Progressions" },
+];
 
 // Find the catalog chord whose pitch-class pattern matches
 // the given interval pattern (compared mod 12, order-free).
@@ -62,11 +74,10 @@ function App() {
   // Sound output toggle
   const [soundOn, setSoundOn] = useState(true);
 
-  // Result of the last Chord Lab build — used for the hint
-  // banner only. Never switches tabs on its own.
-  const [lastBuild, setLastBuild] = useState<{
-    matched: boolean;
-  } | null>(null);
+  // The chord currently assembled in the Chord Lab.
+  const [labChord, setLabChord] = useState<LabChord | null>(
+    null
+  );
 
   // Start fetching the piano samples right away so the
   // first key press already sounds like a piano.
@@ -110,15 +121,17 @@ function App() {
     setAccidentalPreference(preference);
   };
 
-  const handleNoteToggle = (note: string) => {
-      playNote(note);
+  // Stable so PianoKeyboard's keyboard listener isn't torn
+  // down and re-added on every render.
+  const handleNoteToggle = useCallback((note: string) => {
+    playNote(note);
 
     setSelectedNotes((current) =>
       current.includes(note)
         ? current.filter((item) => item !== note)
         : [...current, note]
     );
-  };
+  }, []);
 
   const handleClearSelection = () => {
     setSelectedNotes([]);
@@ -129,6 +142,23 @@ function App() {
   // tacked on; playNotes ignores anything unparseable.
   const handlePlayChord = () => {
     playNotes(chordNotes.map((note) => `${note}4`));
+  };
+
+  const labNotes = labChord
+    ? calculateChordNotes(
+        rootNote,
+        labChord.intervals,
+        labChord.intervalNames,
+        accidentalPreference
+      )
+    : [];
+
+  const labChordName = labChord
+    ? `${formatNoteForDisplay(displayedRootNote)}${formatNoteForDisplay(labChord.symbol)}`
+    : "";
+
+  const handlePlayLabChord = () => {
+    playNotes(labNotes.map((note) => `${note}4`));
   };
 
   // Analyzer -> selector: apply the detected chord.
@@ -156,22 +186,20 @@ function App() {
     setSelectedChordIndex(match);
   };
 
-  // Chord Lab -> Explore: update the Explore chord silently
-  // in the background and show a hint banner. Important:
-  // ChordBuilder fires onChordBuild on mount AND on every
-  // toggle, so switching tabs here would instantly snap the
-  // user back to Explore — never call setMode() from this.
-  const handleChordBuild = (chord: {
-    intervals: number[];
-  }) => {
-    const match = findMatchingChordIndex(chord.intervals);
+  // Chord Lab -> Explore: keep the Explore chord in sync
+  // in the background. ChordBuilder reports from an effect
+  // that depends on this callback, so it must stay stable
+  // (no deps) or every render would re-trigger the effect.
+  // Never call setMode() from here.
+  const handleChordBuild = useCallback((chord: LabChord) => {
+    setLabChord(chord);
 
-    setLastBuild({ matched: match !== -1 });
+    const match = findMatchingChordIndex(chord.intervals);
 
     if (match !== -1) {
       setSelectedChordIndex(match);
     }
-  };
+  }, []);
 
   return (
     <main className="app">
@@ -195,6 +223,7 @@ function App() {
           <button
             className="sound-toggle"
             type="button"
+            aria-pressed={soundOn}
             onClick={handleSoundToggle}
           >
             {soundOn ? "🔊 Sound on" : "🔇 Muted"}
@@ -206,38 +235,23 @@ function App() {
       {/* =========================
           MODE TABS
       ========================== */}
-      <nav className="mode-tabs" aria-label="App mode">
-        <button
-          type="button"
-          className={
-            mode === "explore" ? "tab active" : "tab"
-          }
-          onClick={() => setMode("explore")}
-        >
-          🎹 Explore
-        </button>
-
-        <button
-          type="button"
-          className={
-            mode === "build" ? "tab active" : "tab"
-          }
-          onClick={() => setMode("build")}
-        >
-          🧪 Chord Lab
-        </button>
-
-        <button
-          type="button"
-          className={
-            mode === "progressions"
-              ? "tab active"
-              : "tab"
-          }
-          onClick={() => setMode("progressions")}
-        >
-          🗺️ Progressions
-        </button>
+      <nav
+        className="mode-tabs"
+        role="tablist"
+        aria-label="App mode"
+      >
+        {modes.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={mode === item.id}
+            className={mode === item.id ? "tab active" : "tab"}
+            onClick={() => setMode(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
       </nav>
 
 
@@ -245,7 +259,7 @@ function App() {
         <>
 
           {/* =========================
-              LEFT PANEL: CONTROLS
+              TOP: PICK A CHORD + CHORD CARD
           ========================== */}
           <div className="explore-wrapper">
             <section className="panel explore-controls">
@@ -263,19 +277,6 @@ function App() {
               />
             </section>
 
-            <ChordAnalyzer
-              selectedNotes={selectedNotes}
-              onUseDetectedChord={
-                handleUseDetectedChord
-              }
-            />
-          </div>
-
-          {/* =========================
-              RIGHT PANEL: CHORD + PIANO
-          ========================== */}
-          <div className="explore-stage">
-
             <section className="panel chord-display-panel">
               <ChordDisplay
                 chordName={chordName}
@@ -285,6 +286,14 @@ function App() {
                 onPlay={handlePlayChord}
               />
             </section>
+          </div>
+
+          {/* =========================
+              BOTTOM: PIANO + ANALYZER
+              The analyzer sits right under the keys so
+              the result appears next to where you tap.
+          ========================== */}
+          <div className="explore-stage">
 
             <section className="panel piano-panel">
               <PianoKeyboard
@@ -296,8 +305,16 @@ function App() {
               />
             </section>
 
+            <ChordAnalyzer
+              selectedNotes={selectedNotes}
+              accidentalPreference={accidentalPreference}
+              onUseDetectedChord={
+                handleUseDetectedChord
+              }
+            />
+
             <aside className="panel tips-card">
-              <h2>💡 Quick theory bites</h2>
+              <h2>Quick theory bites</h2>
 
               <ul className="tip-list">
                 <li>
@@ -333,32 +350,38 @@ function App() {
         /* =========================
             CHORD LAB (BUILDER)
         ========================== */
-        <section className="panel lab-panel">
+        <div className="lab-layout">
+          <section className="panel lab-panel">
+            <ChordBuilder
+              rootNote={rootNote}
+              accidentalPreference={accidentalPreference}
+              onRootChange={setRootNote}
+              onChordBuild={handleChordBuild}
+            />
+          </section>
 
-          {lastBuild?.matched && (
-            <p className="lab-hint match">
-              🎉 That matches{" "}
-              <strong>{chordName}</strong> — flip to{" "}
-              <strong>🎹 Explore</strong> to see it
-              light up the piano.
-            </p>
+          {labChord && (
+            <section className="panel chord-display-panel">
+              <ChordDisplay
+                chordName={labChordName}
+                notes={labNotes}
+                intervalNames={labChord.intervalNames}
+                intervals={labChord.intervals}
+                onPlay={handlePlayLabChord}
+              />
+            </section>
           )}
 
-          {lastBuild && !lastBuild.matched && (
-            <p className="lab-hint">
-              🧪 That combination is more exotic than
-              the catalog — the intervals below still
-              tell the story.
-            </p>
-          )}
-
-          <ChordBuilder
-            rootNote={rootNote}
-            onRootChange={setRootNote}
-            onChordBuild={handleChordBuild}
-          />
-
-        </section>
+          <section className="panel piano-panel">
+            <PianoKeyboard
+              chordNotes={labNotes}
+              accidentalPreference={accidentalPreference}
+              selectedNotes={selectedNotes}
+              onNoteToggle={handleNoteToggle}
+              onClearSelection={handleClearSelection}
+            />
+          </section>
+        </div>
       )}
 
       {mode === "progressions" && (
