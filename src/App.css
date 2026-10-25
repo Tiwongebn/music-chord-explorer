@@ -1331,10 +1331,12 @@ select {
   border-bottom: 2px dashed rgba(36, 30, 61, 0.25);
 }
 
+/* 110px lets all seven degrees fit on one row on desktop
+   (130px wrapped the vii° chord onto a row of its own). */
 .degree-row {
   display: grid;
   grid-template-columns:
-    repeat(auto-fit, minmax(130px, 1fr));
+    repeat(auto-fit, minmax(110px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -1450,7 +1452,7 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1 1 220px;
+  font-weight: 700;
 }
 
 .legend-dot {
@@ -1546,6 +1548,40 @@ select {
     flex-direction: column;
     align-items: stretch;
   }
+
+  /* Three chord cards per row instead of two on phones. */
+  .degree-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /* Play / Loop / Rest / Clear as a 2×2 grid instead of a
+     ragged four-row stack. */
+  .builder-panel .builder-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .builder-panel .builder-actions > button {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Desktop: Harmony and Playback side by side instead of
+   stacked, which roughly halves the controls' height. */
+@media (min-width: 901px) {
+  .prog-controls {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    align-items: stretch;
+  }
+
+  .prog-controls .control-group {
+    margin-bottom: 0;
+    min-width: 0;
+  }
 }
 
 .prog-key-label {
@@ -1630,10 +1666,32 @@ select {
 }
 
 .builder-section-hint {
-  margin: 0 0 20px;
+  margin: 0 0 8px;
   opacity: 0.75;
   font-size: 0.95rem;
   line-height: 1.5;
+}
+
+.builder-help {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+}
+
+.builder-help summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--purple-deep);
+}
+
+.builder-help ul {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.builder-help li + li {
+  margin-top: 4px;
 }
 
 .builder-empty {
