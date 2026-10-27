@@ -192,15 +192,60 @@ export async function playNote(
   active.volume.value = oldVolume;
 }
 
-// ---- Plucked-string guitar -------------------------------
+// ---- Guitar ----------------------------------------------
 //
-// A Karplus-Strong model (Tone.PluckSynth) needs no sample
-// download. PluckSynth is monophonic, so each guitar string
-// gets its own voice; re-plucking a string cuts its old note
-// off, just like a real string.
+// Real acoustic-guitar samples (see public/samples/guitar/
+// CREDITS.md), fetched only once the guitar panel asks for
+// them. Until they arrive, or if they fail to load, a
+// Karplus-Strong pluck (Tone.PluckSynth, no download) stands
+// in. Either way each guitar string is its own voice, so
+// re-plucking a string cuts its old note off like a real one.
 
 const GUITAR_STRINGS = 6;
+
+// Roughly every minor third from E2 to D5; Tone repitches the
+// gaps. Guitar range here is E2 up to G5 (fret 15, high e).
+const GUITAR_SAMPLE_NOTES = [
+  "E2", "G2", "A#2", "C#3", "E3", "G3",
+  "A#3", "C#4", "E4", "G4", "B4", "D5",
+];
+
+let guitarSampler: Tone.Sampler | null = null;
+let guitarFailed = false;
 let pluckers: Tone.PluckSynth[] = [];
+// Last note sounding on each string, so a re-pluck can cut it.
+const ringing: (string | null)[] = Array(GUITAR_STRINGS).fill(null);
+
+function ensureGuitarSampler(): Tone.Sampler {
+  if (!guitarSampler) {
+    const urls: Record<string, string> = {};
+
+    for (const note of GUITAR_SAMPLE_NOTES) {
+      urls[note] = `${note.replace("#", "s")}.mp3`;
+    }
+
+    guitarSampler = new Tone.Sampler({
+      urls,
+      release: 0.4,
+      baseUrl: `${import.meta.env.BASE_URL}samples/guitar/`,
+      onerror: () => {
+        guitarFailed = true;
+      },
+    }).toDestination();
+
+    // The samples are recorded hot; a six-string strum peaks near
+    // 0.7 at this level, so it should not clip.
+    guitarSampler.volume.value = -9;
+  }
+
+  return guitarSampler;
+}
+
+// Start fetching the guitar samples (about 2 MB). Safe to call
+// repeatedly; the panel calls it when it first appears.
+export function preloadGuitar(): void {
+  ensureGuitarSampler();
+}
 
 function getPluckers(): Tone.PluckSynth[] {
   if (pluckers.length === 0) {
@@ -244,10 +289,23 @@ export async function playGuitarString(
 
   await Tone.start();
 
-  getPluckers()[string].triggerAttack(
-    Tone.Frequency(midi, "midi").toNote(),
-    Tone.now() + when
-  );
+  const name = Tone.Frequency(midi, "midi").toNote();
+  const time = Tone.now() + when;
+  const sampler = ensureGuitarSampler();
+
+  if (guitarFailed || !sampler.loaded) {
+    getPluckers()[string].triggerAttack(name, time);
+    return;
+  }
+
+  const previous = ringing[string];
+
+  if (previous) {
+    sampler.triggerRelease(previous, time);
+  }
+
+  ringing[string] = name;
+  sampler.triggerAttack(name, time);
 }
 
 // Rake across the strings. "down" goes low to high (the way a

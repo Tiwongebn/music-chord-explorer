@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   STANDARD_TUNING,
   findGuitarVoicings,
@@ -9,7 +9,11 @@ import {
   formatNoteForDisplay,
   getPitchClass,
 } from "../utils/musicTheory";
-import { playGuitarString, strumGuitar } from "../utils/audio";
+import {
+  playGuitarString,
+  preloadGuitar,
+  strumGuitar,
+} from "../utils/audio";
 
 interface GuitarFretboardProps {
   chordName: string;
@@ -48,6 +52,14 @@ function GuitarFretboard({
   const [direction, setDirection] = useState<"down" | "up">("down");
   const [speedId, setSpeedId] =
     useState<(typeof STRUM_SPEEDS)[number]["id"]>("medium");
+
+  // Fetch the guitar samples shortly after the panel appears,
+  // so they never compete with first paint.
+  useEffect(() => {
+    const id = window.setTimeout(preloadGuitar, 800);
+
+    return () => window.clearTimeout(id);
+  }, []);
 
   const rootPc = getPitchClass(rootNote);
   const intervalKey = intervals.join(",");
