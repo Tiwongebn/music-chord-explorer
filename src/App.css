@@ -2305,3 +2305,26 @@ select {
   stroke: var(--ink);
   stroke-width: 2;
 }
+
+.fretboard-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.fretboard-hit:hover {
+  fill: rgba(134, 59, 255, 0.12);
+}
+
+.fretboard-clickable {
+  cursor: pointer;
+}
+
+.fretboard-clickable:hover .fretboard-dot {
+  stroke-width: 3;
+}
+
+.fretboard-hit:focus-visible,
+.fretboard-clickable:focus-visible {
+  outline: 2px solid var(--purple-deep);
+  outline-offset: 2px;
+}

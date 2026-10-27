@@ -192,6 +192,87 @@ export async function playNote(
   active.volume.value = oldVolume;
 }
 
+// ---- Plucked-string guitar -------------------------------
+//
+// A Karplus-Strong model (Tone.PluckSynth) needs no sample
+// download. PluckSynth is monophonic, so each guitar string
+// gets its own voice; re-plucking a string cuts its old note
+// off, just like a real string.
+
+const GUITAR_STRINGS = 6;
+let pluckers: Tone.PluckSynth[] = [];
+
+function getPluckers(): Tone.PluckSynth[] {
+  if (pluckers.length === 0) {
+    pluckers = Array.from({ length: GUITAR_STRINGS }, () => {
+      const voice = new Tone.PluckSynth({
+        attackNoise: 1.5,
+        dampening: 3600,
+        resonance: 0.97,
+      }).toDestination();
+
+      // Six voices can stack up, so leave plenty of headroom.
+      voice.volume.value = -9;
+
+      return voice;
+    });
+  }
+
+  return pluckers;
+}
+
+export interface GuitarString {
+  // 0 = lowest string. Each string sounds one note at a time.
+  string: number;
+  note: string; // e.g. "G3"
+}
+
+// Pluck one string now (or `when` seconds from now).
+export async function playGuitarString(
+  { string, note }: GuitarString,
+  when = 0
+): Promise<void> {
+  if (!enabled) {
+    return;
+  }
+
+  const midi = noteToMidi(note);
+
+  if (Number.isNaN(midi) || string < 0 || string >= GUITAR_STRINGS) {
+    return;
+  }
+
+  await Tone.start();
+
+  getPluckers()[string].triggerAttack(
+    Tone.Frequency(midi, "midi").toNote(),
+    Tone.now() + when
+  );
+}
+
+// Rake across the strings. "down" goes low to high (the way a
+// downstroke hits), "up" goes high to low. `spreadMs` is the gap
+// between neighbouring strings; a few ms of jitter keeps it
+// from sounding mechanical.
+export function strumGuitar(
+  strings: GuitarString[],
+  direction: "down" | "up" = "down",
+  spreadMs = 40
+): void {
+  const ordered = [...strings].sort((a, b) =>
+    direction === "down" ? a.string - b.string : b.string - a.string
+  );
+
+  ordered.forEach((item, index) => {
+    const jitter = (Math.random() - 0.5) * Math.min(spreadMs, 12);
+
+    playGuitarString(
+      item,
+      Math.max(0, (index * spreadMs + jitter) / 1000)
+    );
+  });
+}
+
 // Play several notes together (or arpeggiated if you pass a
 // stagger). `notes` use octave numbers, e.g. ["C4","E4","G4"].
 export function playNotes(

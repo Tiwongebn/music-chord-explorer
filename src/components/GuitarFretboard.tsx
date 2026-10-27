@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import {
   STANDARD_TUNING,
   findGuitarVoicings,
-  voicingToNotes,
+  noteAt,
+  voicingToStrings,
 } from "../utils/guitarVoicings";
 import {
   formatNoteForDisplay,
   getPitchClass,
 } from "../utils/musicTheory";
-import { playNotes } from "../utils/audio";
+import { playGuitarString, strumGuitar } from "../utils/audio";
 
 interface GuitarFretboardProps {
   chordName: string;
@@ -17,6 +18,13 @@ interface GuitarFretboardProps {
   notes: string[];
   intervals: number[];
 }
+
+// Gap between neighbouring strings as a strum sweeps across.
+const STRUM_SPEEDS = [
+  { id: "slow", label: "Slow", spreadMs: 110 },
+  { id: "medium", label: "Medium", spreadMs: 45 },
+  { id: "fast", label: "Fast", spreadMs: 18 },
+] as const;
 
 const STRING_LABELS = ["E", "A", "D", "G", "B", "e"];
 const NECK_FRETS = 12;
@@ -37,6 +45,9 @@ function GuitarFretboard({
 }: GuitarFretboardProps) {
   const [view, setView] = useState<"shape" | "neck">("shape");
   const [shapeIndex, setShapeIndex] = useState(0);
+  const [direction, setDirection] = useState<"down" | "up">("down");
+  const [speedId, setSpeedId] =
+    useState<(typeof STRUM_SPEEDS)[number]["id"]>("medium");
 
   const rootPc = getPitchClass(rootNote);
   const intervalKey = intervals.join(",");
@@ -59,9 +70,29 @@ function GuitarFretboard({
 
   const handlePlay = () => {
     if (voicing) {
-      playNotes(voicingToNotes(voicing.frets), 40);
+      const speed = STRUM_SPEEDS.find((item) => item.id === speedId);
+
+      strumGuitar(
+        voicingToStrings(voicing.frets),
+        direction,
+        speed?.spreadMs
+      );
     }
   };
+
+  // Tap or press Enter/Space on a string to pluck just that note.
+  const pluck = (string: number, fret: number) => {
+    playGuitarString({ string, note: noteAt(string, fret) });
+  };
+
+  const pluckKeys =
+    (string: number, fret: number) =>
+    (event: React.KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        pluck(string, fret);
+      }
+    };
 
   const width = LEFT + STRING_GAP * 5 + 30;
   const height = TOP + FRET_GAP * SHAPE_ROWS + 14;
@@ -197,6 +228,24 @@ function GuitarFretboard({
                   </g>
                 );
               })}
+
+              {voicing.frets.map((fret, string) =>
+                fret < 0 ? null : (
+                  <rect
+                    key={`hit-${string}`}
+                    x={LEFT + string * STRING_GAP - STRING_GAP / 2}
+                    y={0}
+                    width={STRING_GAP}
+                    height={height}
+                    className="fretboard-hit"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Pluck ${STRING_LABELS[string]} string, ${formatNoteForDisplay(noteAt(string, fret))}`}
+                    onClick={() => pluck(string, fret)}
+                    onKeyDown={pluckKeys(string, fret)}
+                  />
+                )
+              )}
             </svg>
 
             <div className="fretboard-controls">
@@ -210,8 +259,44 @@ function GuitarFretboard({
                 className="play-chord"
                 onClick={handlePlay}
               >
-                ▶ Strum
+                ▶ Strum {direction === "down" ? "↓" : "↑"}
               </button>
+
+              <div
+                className="segmented"
+                role="group"
+                aria-label="Strum direction"
+              >
+                {(["down", "up"] as const).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={direction === item ? "seg active" : "seg"}
+                    aria-pressed={direction === item}
+                    onClick={() => setDirection(item)}
+                  >
+                    {item === "down" ? "↓ Down" : "↑ Up"}
+                  </button>
+                ))}
+              </div>
+
+              <div
+                className="segmented"
+                role="group"
+                aria-label="Strum speed"
+              >
+                {STRUM_SPEEDS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={speedId === item.id ? "seg active" : "seg"}
+                    aria-pressed={speedId === item.id}
+                    onClick={() => setSpeedId(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
 
               {voicings.length > 1 && (
                 <button
@@ -230,6 +315,7 @@ function GuitarFretboard({
               <p className="fretboard-hint">
                 Purple dots are the root. × means skip that
                 string; a ring above the nut is an open string.
+                Tap a string to pluck it.
               </p>
             </div>
           </div>
@@ -305,7 +391,15 @@ function GuitarFretboard({
                     const x = fret === 0 ? 24 : 40 + fret * 52 - 26;
 
                     return (
-                      <g key={`neck-dot-${string}-${fret}`}>
+                      <g
+                        key={`neck-dot-${string}-${fret}`}
+                        className="fretboard-clickable"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Pluck ${formatNoteForDisplay(noteAt(string, fret))}`}
+                        onClick={() => pluck(string, fret)}
+                        onKeyDown={pluckKeys(string, fret)}
+                      >
                         <circle
                           cx={x}
                           cy={y}

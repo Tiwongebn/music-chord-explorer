@@ -184,15 +184,18 @@ export function findGuitarVoicings(
   return picked;
 }
 
-// "E2", "A#3", ... for playNotes.
-export function voicingToNotes(frets: number[]): string[] {
-  return frets.flatMap((fret, string) => {
-    if (fret < 0) {
-      return [];
-    }
+// Note name with octave for a string and fret: "E2", "A#3", ...
+export function noteAt(string: number, fret: number): string {
+  const midi = STANDARD_TUNING[string] + fret;
 
-    const midi = STANDARD_TUNING[string] + fret;
+  return `${SHARP_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
+}
 
-    return [`${SHARP_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`];
-  });
+// The sounding strings of a voicing, for the guitar sound.
+export function voicingToStrings(
+  frets: number[]
+): { string: number; note: string }[] {
+  return frets.flatMap((fret, string) =>
+    fret < 0 ? [] : [{ string, note: noteAt(string, fret) }]
+  );
 }
