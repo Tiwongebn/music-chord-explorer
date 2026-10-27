@@ -6,6 +6,7 @@ import ChordSelector from "./components/ChordSelector";
 import ChordDisplay from "./components/ChordDisplay";
 import ChordAnalyzer from "./components/ChordAnalyzer";
 import ChordBuilder from "./components/ChordBuilder";
+import GuitarFretboard from "./components/GuitarFretboard";
 import ChordProgressions from "./components/ChordProgressions";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
@@ -313,6 +314,15 @@ function App() {
               }
             />
 
+            <section className="panel guitar-panel">
+              <GuitarFretboard
+                chordName={chordName}
+                rootNote={rootNote}
+                notes={chordNotes}
+                intervals={selectedChord.intervals}
+              />
+            </section>
+
             <aside className="panel tips-card">
               <h2>Quick theory bites</h2>
 
@@ -368,6 +378,17 @@ function App() {
                 intervalNames={labChord.intervalNames}
                 intervals={labChord.intervals}
                 onPlay={handlePlayLabChord}
+              />
+            </section>
+          )}
+
+          {labChord && (
+            <section className="panel guitar-panel">
+              <GuitarFretboard
+                chordName={labChordName}
+                rootNote={rootNote}
+                notes={labNotes}
+                intervals={labChord.intervals}
               />
             </section>
           )}

@@ -2200,3 +2200,108 @@ select {
 /* Swing button uses standard segmented control styling */
 
 /* Accents select uses standard select styling */
+
+
+/* =========================
+    GUITAR FRETBOARD
+========================= */
+
+.guitar-panel {
+  order: 2;
+}
+
+.fretboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fretboard-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.fretboard-shape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+
+.fretboard-shape svg {
+  width: 100%;
+  max-width: 260px;
+  flex: 0 0 auto;
+}
+
+.fretboard-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 1 200px;
+}
+
+.fretboard-count,
+.fretboard-hint {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #4a4468;
+}
+
+.fretboard-neck {
+  overflow-x: auto;
+}
+
+.fretboard-neck svg {
+  min-width: 640px;
+  width: 100%;
+}
+
+.fretboard-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.fretboard-fret,
+.fretboard-string {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.fretboard-nut {
+  stroke: var(--ink);
+  stroke-width: 5;
+}
+
+.fretboard-dot {
+  fill: var(--yellow);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.fretboard-dot.root {
+  fill: var(--purple);
+}
+
+.fretboard-dot-label {
+  font-size: 10px;
+  font-weight: 800;
+  fill: var(--ink);
+  pointer-events: none;
+}
+
+.fretboard-dot.root + .fretboard-dot-label {
+  fill: #ffffff;
+}
+
+.fretboard-open {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
