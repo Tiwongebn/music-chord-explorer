@@ -4,39 +4,31 @@ import { getPitchClass } from "../utils/musicTheory";
 interface ChordWaveProps {
   rootNote: string;
   intervals: number[];
-  // Bump this to make the wave swell, e.g. when the chord
-  // is played.
+  // Bump this when the chord is played: the wave comes alive
+  // for a moment, then settles back to still.
   pulse: number;
 }
 
 const MIDDLE_C = 261.63;
 
+// How long the wave keeps moving after a play, roughly as
+// long as the chord rings.
+const PLAY_SECONDS = 1.6;
+
 // Draws the chord's real waveform (its notes' sine waves
-// added together) behind the chord name, slowly drifting.
-// Purely decorative, so it's hidden from screen readers.
+// added together) behind the chord name. It sits still
+// until the chord is played, then drifts and swells while
+// the chord sounds. Purely decorative, so it's hidden from
+// screen readers.
 function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const freqsRef = useRef<number[]>([]);
+  const phaseRef = useRef(0);
   const energyRef = useRef(0);
+  const frameRef = useRef(0);
+  const drawRef = useRef<() => void>(() => {});
 
-  // Keep the root in the octave around middle C so the
-  // shape stays readable for every key.
-  useEffect(() => {
-    const rootPc = getPitchClass(rootNote);
-    const base = rootPc > 6 ? rootPc - 12 : rootPc;
-
-    freqsRef.current = intervals.map(
-      (interval) =>
-        MIDDLE_C * Math.pow(2, (base + interval) / 12)
-    );
-  }, [rootNote, intervals]);
-
-  useEffect(() => {
-    if (pulse > 0) {
-      energyRef.current = 1;
-    }
-  }, [pulse]);
-
+  // Draw one still frame for the current chord, and again
+  // whenever the canvas changes size.
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
@@ -45,13 +37,16 @@ function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
       return;
     }
 
-    const still = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
+    // Keep the root in the octave around middle C so the
+    // shape stays readable for every key.
+    const rootPc = getPitchClass(rootNote);
+    const base = rootPc > 6 ? rootPc - 12 : rootPc;
+    const freqs = intervals.map(
+      (interval) =>
+        MIDDLE_C * Math.pow(2, (base + interval) / 12)
+    );
 
-    let frame = 0;
-
-    const draw = (time: number) => {
+    const draw = () => {
       const ratio = window.devicePixelRatio || 1;
       const width = canvas.clientWidth * ratio;
       const height = canvas.clientHeight * ratio;
@@ -63,8 +58,6 @@ function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
 
       context.clearRect(0, 0, width, height);
 
-      const freqs = freqsRef.current;
-      energyRef.current *= 0.97;
       const swell = 1 + energyRef.current * 0.9;
 
       const layers: [number, string, number][] = [
@@ -78,7 +71,7 @@ function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
         context.lineWidth = lineWidth * ratio;
 
         for (let x = 0; x <= width; x += 3) {
-          const t = (x / width) * 0.018 + time / 9000;
+          const t = (x / width) * 0.018 + phaseRef.current;
           let y = 0;
 
           for (const freq of freqs) {
@@ -103,16 +96,59 @@ function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
 
         context.stroke();
       }
+    };
 
-      if (!still) {
-        frame = requestAnimationFrame(draw);
+    drawRef.current = draw;
+    draw();
+
+    const observer = new ResizeObserver(draw);
+    observer.observe(canvas);
+
+    return () => observer.disconnect();
+  }, [rootNote, intervals]);
+
+  // Animate only while a played chord is ringing.
+  useEffect(() => {
+    if (pulse === 0) {
+      return;
+    }
+
+    const still = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    if (still) {
+      return;
+    }
+
+    cancelAnimationFrame(frameRef.current);
+
+    const start = performance.now();
+    let last = start;
+
+    const tick = (now: number) => {
+      const elapsed = (now - start) / 1000;
+      const progress = Math.min(elapsed / PLAY_SECONDS, 1);
+
+      // Swell in fast, fade out with the chord.
+      energyRef.current = Math.sin(Math.PI * progress) ** 0.6;
+      phaseRef.current += ((now - last) / 9000) * (1 - progress * 0.6);
+      last = now;
+
+      drawRef.current();
+
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(tick);
+      } else {
+        energyRef.current = 0;
+        drawRef.current();
       }
     };
 
-    frame = requestAnimationFrame(draw);
+    frameRef.current = requestAnimationFrame(tick);
 
-    return () => cancelAnimationFrame(frame);
-  }, [rootNote, intervals]);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [pulse]);
 
   return (
     <canvas
