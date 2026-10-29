@@ -34,10 +34,16 @@ import {
   type ScaleChord,
 } from "../utils/scaleHarmony";
 import {
+  convertRootNote,
   formatNoteForDisplay,
   getNotesByPreference,
   type AccidentalPreference,
 } from "../utils/musicTheory";
+import {
+  keyRootName,
+  searchProgressions,
+  type SearchResult,
+} from "../utils/progressionSearch";
 import {
   playNotes,
   playTimedProgression,
@@ -94,6 +100,23 @@ const relationLabel: Record<ChordKeyRelation, string> = {
   diatonic: "",
   borrowed: "Borrowed",
   chromatic: "Chromatic",
+};
+
+// Clickable starter queries under the search box, so it's
+// obvious what kinds of things the search understands.
+const searchExamples = [
+  "sad C minor",
+  "jazzy ii-V-I in F",
+  "pop 4 chords",
+  "Am to F",
+  "epic cinematic",
+  "lo-fi chill in Eb",
+];
+
+const searchSourceLabel: Record<SearchResult["source"], string> = {
+  typed: "Typed",
+  library: "Classic",
+  generated: "Generated",
 };
 
 const relationClass: Record<ChordKeyRelation, string> = {
@@ -205,6 +228,14 @@ function ChordProgressions({
   const [highlightedDegree, setHighlightedDegree] =
     useState<number | null>(null);
 
+  // "Find a progression" search. The box text only becomes a
+  // search when submitted, so results don't jump around (or
+  // re-roll their generated ideas) on every keystroke.
+  // searchSeed re-rolls the generated ideas for the same query.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [searchSeed, setSearchSeed] = useState(0);
+
   // The progression the user is composing: a plain list of
   // frozen chord snapshots (root note + chord-type index).
   // Each entry is fully independent of the key/scale/chord
@@ -308,6 +339,25 @@ function ChordProgressions({
       accidentalPreference
     );
   };
+
+  // Results are computed against the key/scale shown when
+  // the search ran; a query that names its own key ("in F",
+  // "C minor", "Am to F") overrides it.
+  const searchResults = useMemo(
+    () =>
+      submittedQuery.trim()
+        ? searchProgressions(submittedQuery, {
+            keyRoot: rootNote,
+            scaleType,
+            seed: searchSeed,
+          })
+        : [],
+    // rootNote/scaleType deliberately left out: loading a
+    // result changes them, and that shouldn't re-run (and
+    // reshuffle) the search the user is looking at.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [submittedQuery, searchSeed]
+  );
 
   const followUps = highlightedDegree
     ? progressionMap[scaleType][highlightedDegree] ?? []
@@ -552,6 +602,28 @@ function ChordProgressions({
 
   const handleDeleteSaved = (id: string) => {
     setSavedProgressions(deleteProgression(id));
+  };
+
+  const runSearch = (query: string) => {
+    setSearchQuery(query);
+    setSubmittedQuery(query);
+    setSearchSeed(0);
+  };
+
+  // Loads a search result into the builder and switches the
+  // key/scale controls to match, so the diatonic row and the
+  // Borrowed/Chromatic badges line up with what was found.
+  const handleLoadSearchResult = (result: SearchResult) => {
+    stopLoop();
+    setBuilderChords(result.chords);
+    onRootChange(
+      convertRootNote(
+        keyRootName(result.keyPitchClass),
+        accidentalPreference
+      )
+    );
+    setScaleType(result.scaleType);
+    setHighlightedDegree(null);
   };
 
   const handleLoadSaved = (saved: SavedProgression) => {
@@ -1194,6 +1266,145 @@ function ChordProgressions({
           </div>
         ))}
       </div>
+
+      {/* SEARCH & FIND */}
+      <section className="panel search-panel">
+        <p className="eyebrow">SEARCH &amp; FIND</p>
+        <h3>Find a progression</h3>
+        <p className="builder-section-hint">
+          Describe a mood, genre or key, or type chords
+          or numerals. We'll find classic progressions
+          and generate new ones you can load into the
+          builder.
+        </p>
+
+        <form
+          className="search-form"
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            runSearch(searchQuery);
+          }}
+        >
+          <input
+            type="search"
+            className="search-input"
+            aria-label="Search for a chord progression"
+            placeholder='Try "sad C minor" or "Am to F"'
+            value={searchQuery}
+            onChange={(event) =>
+              setSearchQuery(event.target.value)
+            }
+          />
+          <button
+            type="submit"
+            className="search-submit"
+            disabled={!searchQuery.trim()}
+          >
+            Search
+          </button>
+        </form>
+
+        <div className="search-examples">
+          {searchExamples.map((example) => (
+            <button
+              type="button"
+              key={example}
+              className="search-example"
+              onClick={() => runSearch(example)}
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+
+        {submittedQuery.trim() && (
+          <>
+            <div className="search-results-head">
+              <p className="hint">
+                {searchResults.length} result
+                {searchResults.length === 1 ? "" : "s"} for{" "}
+                <strong>"{submittedQuery}"</strong>
+              </p>
+              <button
+                type="button"
+                className="surprise-me-btn"
+                title="Generate different ideas for this search"
+                onClick={() =>
+                  setSearchSeed((current) => current + 1)
+                }
+              >
+                🎲 More ideas
+              </button>
+            </div>
+
+            <div className="saved-list search-results">
+              {searchResults.map((result) => (
+                <div
+                  className={`saved-card search-card search-${result.source}`}
+                  key={result.id}
+                >
+                  <div className="saved-card-head">
+                    <strong>{result.title}</strong>
+                    <span className="saved-card-key">
+                      {getDisplayKeyRoot(
+                        keyRootName(result.keyPitchClass),
+                        accidentalPreference
+                      )}{" "}
+                      {result.scaleType}
+                    </span>
+                  </div>
+
+                  <span className="search-source">
+                    {searchSourceLabel[result.source]}
+                  </span>
+
+                  <div className="template-chip-row">
+                    {result.chords.map((chord, index) => (
+                      <span
+                        className="template-chip"
+                        key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
+                      >
+                        {resolveSnapshot(chord).chordLabel}
+                      </span>
+                    ))}
+                  </div>
+
+                  <p className="search-romans">
+                    {result.romans.join(" – ")}
+                  </p>
+
+                  <p className="search-description">
+                    {result.description}
+                  </p>
+
+                  <div className="saved-card-actions">
+                    <button
+                      type="button"
+                      className="play-chord template-play"
+                      onClick={() =>
+                        handlePlaySnapshotList(result.chords)
+                      }
+                    >
+                      ▶ Play
+                    </button>
+
+                    <button
+                      type="button"
+                      className="template-use"
+                      onClick={() =>
+                        handleLoadSearchResult(result)
+                      }
+                    >
+                      Load into builder
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
 
       {/* CUSTOM PROGRESSION BUILDER */}
       <section className="panel builder-panel">
