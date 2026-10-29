@@ -313,7 +313,7 @@ function GuitarFretboard({
               {voicings.length > 1 && (
                 <button
                   type="button"
-                  className="play-chord"
+                  className="template-use"
                   onClick={() =>
                     setShapeIndex(
                       (shapeIndex + 1) % voicings.length
@@ -325,7 +325,7 @@ function GuitarFretboard({
               )}
 
               <p className="fretboard-hint">
-                Purple dots are the root. × means skip that
+                Amber dots are the root. × means skip that
                 string; a ring above the nut is an open string.
                 Tap a string to pluck it.
               </p>

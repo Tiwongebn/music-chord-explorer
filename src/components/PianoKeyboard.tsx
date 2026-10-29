@@ -278,12 +278,9 @@ function PianoKeyboard({
       <div className="piano-section-head">
         <h2>Tap the keys</h2>
 
-        {/* Toggle is rendered on every screen size for a
-            consistent DOM/aria story, but .piano-toggle is
-            styled to be visually inert (no border, no
-            pointer) above the mobile breakpoint — see
-            App.css — so desktop/tablet users never notice
-            it's there. */}
+        {/* The keyboard only collapses on phones, so
+            .piano-toggle is hidden above the mobile
+            breakpoint (see App.css). */}
         <button
           type="button"
           className="piano-toggle"
@@ -299,8 +296,8 @@ function PianoKeyboard({
       </div>
 
       <p className="piano-description">
-        Purple keys = the chord above · yellow keys =
-        your picks · <kbd>A</kbd>–<kbd>L</kbd> &amp;{" "}
+        Amber keys are the chord · pink keys are your
+        picks · <kbd>A</kbd>–<kbd>L</kbd> &amp;{" "}
         <kbd>W</kbd>/<kbd>E</kbd>/<kbd>T</kbd>/<kbd>Y</kbd>/<kbd>U</kbd> = keyboard
       </p>
 

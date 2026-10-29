@@ -1095,7 +1095,7 @@ function ChordProgressions({
                 onClick={() => setSwingEnabled(!swingEnabled)}
                 title="Swing adds a shuffled, triplet-like feel to the rhythm instead of a straight beat. Click to toggle on/off."
               >
-                {swingEnabled ? "🎷 Swing on" : "🎷 Swing off"}
+                {swingEnabled ? "Swing on" : "Swing off"}
               </button>
             </div>
           </div>
@@ -1208,7 +1208,7 @@ function ChordProgressions({
       >
         {showGlossary
           ? "− Hide term explanations"
-          : "❓ What do these terms mean?"}
+          : "What do these terms mean?"}
       </button>
 
       {showGlossary && (
@@ -1346,7 +1346,7 @@ function ChordProgressions({
             aria-pressed={searchMode === "song"}
             onClick={() => setSearchMode("song")}
           >
-            🎵 A song
+            A song
           </button>
           <button
             type="button"
@@ -1637,7 +1637,7 @@ function ChordProgressions({
                     setSearchSeed((current) => current + 1)
                   }
                 >
-                  🎲 More ideas
+                  More ideas
                 </button>
               </div>
 
@@ -1729,7 +1729,7 @@ function ChordProgressions({
               title="Replace the builder with a random progression"
               onClick={handleSurpriseMe}
             >
-              🎲 Surprise me
+              Surprise me
             </button>
           </div>
 
@@ -1990,7 +1990,7 @@ function ChordProgressions({
             disabled={builderChords.length === 0}
             onClick={handleToggleBuilderLoop}
           >
-            {loopHandle ? "■ Stop loop" : "🔁 Loop"}
+            {loopHandle ? "■ Stop loop" : "Loop"}
           </button>
 
           <button
@@ -2041,7 +2041,7 @@ function ChordProgressions({
             }
             onClick={handleSaveBuilder}
           >
-            💾 Save
+            Save
           </button>
         </div>
 

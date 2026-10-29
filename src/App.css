@@ -1,21 +1,29 @@
 /* ============================================================
-   Music Chord Explorer — playful card-based redesign
+   Music Chord Explorer — "Late Set"
+   A dark stage with one warm amber light. No cards or boxes:
+   content sits on open space, and spacing, type and color do
+   the structuring. Big names use Unbounded, everything else
+   Azeret Mono.
    ============================================================ */
 
 :root {
-  --bg: #fdf4e6;
-  --ink: #241e3d;
-  --card: #ffffff;
-  --purple: #863bff;
-  --purple-deep: #5a1fd0;
-  --pink: #ff6b9d;
-  --yellow: #ffd166;
-  --blue: #47bfff;
-  --green: #12c48b;
-  --red: #ff5d5d;
-  --radius: 18px;
-  --shadow: 6px 6px 0 var(--ink);
-  --shadow-sm: 3px 3px 0 var(--ink);
+  --night: #14111d;
+  --night-raised: #1c1828;
+  --fg: #efe9f7;
+  --muted: #9a91b1;
+  --line: #2c2740;
+  --line-strong: #4a4363;
+  --amber: #ffb547;
+  --amber-deep: #d98e20;
+  --amber-glow: rgba(255, 181, 71, 0.35);
+  --rose: #ff7d8c;
+  --lilac: #c7a6ff;
+  --mint: #7ee0b0;
+
+  --display: "Unbounded", "Futura", system-ui, sans-serif;
+  --mono: "Azeret Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  color-scheme: dark;
 }
 
 * {
@@ -26,395 +34,275 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(
-      circle at 15% 8%,
-      rgba(134, 59, 255, 0.12),
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at 88% 18%,
-      rgba(255, 209, 102, 0.3),
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at 50% 105%,
-      rgba(71, 191, 255, 0.14),
-      transparent 45%
-    ),
-    var(--bg);
-  color: var(--ink);
-  font-family:
-    "Outfit", "Segoe UI", Arial, Helvetica, sans-serif;
+  background: var(--night);
+  color: var(--fg);
+  font: 400 15px/1.6 var(--mono);
   -webkit-font-smoothing: antialiased;
 }
 
 button,
-select {
+select,
+input {
   font: inherit;
   color: inherit;
+}
+
+button {
+  cursor: pointer;
 }
 
 select:focus-visible,
 button:focus-visible,
-input:focus-visible {
-  outline: 3px solid var(--blue);
-  outline-offset: 2px;
+input:focus-visible,
+summary:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 4px;
+}
+
+kbd {
+  font: inherit;
+  color: var(--fg);
 }
 
 .app {
-  width: min(100% - 32px, 1020px);
+  width: min(100% - 40px, 1120px);
   margin: 0 auto;
-  padding: 48px 0 80px;
+  padding: 28px 0 120px;
 }
 
 
 /* =========================
-    HEADER
+    SHARED TYPE + CONTROLS
 ========================= */
 
-.header {
-  text-align: center;
-  margin-bottom: 26px;
+/* Small mono labels do the job boxes used to do. */
+.eyebrow,
+.selector-label,
+.control-group legend,
+.control-group-toggle,
+.detected-label,
+.structure h3,
+.piano-section h2,
+.chord-analyzer h2,
+.fretboard-header h2,
+.tips-card h2,
+.selected-notes h3,
+.analyzed-notes h4,
+.saved-progressions h4,
+.builder-group h3,
+.builder-result h3 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .eyebrow {
-  display: inline-block;
-  margin: 0 0 18px;
-  padding: 0.45rem 1rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--yellow);
-  box-shadow: var(--shadow-sm);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  transform: rotate(-1.5deg);
+  color: var(--amber);
 }
 
-.header h1 {
-  margin: 0 0 12px;
-  font-size: clamp(2.4rem, 6vw, 4.2rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  background: linear-gradient(
-    90deg,
-    var(--purple),
-    var(--pink) 55%,
-    var(--blue)
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.hint,
+.subtitle-left,
+.builder-section-hint,
+.piano-description,
+.fretboard-count,
+.fretboard-hint,
+.prog-key-label,
+.progression-templates-hint,
+.builder-bar-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 
-.subtitle {
-  max-width: 560px;
-  margin: 0 auto;
-  font-size: 1.1rem;
-  opacity: 0.8;
-}
-
-
-/* =========================
-    MODE TABS
-========================= */
-
-.mode-tabs {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  width: fit-content;
-  margin: 26px auto 30px;
-  padding: 6px;
-  background: var(--card);
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  box-shadow: var(--shadow-sm);
-}
-
-.tab {
-  padding: 0.6rem 1.4rem;
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.tab:hover {
-  transform: translateY(-2px);
-}
-
-.tab.active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #ffffff;
-}
-
-
-/* =========================
-    PANELS (cards)
-========================= */
-
-.panel {
-  padding: 28px;
-  background: var(--card);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-.piano-panel {
-  margin-top: 28px;
-}
-
-.lab-panel {
-  margin-top: 28px;
-}
-
-.duo-grid {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 28px;
-  align-items: stretch;
-  margin-top: 28px;
-}
-
-.duo-grid > * {
-  min-width: 0;
-}
-
-
-/* =========================
-    EXPLORE TAB LAYOUT
-========================= */
-
-.explore-wrapper {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 28px;
-  align-items: stretch;
-  margin-top: 28px;
-}
-
-.explore-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.explore-controls h2 {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 800;
-}
-
-.explore-stage {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-top: 28px;
-}
-
-/* Chord Lab: builder, then the result card, then the keys. */
-.lab-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.lab-layout .piano-panel,
-.lab-layout .lab-panel {
-  margin-top: 0;
-}
-
-.lab-layout .lab-panel {
-  margin-top: 28px;
-}
-
-.chord-display-panel {
-  order: 1;
-}
-
-.piano-panel {
-  order: 2;
-  margin-top: 0;
-}
-
-.tips-card {
-  order: 3;
-}
-
-@media (max-width: 1000px) {
-  .explore-wrapper {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .explore-stage {
-    margin-top: 20px;
-  }
-}
-
-/* Phones: a compact header so the tabs and the first
-   controls fit on the opening screen. */
-@media (max-width: 700px) {
-  .app {
-    padding-top: 20px;
-  }
-
-  .header {
-    margin-bottom: 12px;
-  }
-
-  .header .eyebrow {
-    margin-bottom: 10px;
-    font-size: 0.65rem;
-  }
-
-  .header h1 {
-    margin-bottom: 8px;
-    font-size: 2rem;
-  }
-
-  .header .subtitle {
-    display: none;
-  }
-
-  .mode-tabs {
-    margin: 12px auto 16px;
-  }
-}
-
-/* =========================
-    PROGRESSIONS: CONTROL GROUPS
-========================= */
-
-.control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-  border: 2px dashed rgba(36, 30, 61, 0.25);
-  border-radius: 14px;
-  background: #fffaf0;
-  margin-bottom: 20px;
-}
-
-.control-group legend {
-  font-weight: 800;
-  font-size: 0.9rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.7;
-  padding: 0 8px;
-  margin-left: -8px;
-}
-
-/* The legend's inner button is the actual collapse/expand
-   control on mobile (see .control-group-content below). On
-   desktop/tablet it's deliberately styled to look identical
-   to a plain static <legend> label — no border, no pointer,
-   inherited everything — because the fieldsets are always
-   fully expanded there and nothing should hint at
-   interactivity that doesn't apply at that width. */
-.control-group-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: inherit;
-  cursor: default;
-}
-
-.control-group-chevron {
-  display: none;
-}
-
-/* Base (desktop/tablet) layout for the content wrapper now
-   sitting between the fieldset and its .selector-group
-   children — mirrors the flex column + gap the fieldset
-   itself used to provide directly, so adding this wrapper
-   for the mobile accordion (below) doesn't change spacing
-   above the 700px breakpoint. */
-.control-group-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.harmony-group {
-  border-color: var(--purple);
-  background: #f4edff;
-}
-
-.harmony-group legend {
-  color: var(--purple-deep);
-}
-
-.playback-group {
-  border-color: var(--blue);
-  background: #e6f7ff;
-}
-
-.playback-group legend {
-  color: var(--blue);
-}
-
-@media (max-width: 900px) {
-  .prog-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-
-  .control-group {
-    margin-bottom: 0;
-  }
-}
-
-.chord-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 22px;
-  align-items: flex-end;
-  margin-bottom: 26px;
-  padding-bottom: 22px;
-  border-bottom: 2px dashed rgba(36, 30, 61, 0.25);
-}
-
-.selector-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.selector-label {
+/* Primary action: the one lit button on screen. */
+.play-chord,
+.use-detected-chord {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  gap: 8px;
+  padding: 0.7rem 1.4rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--amber);
+  color: var(--night);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  opacity: 0.65;
+  box-shadow: 0 0 28px var(--amber-glow);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
-/* Small "ⓘ" affordance next to a label that has a native
-   title tooltip. Not interactive itself beyond focus/hover —
-   it exists purely to make users aware that hovering (or
-   tabbing to, on keyboard) reveals an explanation. Sized and
-   un-uppercased independently of the label so it stays
-   legible and circular at small label font-sizes. */
+.play-chord:hover,
+.use-detected-chord:hover {
+  box-shadow: 0 0 40px rgba(255, 181, 71, 0.55);
+  transform: translateY(-1px);
+}
+
+.play-chord:active,
+.use-detected-chord:active {
+  transform: scale(0.97);
+}
+
+/* Quiet actions: uppercase mono text, no outline. */
+.clear-selection,
+.template-use,
+.glossary-toggle,
+.surprise-me-btn,
+.saved-delete,
+.degree-add-btn,
+.search-submit,
+.advanced-toggle,
+.link-button,
+.piano-toggle,
+.play-chord.template-play {
+  padding: 0.35rem 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 0.15s ease;
+}
+
+.clear-selection:hover,
+.template-use:hover,
+.glossary-toggle:hover,
+.surprise-me-btn:hover,
+.degree-add-btn:hover,
+.search-submit:hover:not(:disabled),
+.advanced-toggle:hover,
+.link-button:hover,
+.play-chord.template-play:hover {
+  color: var(--fg);
+  transform: none;
+  box-shadow: none;
+}
+
+.play-chord.template-play,
+.surprise-me-btn,
+.search-submit {
+  color: var(--amber);
+}
+
+.play-chord.template-play:hover,
+.surprise-me-btn:hover,
+.search-submit:hover:not(:disabled) {
+  color: var(--amber);
+  text-shadow: 0 0 14px var(--amber);
+}
+
+.search-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.saved-delete:hover {
+  color: var(--rose);
+}
+
+.link-button {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: inherit;
+  color: var(--amber);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Root pills: plain letters, the chosen one lights up. */
+.root-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+
+.root-pill {
+  min-width: 40px;
+  padding: 0.45rem 0.35rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+}
+
+.root-pill:hover {
+  color: var(--fg);
+}
+
+.root-pill.active {
+  color: var(--amber);
+  text-shadow: 0 0 14px var(--amber);
+}
+
+/* Segmented controls: words in a row, active one amber. */
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+}
+
+.seg {
+  padding: 0.4rem 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--muted);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.seg:hover {
+  color: var(--fg);
+}
+
+.seg.active {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+}
+
+select {
+  min-width: 220px;
+  max-width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0;
+  border: none;
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23ffb547' stroke-width='1.6' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  color: var(--fg);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+select:hover {
+  border-bottom-color: var(--amber);
+}
+
+select option,
+select optgroup {
+  background: var(--night-raised);
+  color: var(--fg);
+}
+
 .help-icon {
   display: inline-flex;
   align-items: center;
@@ -423,27 +311,181 @@ input:focus-visible {
   height: 15px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.65rem;
   letter-spacing: 0;
   text-transform: none;
-  opacity: 0.7;
   cursor: help;
 }
 
 .help-icon:hover,
 .help-icon:focus-visible {
-  opacity: 1;
-  background: var(--yellow);
-  color: var(--ink);
+  color: var(--amber);
 }
 
-/* Takes a full row when the selector lays out as a row.
-   Wherever the parent stacks as a column (phones, the
-   Progressions control groups) the basis would become a
-   *height* and leave a big empty block under the pills,
-   so those contexts reset it to auto (see below and the
-   700px breakpoint). */
+
+/* =========================
+    HEADER + MODE TABS
+========================= */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 32px;
+}
+
+.header h1 {
+  margin: 0;
+  font: 700 1.05rem/1 var(--display);
+  letter-spacing: 0.02em;
+}
+
+.header h1 span {
+  color: var(--amber);
+}
+
+.mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  margin-left: auto;
+}
+
+.tab {
+  padding: 0.4rem 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition:
+    color 0.15s ease,
+    text-shadow 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tab.active {
+  color: var(--amber);
+  text-shadow: 0 0 14px var(--amber-glow);
+}
+
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.4rem 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.sound-toggle::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.sound-toggle[aria-pressed="true"]::before {
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+}
+
+.sound-toggle:hover {
+  color: var(--fg);
+}
+
+
+/* =========================
+    OPEN SECTIONS (formerly panels)
+========================= */
+
+.panel {
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.explore-wrapper,
+.lab-layout,
+.progressions-panel {
+  margin-top: 64px;
+}
+
+/* Explore: pickers across the top, then the stage. */
+.explore-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.explore-controls h2 {
+  display: none;
+}
+
+.explore-stage,
+.lab-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 88px;
+}
+
+.explore-stage {
+  margin-top: 88px;
+}
+
+.chord-display-panel {
+  order: 1;
+}
+
+.piano-panel {
+  order: 2;
+}
+
+.guitar-panel {
+  order: 2;
+}
+
+.tips-card {
+  order: 3;
+}
+
+
+/* =========================
+    CHORD SELECTOR
+========================= */
+
+.chord-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 48px;
+  align-items: flex-end;
+}
+
+.selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.selector-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .root-group {
   flex: 1 1 100%;
   min-width: 0;
@@ -453,170 +495,118 @@ input:focus-visible {
   flex: 0 0 auto;
 }
 
-/* Nothing sits below the selector in Explore, so the
-   divider just left a stray dashed line. */
-.explore-controls .chord-selector {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.root-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.root-pill {
-  min-width: 44px;
-  padding: 0.55rem 0.7rem;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 3px 3px 0 rgba(36, 30, 61, 0.9);
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease,
-    background 0.12s ease;
-}
-
-.root-pill:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 rgba(36, 30, 61, 0.9);
-}
-
-.root-pill.active {
-  background: var(--purple);
-  color: #ffffff;
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 var(--ink);
-}
-
-.segmented {
-  display: flex;
-  overflow: hidden;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  box-shadow: var(--shadow-sm);
-}
-
-.seg {
-  padding: 0.6rem 1rem;
-  border: none;
-  background: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.seg + .seg {
-  border-left: 2px solid var(--ink);
-}
-
-.seg.active {
-  background: var(--ink);
-  color: #ffffff;
-}
-
-select {
-  min-width: 220px;
-  padding: 0.7rem 2.4rem 0.7rem 1rem;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  background-color: #ffffff;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23241e3d' stroke-width='2' stroke-linecap='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  box-shadow: var(--shadow-sm);
-  font-weight: 600;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
 
 /* =========================
-    CHORD DISPLAY
+    CHORD DISPLAY (the stage)
 ========================= */
 
+.chord-display {
+  position: relative;
+}
+
+.chord-stage {
+  position: relative;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  height: 320px;
+}
+
+.chord-stage::before {
+  content: "";
+  position: absolute;
+  inset: 8% 22%;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 181, 71, 0.16),
+    transparent
+  );
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.chord-wave {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.chord-display-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
 .chord-display h2 {
-  margin: 6px 0 26px;
-  font-size: clamp(2.4rem, 5vw, 3.4rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  position: relative;
+  margin: 0;
+  font: 300 clamp(4.5rem, 14vw, 10.5rem)/1 var(--display);
+  letter-spacing: -0.04em;
   text-align: center;
+  animation: chord-in 0.45s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes chord-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    filter: blur(6px);
+  }
 }
 
 .chord-notes {
-  display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(140px, 1fr));
-  gap: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px 48px;
 }
 
 .note-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 18px 16px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: linear-gradient(
-    160deg,
-    #f4edff,
-    #ffffff 60%
-  );
-  box-shadow: var(--shadow-sm);
+  align-items: center;
+  gap: 2px;
   text-align: center;
-  transition: transform 0.15s ease;
-}
-
-.note-card:hover {
-  transform: translateY(-4px) rotate(-0.5deg);
 }
 
 .note-name {
-  font-size: 1.9rem;
-  font-weight: 800;
+  font: 500 1.7rem/1.2 var(--display);
 }
 
 .interval-name {
-  font-weight: 700;
-  color: var(--purple-deep);
+  font-size: 0.8rem;
+  color: var(--fg);
 }
 
 .semitone-value {
-  font-size: 0.85rem;
-  opacity: 0.65;
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 .structure {
-  margin-top: 26px;
-  padding: 18px 20px;
-  border: 2px dashed rgba(36, 30, 61, 0.35);
-  border-radius: 14px;
-  background: #fffdf7;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 28px;
+  margin-top: 36px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
 }
 
 .structure h3 {
-  margin: 0 0 10px;
-  font-size: 1rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.7;
+  flex-basis: 100%;
+}
+
+.structure p {
+  margin: 0;
 }
 
 .structure-notes {
-  margin: 0 0 8px;
-  font-size: 1.4rem;
-  font-weight: 800;
-}
-
-.structure-intervals,
-.structure-semitones {
-  margin: 4px 0;
-  opacity: 0.8;
+  color: var(--amber);
 }
 
 
@@ -624,51 +614,23 @@ select {
     PIANO
 ========================= */
 
-.piano-section-head {
+.piano-section-head,
+.fretboard-header {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-}
-
-.piano-section h2 {
-  margin: 0 0 4px;
-  font-size: 1.6rem;
-  font-weight: 800;
-}
-
-.piano-section h2::before {
-  content: "🎹 ";
-}
-
-/* Hide/Show keyboard toggle — styled to be invisible above
-   the mobile breakpoint (no border, no pointer, same text
-   color/size as the rest of the panel) since the keyboard
-   is never collapsed on desktop/tablet. Reuses
-   .control-group-chevron from the Progressions accordion so
-   the ▾/▸ glyph is sized/positioned consistently app-wide. */
-.piano-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-weight: 700;
-  color: inherit;
-  cursor: default;
+  gap: 12px 24px;
 }
 
 .piano-description {
-  margin: 0 0 18px;
-  opacity: 0.7;
+  margin: 8px 0 18px;
 }
 
-/* Base (desktop/tablet) layout for the collapsible wrapper
-   around .piano-wrapper — no visual effect above the mobile
-   breakpoint, where it's always fully expanded. */
+.piano-toggle {
+  display: none;
+}
+
 .piano-keys-content {
   overflow: visible;
 }
@@ -676,7 +638,7 @@ select {
 .piano-wrapper {
   width: 100%;
   overflow-x: auto;
-  padding: 4px 2px 10px;
+  padding: 6px 2px 16px;
 }
 
 .piano-keyboard {
@@ -684,7 +646,7 @@ select {
   display: flex;
   gap: 3px;
   min-width: 900px;
-  height: 250px;
+  height: 240px;
   margin: 0 auto;
 }
 
@@ -692,27 +654,27 @@ select {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  border: 2px solid var(--ink);
-  box-sizing: border-box;
+  border: none;
   font-family: inherit;
-  cursor: pointer;
   transition:
-    transform 0.12s ease,
-    background-color 0.15s ease;
+    background-color 0.15s ease,
+    box-shadow 0.2s ease,
+    transform 0.08s ease;
 }
 
-.piano-key:hover {
-  transform: translateY(-3px);
+.piano-key:active {
+  transform: scaleY(0.985);
+  transform-origin: top;
 }
 
 .piano-key.white {
   position: relative;
   flex: 1;
   height: 100%;
-  padding-bottom: 12px;
-  border-radius: 0 0 12px 12px;
-  background: #ffffff;
-  color: var(--ink);
+  padding-bottom: 14px;
+  border-radius: 0 0 6px 6px;
+  background: #e9e3f1;
+  color: var(--night);
 }
 
 .piano-key.black {
@@ -722,92 +684,96 @@ select {
   width: 3.6%;
   height: 60%;
   padding-bottom: 10px;
-  border-radius: 0 0 10px 10px;
-  background: var(--ink);
-  color: #ffffff;
+  border: 2px solid var(--night);
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+  background: #0c0a12;
+  color: var(--muted);
+}
+
+.piano-key.white:hover {
+  background: #f6f2fb;
+}
+
+.piano-key.black:hover {
+  background: #221d30;
 }
 
 .piano-key.active.white {
-  background: var(--purple);
-  color: #ffffff;
+  background: var(--amber);
+  box-shadow: 0 0 22px rgba(255, 181, 71, 0.45);
 }
 
 .piano-key.active.black {
-  background: var(--purple-deep);
-  color: #ffffff;
+  background: var(--amber-deep);
+  color: var(--night);
+  box-shadow: 0 0 18px rgba(255, 181, 71, 0.4);
 }
 
 .piano-key.selected.white {
-  background: var(--yellow);
-  color: var(--ink);
+  background: var(--rose);
+  color: var(--night);
+  box-shadow: 0 0 22px rgba(255, 125, 140, 0.5);
 }
 
 .piano-key.selected.black {
-  background: #e6a700;
-  color: var(--ink);
+  background: #d95768;
+  color: var(--night);
+  box-shadow: 0 0 18px rgba(255, 125, 140, 0.45);
+}
+
+.piano-key.white.keyboard-active {
+  background: #fff6e6;
+  box-shadow: 0 0 26px rgba(255, 255, 255, 0.5);
+}
+
+.piano-key.black.keyboard-active {
+  background: #6b6280;
 }
 
 .key-label {
   pointer-events: none;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .piano-key.black .key-label {
-  font-size: 0.8rem;
+  font-size: 0.65rem;
 }
 
 .octave-label {
   position: absolute;
   bottom: 38px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   opacity: 0.55;
 }
 
 .selected-notes {
-  margin-top: 6px;
-}
-
-.selected-notes h3 {
-  margin: 18px 0 10px;
-}
-
-.selected-note-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  align-items: baseline;
+  gap: 10px 20px;
+  margin-top: 8px;
 }
 
-.selected-note {
-  padding: 0.5rem 0.9rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--yellow);
-  box-shadow: 2px 2px 0 var(--ink);
-  font-weight: 700;
+.selected-notes .hint {
+  margin: 0;
 }
 
-.hint {
-  opacity: 0.65;
+.selected-note-list,
+.analyzed-note-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.selected-note,
+.analyzed-note {
+  color: var(--rose);
 }
 
 .clear-selection {
-  margin-top: 14px;
-  padding: 0.6rem 1.2rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: var(--shadow-sm);
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    transform 0.12s ease,
-    background 0.12s ease;
-}
-
-.clear-selection:hover {
-  background: var(--red);
-  color: #ffffff;
-  transform: translateY(-2px);
+  margin: 0;
 }
 
 
@@ -815,166 +781,115 @@ select {
     ANALYZER
 ========================= */
 
+/* Sits right under the keys so the answer appears where
+   you tap. */
 .chord-analyzer {
-  padding: 28px;
-  background: var(--card);
-  border: 2px solid var(--ink);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  text-align: center;
-}
-
-.chord-analyzer h2 {
-  margin: 0 0 6px;
-  font-size: 1.6rem;
-  font-weight: 800;
-}
-
-.chord-analyzer h2::before {
-  content: "🔍 ";
+  order: 2;
+  margin-top: -48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
 }
 
 .chord-analyzer > p {
-  opacity: 0.75;
+  margin: 10px 0 0;
+  font-size: 0.85rem;
 }
 
 .detected-chord {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 24px;
   margin-top: 12px;
-  animation: pop 0.35s ease;
+  animation: chord-in 0.35s ease;
 }
 
 .detected-label {
-  margin: 0;
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.6;
+  flex-basis: 100%;
 }
 
 .detected-chord h3 {
-  margin: 6px 0;
-  font-size: clamp(2.2rem, 4vw, 3rem);
-  font-weight: 800;
-  background: linear-gradient(
-    90deg,
-    var(--purple),
-    var(--pink)
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  margin: 0;
+  font: 300 clamp(2.4rem, 5vw, 3.4rem)/1 var(--display);
+  color: var(--rose);
+  text-shadow: 0 0 24px rgba(255, 125, 140, 0.35);
 }
 
 .chord-type {
   margin: 0;
-  opacity: 0.75;
+  color: var(--fg);
 }
 
 .inversion {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 0.35rem 0.9rem;
-  border: 2px solid var(--green);
-  border-radius: 999px;
-  background: #e9fbf3;
-  color: #0a7d57;
-  font-weight: 700;
+  margin: 0;
+  color: var(--mint);
+  font-size: 0.85rem;
 }
 
 .analyzed-notes {
-  margin-top: 18px;
-}
-
-.analyzed-notes h4 {
-  margin: 0 0 10px;
-}
-
-.analyzed-note-list {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.analyzed-note {
-  padding: 0.45rem 0.8rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: #f1ecff;
-  font-weight: 700;
+  align-items: baseline;
+  gap: 8px 16px;
+  flex-basis: 100%;
 }
 
 .use-detected-chord {
-  margin-top: 18px;
-  padding: 0.8rem 1.6rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--purple);
-  box-shadow: var(--shadow-sm);
-  color: #ffffff;
-  font-size: 1rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    transform 0.12s ease,
-    background 0.12s ease;
-}
-
-.use-detected-chord:hover {
-  background: var(--purple-deep);
-  transform: translateY(-2px);
+  margin-top: 6px;
 }
 
 .unknown-chord {
   margin-top: 12px;
-  opacity: 0.75;
 }
 
 .unknown-chord p {
-  margin: 6px 0;
+  margin: 4px 0;
 }
 
 
 /* =========================
-    TIPS CARD
+    TIPS
 ========================= */
 
-.tips-card h2 {
-  margin: 0 0 14px;
-  font-size: 1.4rem;
-}
-
-.tips-card h2::before {
-  content: "💡 ";
-}
-
 .tip-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0;
-  padding-left: 20px;
-  line-height: 1.5;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px 40px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.tip-list li {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
 }
 
 .tip-list strong {
-  color: var(--purple-deep);
+  color: var(--fg);
+  font-weight: 500;
 }
 
 
 /* =========================
-    CHORD BUILDER
+    CHORD LAB (builder)
 ========================= */
 
 .builder-header h2 {
-  margin: 0.3rem 0;
-  font-size: 2rem;
-  font-weight: 800;
+  margin: 0.3rem 0 8px;
+  font: 300 clamp(2.4rem, 6vw, 4rem)/1 var(--display);
+  letter-spacing: -0.03em;
 }
 
 .builder-header p {
-  margin-top: 0;
-  opacity: 0.75;
+  margin: 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .builder-control {
@@ -982,116 +897,1141 @@ select {
   flex-direction: column;
   gap: 8px;
   max-width: 260px;
-  margin-top: 20px;
+  margin-top: 32px;
 }
 
 .builder-control label {
-  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .builder-group {
-  margin-top: 24px;
+  margin-top: 32px;
 }
 
 .builder-group h3 {
-  margin: 0 0 10px;
+  margin-bottom: 10px;
 }
 
 .builder-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 4px 24px;
 }
 
 .builder-option {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0.6rem 1rem;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 3px 3px 0 rgba(36, 30, 61, 0.85);
-  font-weight: 600;
+  padding: 0.4rem 0;
+  color: var(--muted);
   cursor: pointer;
-  transition: transform 0.12s ease;
+  transition: color 0.15s ease;
 }
 
 .builder-option:hover {
-  transform: translateY(-2px);
+  color: var(--fg);
 }
 
 .builder-option:has(input:checked) {
-  background: var(--yellow);
+  color: var(--amber);
 }
 
 .builder-option input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--purple);
+  width: 14px;
+  height: 14px;
+  accent-color: var(--amber);
   cursor: pointer;
 }
 
 .builder-result {
-  margin-top: 28px;
-  padding: 18px 20px;
-  border: 2px dashed rgba(36, 30, 61, 0.35);
-  border-radius: 14px;
-  background: #fffdf7;
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }
 
 .builder-result h3 {
-  margin: 0 0 8px;
+  margin-bottom: 8px;
 }
 
 .builder-result p {
   margin: 4px 0;
+  color: var(--muted);
+}
+
+.lab-hint {
+  margin: 0 0 28px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.lab-hint::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: var(--rose);
+  vertical-align: 1px;
+}
+
+.lab-hint.match::before {
+  background: var(--mint);
 }
 
 
 /* =========================
-    MOTION + RESPONSIVE
+    PROGRESSIONS
 ========================= */
 
-@keyframes pop {
-  0% {
-    transform: scale(0.94);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
+.progressions-header h2 {
+  margin: 10px 0 14px;
+  font: 300 clamp(2.4rem, 6vw, 4rem)/1 var(--display);
+  letter-spacing: -0.03em;
+}
+
+.subtitle-left {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.prog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px 64px;
+  align-items: flex-start;
+  margin: 48px 0 64px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.control-group legend {
+  padding: 0;
+  margin: 0 0 18px;
+}
+
+.control-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--amber);
+  cursor: default;
+}
+
+.control-group-chevron {
+  display: none;
+}
+
+.control-group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.tempo-group {
+  min-width: 180px;
+}
+
+.tempo-control {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.tempo-control input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 100px;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
+.tempo-value {
+  min-width: 64px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.prog-key-label {
+  margin: 0 0 14px;
+  color: var(--fg);
+  font: 300 1.6rem/1.2 var(--display);
+}
+
+.scale-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin-bottom: 18px;
+}
+
+.scale-note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.scale-note-degree {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.scale-note-name {
+  font-size: 0.95rem;
+}
+
+.glossary-toggle {
+  margin: 0 0 18px;
+}
+
+.advanced-toggle {
+  align-self: flex-start;
+}
+
+.glossary-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px 40px;
+  margin: 0 0 36px;
+}
+
+.glossary-entry dt {
+  margin: 0 0 4px;
+  color: var(--amber);
+}
+
+.glossary-entry dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* The key's chords: open columns hung from a hairline. */
+.degree-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 0 8px;
+  margin: 28px 0 24px;
+}
+
+.degree-card-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.degree-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 18px 8px 8px 0;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  text-align: left;
+  transition: border-color 0.2s ease;
+}
+
+.degree-card:hover {
+  border-top-color: var(--line-strong);
+}
+
+.degree-roman {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.degree-chord-name {
+  font: 500 2rem/1.2 var(--display);
+  letter-spacing: -0.02em;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+}
+
+.degree-notes {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.degree-function {
+  margin-top: 4px;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.degree-card.fn-tonic .degree-function {
+  color: var(--amber);
+}
+
+.degree-card.fn-subdominant .degree-function {
+  color: var(--lilac);
+}
+
+.degree-card.fn-dominant .degree-function {
+  color: var(--rose);
+}
+
+.degree-card.active {
+  border-top: 2px solid var(--amber);
+  padding-top: 17px;
+}
+
+.degree-card.active .degree-chord-name {
+  color: var(--amber);
+  text-shadow: 0 0 18px var(--amber-glow);
+}
+
+.degree-card.suggested {
+  border-top: 1px dashed var(--amber);
+}
+
+.degree-card.suggested .degree-chord-name {
+  color: #ffd8a0;
+}
+
+.degree-add-btn {
+  padding: 0.25rem 0;
+}
+
+.harmony-hint {
+  max-width: 70ch;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.harmony-hint p {
+  margin: 0;
+}
+
+.harmony-hint strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.function-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-item.fn-tonic .legend-dot {
+  background: var(--amber);
+}
+
+.legend-item.fn-subdominant .legend-dot {
+  background: var(--lilac);
+}
+
+.legend-item.fn-dominant .legend-dot {
+  background: var(--rose);
+}
+
+/* Chord chips inside lists: just the names, in the display face. */
+.template-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 10px 0;
+}
+
+.template-chip {
+  font: 500 1.15rem/1.3 var(--display);
+}
+
+.template-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.template-play {
+  font-size: 0.72rem;
+}
+
+.relation-chip,
+.difficulty-chip,
+.search-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.relation-chip::before,
+.difficulty-chip::before,
+.search-source::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.relation-chip.relation-borrowed,
+.difficulty-chip.difficulty-intermediate {
+  color: var(--lilac);
+}
+
+.relation-chip.relation-chromatic,
+.difficulty-chip.difficulty-advanced {
+  color: var(--rose);
+}
+
+.difficulty-chip.difficulty-beginner {
+  color: var(--mint);
+}
+
+.builder-slot .relation-chip {
+  margin-left: 0;
+}
+
+.beats-chip {
+  margin-left: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  vertical-align: middle;
+}
+
+
+/* =========================
+    SEARCH & FIND + SONG LOOKUP
+========================= */
+
+.search-panel,
+.builder-panel {
+  margin-top: 112px;
+}
+
+.search-panel h3,
+.builder-panel-header h3 {
+  margin: 10px 0 18px;
+  font: 300 clamp(2rem, 4.5vw, 3rem)/1.05 var(--display);
+  letter-spacing: -0.03em;
+}
+
+.search-mode {
+  margin: 0 0 18px;
+}
+
+.search-form {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  max-width: 720px;
+  margin: 18px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-strong);
+  transition: border-color 0.2s ease;
+}
+
+.search-form:focus-within {
+  border-bottom-color: var(--amber);
+}
+
+.search-form::before {
+  content: "›";
+  color: var(--amber);
+  font-size: 1.4rem;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  font: 300 1.6rem/1.3 var(--display);
+}
+
+.search-input::placeholder {
+  color: var(--line-strong);
+}
+
+.search-input:focus {
+  outline: none;
+}
+
+.search-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-bottom: 8px;
+}
+
+.search-example {
+  padding: 0.25rem 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-decoration: underline dotted var(--line-strong);
+  text-underline-offset: 4px;
+  transition: color 0.15s ease;
+}
+
+.search-example:hover {
+  color: var(--amber);
+}
+
+.search-results-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 24px 0 8px;
+}
+
+.search-results-head .hint {
+  margin: 0;
+}
+
+.search-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.search-card .saved-card-actions {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.search-source {
+  align-self: flex-start;
+  margin: 0 0 6px;
+  color: var(--amber);
+}
+
+.search-generated .search-source {
+  color: var(--mint);
+}
+
+.search-typed .search-source {
+  color: var(--lilac);
+}
+
+.search-romans {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.search-description {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.song-title {
+  font: 500 1.15rem/1.3 var(--display);
+}
+
+.song-artist {
+  margin: 2px 0 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.song-key {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.song-key select {
+  min-width: 0;
+  padding: 0.2rem 1.6rem 0.2rem 0;
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.song-section {
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.song-section .search-source {
+  display: inline-flex;
+}
+
+.song-section .saved-card-actions {
+  margin-top: 6px;
+}
+
+.song-load-all {
+  align-self: flex-start;
+  margin-top: 14px;
+  color: var(--amber);
+}
+
+.song-missing {
+  max-width: 62ch;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.song-missing p {
+  margin: 0 0 6px;
+}
+
+.song-missing p:last-child {
+  margin-bottom: 0;
+}
+
+
+/* =========================
+    SAVED / RESULT LISTS
+========================= */
+
+.saved-progressions {
+  margin-top: 48px;
+}
+
+.saved-progressions h4 {
+  margin-bottom: 14px;
+}
+
+.saved-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px 40px;
+}
+
+.saved-card {
+  padding: 16px 0 14px;
+  border-top: 1px solid var(--line);
+  background: none;
+}
+
+.saved-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.saved-card-head strong {
+  font-weight: 500;
+}
+
+.saved-card-key {
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.saved-card-actions {
+  display: flex;
+  gap: 4px 18px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.saved-card-time-signature {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+
+/* =========================
+    PROGRESSION BUILDER
+========================= */
+
+.builder-panel-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.builder-section-hint {
+  margin: 0 0 8px;
+  max-width: 62ch;
+}
+
+.builder-help {
+  margin: 0 0 28px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.builder-help summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--fg);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.builder-help ul {
+  max-width: 70ch;
+  margin: 12px 0 0;
+  padding-left: 1.2rem;
+  line-height: 1.6;
+}
+
+.builder-help li + li {
+  margin-top: 6px;
+}
+
+.builder-empty {
+  margin: 0 0 24px;
+  padding: 28px 0;
+  border-top: 1px dashed var(--line-strong);
+  border-bottom: 1px dashed var(--line-strong);
+  text-align: center;
+}
+
+/* Slots read like bars on a lead sheet: a dot, the chord,
+   the numeral, and a barline after each full bar. */
+.builder-slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 18px 0;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.builder-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 118px;
+  padding: 24px 22px 0 0;
+}
+
+.builder-slot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 12px var(--amber-glow);
+}
+
+.builder-slot::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 16px;
+  right: 6px;
+  height: 1px;
+  background: var(--line);
+}
+
+.builder-slot-index {
+  position: absolute;
+  top: -5px;
+  left: 18px;
+  padding: 0 4px;
+  background: var(--night);
+  color: var(--muted);
+  font-size: 0.62rem;
+  z-index: 1;
+}
+
+.builder-slot-chord {
+  font: 500 1.9rem/1.15 var(--display);
+  letter-spacing: -0.02em;
+}
+
+.builder-slot-roman {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.builder-slot-actions,
+.beats-stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.beats-value {
+  min-width: 46px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.slot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.slot-btn:hover:not(:disabled) {
+  color: var(--fg);
+  background: var(--night-raised);
+}
+
+.slot-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.slot-remove:hover:not(:disabled) {
+  color: var(--rose);
+}
+
+.builder-slot.bar-end {
+  margin-right: 22px;
+  border-right: 3px double var(--line-strong);
+}
+
+.builder-slot.rest-slot::before {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+
+.builder-slot-chord.rest {
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+
+.builder-bar-hint {
+  margin: 0 0 24px;
+  font-size: 0.75rem;
+}
+
+.builder-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px 26px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+/* In the builder row only Play is lit; Loop starts quiet and
+   glows while it runs. */
+.builder-actions .loop-btn {
+  padding: 0.35rem 0;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.builder-actions .loop-btn:hover:not(:disabled) {
+  color: var(--fg);
+  transform: none;
+  box-shadow: none;
+}
+
+.loop-btn.looping,
+.builder-actions .loop-btn.looping {
+  color: var(--amber);
+  animation: loop-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes loop-pulse {
+  50% {
+    text-shadow: 0 0 16px var(--amber);
   }
 }
 
-@media (max-width: 900px) {
-  .duo-grid {
-    grid-template-columns: 1fr;
+.builder-actions button:disabled,
+.builder-save-row button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none;
+}
+
+.builder-save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  max-width: 720px;
+  margin-bottom: 10px;
+}
+
+.builder-save-input {
+  flex: 1 1 220px;
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--fg);
+}
+
+.builder-save-input::placeholder {
+  color: var(--muted);
+}
+
+.builder-save-input:focus {
+  outline: none;
+  border-bottom-color: var(--amber);
+}
+
+
+/* =========================
+    GUITAR FRETBOARD
+========================= */
+
+.fretboard-header {
+  margin-bottom: 18px;
+}
+
+.fretboard-shape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 32px 56px;
+}
+
+.fretboard-shape svg {
+  width: 100%;
+  max-width: 260px;
+  flex: 0 0 auto;
+}
+
+.fretboard-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1 1 220px;
+}
+
+.fretboard-controls .play-chord {
+  margin-bottom: 4px;
+}
+
+.fretboard-count,
+.fretboard-hint {
+  margin: 0;
+}
+
+.fretboard-neck {
+  overflow-x: auto;
+}
+
+.fretboard-neck svg {
+  min-width: 640px;
+  width: 100%;
+}
+
+.fretboard-label {
+  font-family: var(--mono);
+  font-size: 12px;
+  fill: var(--muted);
+}
+
+.fretboard-fret {
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.fretboard-string {
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+}
+
+.fretboard-nut {
+  stroke: var(--muted);
+  stroke-width: 5;
+}
+
+.fretboard-dot {
+  fill: var(--fg);
+  stroke: var(--night);
+  stroke-width: 2;
+  transition: filter 0.15s ease;
+}
+
+.fretboard-dot.root {
+  fill: var(--amber);
+  filter: drop-shadow(0 0 6px rgba(255, 181, 71, 0.6));
+}
+
+.fretboard-dot-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  fill: var(--night);
+  pointer-events: none;
+}
+
+.fretboard-dot.root + .fretboard-dot-label {
+  fill: var(--night);
+}
+
+.fretboard-open {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 1.5;
+}
+
+.fretboard-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.fretboard-hit:hover {
+  fill: rgba(255, 181, 71, 0.1);
+}
+
+.fretboard-clickable {
+  cursor: pointer;
+}
+
+.fretboard-clickable:hover .fretboard-dot {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+}
+
+.fretboard-hit:focus-visible,
+.fretboard-clickable:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 2px;
+}
+
+
+/* =========================
+    RESPONSIVE
+========================= */
+
+@media (min-width: 901px) {
+  /* Harmony and Playback side by side. */
+  .prog-controls {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
   }
 }
 
 @media (max-width: 700px) {
-  .panel {
-    padding: 20px;
+  .app {
+    width: min(100% - 32px, 1120px);
+    padding-top: 20px;
   }
 
-  /* Piano touch targets: feedback testing found keys too
-     small to tap reliably on phones (~30px wide white keys,
-     below the ~44px WCAG touch-target minimum). 21 white
-     keys (7 notes × 3 octaves) at a wider min-width works
-     out to roughly 46-48px per key once the 3px inter-key
-     gaps are subtracted — still wider than the previous
-     720px, which .piano-wrapper already handles via
-     horizontal scroll (overflow-x: auto), so this trades a
-     bit more scrolling for keys that are actually tappable. */
-  .piano-keyboard {
-    min-width: 1050px;
-    height: 220px;
+  .header {
+    gap: 12px 20px;
+  }
+
+  .mode-tabs {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    gap: 4px 22px;
+  }
+
+  .sound-toggle {
+    margin-left: auto;
+  }
+
+  .explore-wrapper,
+  .lab-layout,
+  .progressions-panel {
+    margin-top: 40px;
+  }
+
+  .explore-stage,
+  .lab-layout {
+    gap: 64px;
+  }
+
+  .explore-stage {
+    margin-top: 56px;
+  }
+
+  .chord-stage {
+    height: 230px;
+  }
+
+  .chord-analyzer {
+    margin-top: -32px;
   }
 
   .chord-selector {
     flex-direction: column;
     align-items: stretch;
+    gap: 22px;
   }
 
   .chord-selector .root-group {
@@ -1102,49 +2042,47 @@ select {
     width: 100%;
   }
 
-  /* Mobile readability: feedback testing found labels and
-     control text comfortable on desktop but a little small
-     to read on phones. Bump the key text sizes up without
-     touching desktop/tablet layout. Badge-style text
-     (.degree-function) gets a smaller bump than full labels
-     so its pill shape doesn't overflow. */
-  .selector-label,
-  .control-group legend,
-  .tempo-value,
-  .degree-roman {
-    font-size: 0.95rem;
+  .prog-controls {
+    flex-direction: column;
+    align-items: stretch;
+    margin: 36px 0 48px;
+  }
+
+  .degree-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px 8px;
+  }
+
+  .degree-chord-name {
+    font-size: 1.5rem;
   }
 
   .degree-function {
-    font-size: 0.72rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.06em;
   }
 
-  select,
-  .root-pill,
-  .seg,
-  .builder-save-input {
-    font-size: 1rem;
+  .search-panel,
+  .builder-panel {
+    margin-top: 80px;
   }
 
-  .help-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 0.85rem;
+  .builder-slot {
+    min-width: 104px;
   }
 
-  /* Collapsible Progressions control groups: feedback
-     testing found the Harmony Selection + Playback & Groove
-     fieldsets, stacked vertically, required excessive
-     scrolling on phones. Below this breakpoint the legend
-     becomes a real tap target (full-width, visible chevron,
-     pointer cursor) that toggles .is-collapsed on the
-     content wrapper. Desktop/tablet never apply
-     .is-collapsed in the first place (React still toggles
-     the class, but nothing below reads it above 700px). */
+  /* Piano keys stay tappable (~46px white keys) and the
+     strip scrolls sideways inside its own container. */
+  .piano-keyboard {
+    min-width: 1000px;
+    height: 210px;
+  }
+
+  /* Collapsible Progressions control groups on phones. */
   .control-group-toggle {
     width: 100%;
-    cursor: pointer;
     justify-content: space-between;
+    cursor: pointer;
   }
 
   .control-group-chevron {
@@ -1152,14 +2090,6 @@ select {
     font-size: 0.8rem;
   }
 
-  /* max-height (rather than the common grid-template-rows
-     1fr/0fr trick) because .control-group-content has
-     several .selector-group children, each of which would
-     get its own implicit grid row that the "fr" trick can't
-     collapse — max-height collapses the whole block
-     regardless of how many children it holds. The 2000px
-     ceiling is just "comfortably taller than this content
-     will ever be," not a measured value. */
   .control-group-content {
     max-height: 2000px;
     overflow: hidden;
@@ -1176,30 +2106,15 @@ select {
     margin-top: -16px;
   }
 
-  /* Collapsible piano keyboard: even with the wider keys
-     above, mobile testers (Sam) suggested making the piano
-     optional/collapsible rather than always taking up
-     screen space. "Hide/Show keyboard" becomes a real,
-     bordered tap target here; .piano-keys-content collapses
-     the same way .control-group-content does above. The
-     "Your notes" summary below the keyboard is a sibling,
-     not a child, of .piano-keys-content, so it stays
-     visible even while the keys are hidden. */
+  /* Collapsible keyboard on phones. */
   .piano-section-head {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .piano-toggle {
-    padding: 0.4rem 0.8rem;
-    border: 2px solid var(--ink);
-    border-radius: 999px;
-    background: #ffffff;
-    box-shadow: var(--shadow-sm);
-    cursor: pointer;
-  }
-
-  .piano-toggle:hover {
-    background: var(--yellow);
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .piano-keys-content {
@@ -1219,1343 +2134,11 @@ select {
   }
 }
 
-
-/* =========================
-    CHORD LAB HINT BANNER
-========================= */
-
-.lab-hint {
-  margin: 0 0 22px;
-  padding: 0.85rem 1.1rem;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  background: #fff3f6;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.lab-hint.match {
-  background: #e9fbf3;
-  border-color: var(--green);
-}
-
-
-/* =========================
-    SOUND
-========================= */
-
-.header-actions {
-  margin-top: 18px;
-}
-
-.sound-toggle {
-  padding: 0.55rem 1.1rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: var(--shadow-sm);
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.12s ease;
-}
-
-.sound-toggle:hover {
-  transform: translateY(-2px);
-}
-
-.chord-display-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin: 6px 0 26px;
-}
-
-.chord-display-header h2 {
-  margin: 0;
-}
-
-.play-chord {
-  padding: 0.6rem 1.2rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--blue);
-  box-shadow: var(--shadow-sm);
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.12s ease;
-}
-
-.play-chord:hover {
-  transform: translateY(-2px) rotate(-1deg);
-}
-
-/* Key lit up by keyboard press */
-.piano-key.white.keyboard-active {
-  background: #a78bfa; /* soft violet — tweak to match your theme */
-}
-
-.piano-key.black.keyboard-active {
-  background: #7c3aed;
-}
-
-
-/* =========================
-    CHORD PROGRESSIONS
-========================= */
-
-.progressions-panel {
-  margin-top: 28px;
-}
-
-.progressions-header h2 {
-  margin: 0.3rem 0 10px;
-  font-size: clamp(1.8rem, 4vw, 2.4rem);
-  font-weight: 800;
-}
-
-.subtitle-left {
-  margin: 0;
-  max-width: 640px;
-  opacity: 0.75;
-}
-
-.prog-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 22px;
-  align-items: flex-end;
-  margin: 22px 0 26px;
-  padding-bottom: 22px;
-  border-bottom: 2px dashed rgba(36, 30, 61, 0.25);
-}
-
-/* 110px lets all seven degrees fit on one row on desktop
-   (130px wrapped the vii° chord onto a row of its own). */
-.degree-row {
-  display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(110px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.degree-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 16px 10px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  text-align: center;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease,
-    background 0.12s ease;
-}
-
-.degree-card:hover {
-  transform: translateY(-3px);
-}
-
-.degree-card.active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 var(--ink);
-  color: #ffffff;
-}
-
-.degree-card.active.fn-tonic {
-  background: var(--purple);
-}
-
-.degree-card.active.fn-subdominant {
-  background: var(--blue);
-}
-
-.degree-card.active.fn-dominant {
-  background: var(--pink);
-}
-
-.degree-card.suggested {
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(18, 196, 139, 0.3);
-}
-
-.degree-roman {
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  opacity: 0.65;
-}
-
-.degree-card.active .degree-roman {
-  opacity: 0.85;
-}
-
-.degree-chord-name {
-  font-size: 1.5rem;
-  font-weight: 800;
-}
-
-.degree-notes {
-  font-size: 0.75rem;
-  opacity: 0.65;
-}
-
-.degree-card.active .degree-notes {
-  opacity: 0.9;
-}
-
-.degree-function {
-  margin-top: 4px;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(36, 30, 61, 0.08);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.degree-card.active .degree-function {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.harmony-hint {
-  padding: 16px 18px;
-  margin-bottom: 20px;
-  border: 2px dashed rgba(36, 30, 61, 0.3);
-  border-radius: 14px;
-  background: #fffdf7;
-  line-height: 1.6;
-}
-
-.harmony-hint p {
-  margin: 0;
-}
-
-.function-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 28px;
-  font-size: 0.9rem;
-  opacity: 0.85;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-}
-
-.legend-item.fn-tonic .legend-dot {
-  background: var(--purple);
-}
-
-.legend-item.fn-subdominant .legend-dot {
-  background: var(--blue);
-}
-
-.legend-item.fn-dominant .legend-dot {
-  background: var(--pink);
-}
-
-.progression-templates h3 {
-  margin: 0 0 14px;
-  font-size: 1.2rem;
-}
-
-.template-grid {
-  display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.template-card {
-  padding: 16px 18px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: linear-gradient(
-    160deg,
-    #f4edff,
-    #ffffff 60%
-  );
-  box-shadow: var(--shadow-sm);
-}
-
-.template-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.template-card-head h4 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.template-play {
-  padding: 0.35rem 0.8rem;
-  font-size: 0.85rem;
-}
-
-.template-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 12px 0;
-}
-
-.template-chip {
-  padding: 0.3rem 0.7rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--yellow);
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.template-vibe {
-  margin: 6px 0 0;
-  font-size: 0.85rem;
-  opacity: 0.75;
-  line-height: 1.4;
-}
-
-@media (max-width: 700px) {
-  .prog-controls {
-    flex-direction: column;
-    align-items: stretch;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
-
-  /* Three chord cards per row instead of two on phones. */
-  .degree-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  /* Play / Loop / Rest / Clear as a 2×2 grid instead of a
-     ragged four-row stack. */
-  .builder-panel .builder-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .builder-panel .builder-actions > button {
-    width: 100%;
-    margin: 0;
-  }
-}
-
-/* Desktop: Harmony and Playback side by side instead of
-   stacked, which roughly halves the controls' height. */
-@media (min-width: 901px) {
-  .prog-controls {
-    display: grid;
-    grid-template-columns: 3fr 2fr;
-    align-items: stretch;
-  }
-
-  .prog-controls .control-group {
-    margin-bottom: 0;
-    min-width: 0;
-  }
-}
-
-.prog-key-label {
-  margin: 0 0 16px;
-  font-size: 0.95rem;
-  opacity: 0.75;
-}
-
-.degree-card-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.degree-card-wrap .degree-card {
-  width: 100%;
-}
-
-.degree-add-btn {
-  padding: 0.35rem 0.5rem;
-  border: 2px solid var(--ink);
-  border-radius: 10px;
-  background: #ffffff;
-  box-shadow: 2px 2px 0 rgba(36, 30, 61, 0.85);
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-
-.degree-add-btn:hover {
-  background: var(--yellow);
-  transform: translateY(-1px);
-}
-
-.template-card-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.template-use {
-  padding: 0.35rem 0.75rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 2px 2px 0 rgba(36, 30, 61, 0.85);
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-
-.template-use:hover {
-  background: var(--yellow);
-  transform: translateY(-1px);
-}
-
-
-/* =========================
-    SEARCH & FIND
-    (free-text progression search, above the builder)
-========================= */
-
-.search-panel {
-  margin-top: 32px;
-  background: #f3fbff;
-  border-color: var(--blue);
-  box-shadow: 6px 6px 0 var(--blue);
-}
-
-.search-panel .eyebrow {
-  background: var(--blue);
-  color: var(--ink);
-}
-
-.search-panel h3 {
-  margin: 0.3rem 0 8px;
-  font-size: 1.5rem;
-  font-weight: 800;
-}
-
-.search-form {
-  display: flex;
-  gap: 8px;
-  margin: 12px 0 10px;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 0;
-  padding: 0.65rem 1rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: #ffffff;
-  font: inherit;
-  font-size: 1rem;
-}
-
-.search-input:focus {
-  outline: 3px solid var(--blue);
-  outline-offset: 1px;
-}
-
-.search-submit {
-  padding: 0.6rem 1.2rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--ink);
-  color: #ffffff;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.search-submit:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.search-examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.search-example {
-  padding: 0.25rem 0.7rem;
-  border: 2px dashed rgba(36, 30, 61, 0.45);
-  border-radius: 999px;
-  background: transparent;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.search-example:hover {
-  border-style: solid;
-  background: #ffffff;
-}
-
-.search-results-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 14px 0 12px;
-}
-
-.search-results-head .hint {
-  margin: 0;
-}
-
-.search-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.search-card .saved-card-actions {
-  margin-top: auto;
-  padding-top: 10px;
-}
-
-.search-source {
-  align-self: flex-start;
-  margin-bottom: 8px;
-  padding: 0.1rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  background: #eee8ff;
-  color: var(--purple-deep);
-}
-
-.search-generated .search-source {
-  background: #e3fbf2;
-  color: #0a7a56;
-}
-
-.search-typed .search-source {
-  background: #fff3d1;
-  color: #8a5a00;
-}
-
-.search-romans {
-  margin: 8px 0 0;
-  font-weight: 700;
-  font-size: 0.85rem;
-  opacity: 0.7;
-}
-
-.search-description {
-  margin: 4px 0 0;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  opacity: 0.8;
-}
-
-/* Song lookup mode */
-
-.search-mode {
-  display: inline-flex;
-  margin: 6px 0 12px;
-}
-
-.song-title {
-  font-size: 1.05rem;
-}
-
-.song-artist {
-  margin: 2px 0 8px;
-  font-size: 0.85rem;
-  opacity: 0.7;
-}
-
-.song-key {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.song-key select {
-  min-width: 0;
-  max-width: 100%;
-  padding: 0.2rem 0.4rem;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-  background: #ffffff;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.song-section {
-  padding-top: 10px;
-  margin-top: 8px;
-  border-top: 2px dashed rgba(36, 30, 61, 0.15);
-}
-
-.song-section .search-source {
-  display: inline-block;
-}
-
-.song-section .saved-card-actions {
-  margin-top: 8px;
-}
-
-.song-load-all {
-  align-self: flex-start;
-  margin-top: 12px;
-}
-
-.song-missing {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border: 2px dashed rgba(36, 30, 61, 0.35);
-  border-radius: 12px;
-  background: #ffffff;
-}
-
-.song-missing p {
-  margin: 0 0 6px;
-}
-
-.song-missing p:last-child {
-  margin-bottom: 0;
-}
-
-.link-button {
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-@media (max-width: 700px) {
-  .search-submit {
-    padding: 0.6rem 0.9rem;
-  }
-}
-
-
-/* =========================
-    PROGRESSION BUILDER
-    (its own dedicated panel, nested inside the
-    Progressions section)
-========================= */
-
-.builder-panel {
-  margin-top: 32px;
-  background: #fffaf0;
-  border-color: var(--purple);
-  box-shadow: 6px 6px 0 var(--purple);
-}
-
-.builder-panel-header .eyebrow {
-  background: var(--purple);
-  color: #ffffff;
-}
-
-.builder-panel-header h3 {
-  margin: 0.3rem 0 8px;
-  font-size: 1.5rem;
-  font-weight: 800;
-}
-
-.builder-section-hint {
-  margin: 0 0 8px;
-  opacity: 0.75;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.builder-help {
-  margin: 0 0 20px;
-  font-size: 0.9rem;
-}
-
-.builder-help summary {
-  cursor: pointer;
-  font-weight: 700;
-  color: var(--purple-deep);
-}
-
-.builder-help ul {
-  margin: 10px 0 0;
-  padding-left: 1.2rem;
-  line-height: 1.5;
-  opacity: 0.85;
-}
-
-.builder-help li + li {
-  margin-top: 4px;
-}
-
-.builder-empty {
-  padding: 20px;
-  margin-bottom: 18px;
-  border: 2px dashed rgba(36, 30, 61, 0.3);
-  border-radius: 14px;
-  text-align: center;
-}
-
-.builder-slot-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 10px;
-  margin: 0 0 20px;
-  padding: 0;
-  list-style: none;
-}
-
-.builder-slot {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 92px;
-  padding: 10px 12px 8px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: var(--shadow-sm);
-}
-
-.builder-slot-index {
-  font-size: 0.7rem;
-  font-weight: 700;
-  opacity: 0.5;
-}
-
-.builder-slot-chord {
-  font-size: 1.2rem;
-  font-weight: 800;
-}
-
-.builder-slot-roman {
-  font-size: 0.75rem;
-  opacity: 0.6;
-}
-
-.builder-slot-actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.slot-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-  background: #ffffff;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-
-.slot-btn:hover:not(:disabled) {
-  background: var(--yellow);
-  transform: translateY(-1px);
-}
-
-.slot-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.slot-remove:hover:not(:disabled) {
-  background: var(--red);
-  color: #ffffff;
-}
-
-.builder-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.builder-actions button:disabled,
-.builder-save-row button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-.builder-save-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.builder-save-input {
-  flex: 1 1 220px;
-  padding: 0.65rem 0.9rem;
-  border: 2px solid var(--ink);
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: var(--shadow-sm);
-  font: inherit;
-}
-
-.saved-progressions {
-  margin-top: 24px;
-}
-
-.saved-progressions h4 {
-  margin: 0 0 12px;
-  font-size: 1rem;
-  opacity: 0.8;
-}
-
-.saved-list {
-  display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
-}
-
-.saved-card {
-  padding: 14px 16px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: #fffdf7;
-  box-shadow: var(--shadow-sm);
-}
-
-.saved-card-head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 10px;
-}
-
-.saved-card-key {
-  font-size: 0.75rem;
-  opacity: 0.65;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.saved-card-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.saved-delete {
-  padding: 0.35rem 0.75rem;
-  border: 2px solid var(--red);
-  border-radius: 999px;
-  background: #fff3f6;
-  color: #a8233f;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-
-.saved-delete:hover {
-  background: var(--red);
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-
-/* =========================
-    PLAYBACK & FEEDBACK ADDITIONS
-========================= */
-
-/* Tempo slider */
-
-.tempo-group {
-  min-width: 180px;
-}
-
-.tempo-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.tempo-control input[type="range"] {
-  flex: 1 1 auto;
-  min-width: 100px;
-  accent-color: var(--purple);
-  cursor: pointer;
-}
-
-.tempo-value {
-  min-width: 64px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-/* Builder header top row (title + Surprise me button) */
-
-.builder-panel-header-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.surprise-me-btn {
-  padding: 0.6rem 1.1rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--yellow);
-  box-shadow: var(--shadow-sm);
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-
-.surprise-me-btn:hover {
-  background: #ffe08a;
-  transform: translateY(-2px) rotate(-1deg);
-}
-
-/* Loop toggle */
-
-.loop-btn.looping {
-  background: var(--pink);
-  animation: loop-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes loop-pulse {
-  0%,
-  100% {
-    box-shadow: var(--shadow-sm);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(255, 107, 157, 0.35);
-  }
-}
-
-/* Borrowed / chromatic relation chips */
-
-.relation-chip {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 4px;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  vertical-align: middle;
-}
-
-.relation-chip.relation-borrowed {
-  background: #fff3e0;
-  color: #a35b00;
-  border: 2px solid var(--yellow);
-}
-
-.relation-chip.relation-chromatic {
-  background: #fff0f4;
-  color: #a8233f;
-  border: 2px solid var(--pink);
-}
-
-.builder-slot .relation-chip {
-  margin-left: 0;
-}
-
-
-/* =========================
-    BEGINNER-FRIENDLY ADDITIONS
-========================= */
-
-/* Advanced chord-type disclosure (progressive disclosure) */
-
-.advanced-toggle {
-  align-self: flex-start;
-  margin-top: 2px;
-  padding: 0.3rem 0;
-  border: none;
-  background: none;
-  color: var(--purple-deep);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.advanced-toggle:hover {
-  color: var(--purple);
-}
-
-/* Raw scale strip */
-
-.scale-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.scale-note {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0.35rem 0.7rem;
-  border: 2px solid rgba(36, 30, 61, 0.25);
-  border-radius: 999px;
-  background: #fffdf7;
-}
-
-.scale-note-degree {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(36, 30, 61, 0.1);
-  font-size: 0.65rem;
-  font-weight: 700;
-}
-
-.scale-note-name {
-  font-weight: 700;
-}
-
-/* Glossary disclosure */
-
-.glossary-toggle {
-  display: inline-block;
-  margin: 0 0 18px;
-  padding: 0.45rem 0.9rem;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: var(--shadow-sm);
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-
-.glossary-toggle:hover {
-  background: var(--yellow);
-  transform: translateY(-1px);
-}
-
-.glossary-list {
-  display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
-  margin: 0 0 24px;
-  padding: 18px 20px;
-  border: 2px dashed rgba(36, 30, 61, 0.3);
-  border-radius: 14px;
-  background: #fffdf7;
-}
-
-.glossary-entry dt {
-  margin: 0 0 4px;
-  font-weight: 800;
-  color: var(--purple-deep);
-}
-
-.glossary-entry dd {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  opacity: 0.85;
-}
-
-/* Difficulty chips */
-
-.progression-templates-hint {
-  margin: 0 0 16px;
-  font-size: 0.9rem;
-  opacity: 0.75;
-}
-
-.difficulty-chip {
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.difficulty-chip.difficulty-beginner {
-  background: #e9fbf3;
-  color: #0a7d57;
-  border: 2px solid var(--green);
-}
-
-.difficulty-chip.difficulty-intermediate {
-  background: #fff3e0;
-  color: #a35b00;
-  border: 2px solid var(--yellow);
-}
-
-.difficulty-chip.difficulty-advanced {
-  background: #fff0f4;
-  color: #a8233f;
-  border: 2px solid var(--pink);
-}
-
-
-/* =========================
-    TIMING & RHYTHM
-========================= */
-
-/* Bar-end divider between builder slots */
-
-.builder-slot.bar-end {
-  margin-right: 14px;
-  padding-right: 12px;
-  border-right: 3px double var(--ink);
-}
-
-.builder-bar-hint {
-  margin: 0 0 18px;
-  font-size: 0.8rem;
-  opacity: 0.6;
-}
-
-/* Per-chord beats stepper */
-
-.beats-stepper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed rgba(36, 30, 61, 0.2);
-}
-
-.beats-value {
-  min-width: 48px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-align: center;
-  opacity: 0.75;
-  white-space: nowrap;
-}
-
-/* Non-default beat count shown on saved-progression chips */
-
-.beats-chip {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 4px;
-  padding: 0.1rem 0.4rem;
-  border-radius: 999px;
-  background: rgba(36, 30, 61, 0.1);
-  font-size: 0.6rem;
-  font-weight: 700;
-  vertical-align: middle;
-}
-
-.saved-card-time-signature {
-  margin: 8px 0 0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  opacity: 0.5;
-}
-
-
-/* =========================
-    RESTS, SWING, ACCENTS
-========================= */
-
-.builder-slot.rest-slot {
-  opacity: 0.7;
-  font-style: italic;
-}
-
-.builder-slot-chord.rest {
-  font-size: 0.8rem;
-  letter-spacing: 0.02em;
-  opacity: 0.6;
-}
-
-/* Swing button uses standard segmented control styling */
-
-/* Accents select uses standard select styling */
-
-
-/* =========================
-    GUITAR FRETBOARD
-========================= */
-
-.guitar-panel {
-  order: 2;
-}
-
-.fretboard-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.fretboard-header h2 {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 800;
-}
-
-.fretboard-shape {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 24px;
-}
-
-.fretboard-shape svg {
-  width: 100%;
-  max-width: 260px;
-  flex: 0 0 auto;
-}
-
-.fretboard-controls {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  flex: 1 1 200px;
-}
-
-.fretboard-count,
-.fretboard-hint {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #4a4468;
-}
-
-.fretboard-neck {
-  overflow-x: auto;
-}
-
-.fretboard-neck svg {
-  min-width: 640px;
-  width: 100%;
-}
-
-.fretboard-label {
-  font-size: 12px;
-  font-weight: 700;
-  fill: var(--ink);
-}
-
-.fretboard-fret,
-.fretboard-string {
-  stroke: var(--ink);
-  stroke-width: 1.5;
-}
-
-.fretboard-nut {
-  stroke: var(--ink);
-  stroke-width: 5;
-}
-
-.fretboard-dot {
-  fill: var(--yellow);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-
-.fretboard-dot.root {
-  fill: var(--purple);
-}
-
-.fretboard-dot-label {
-  font-size: 10px;
-  font-weight: 800;
-  fill: var(--ink);
-  pointer-events: none;
-}
-
-.fretboard-dot.root + .fretboard-dot-label {
-  fill: #ffffff;
-}
-
-.fretboard-open {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-
-.fretboard-hit {
-  fill: transparent;
-  cursor: pointer;
-}
-
-.fretboard-hit:hover {
-  fill: rgba(134, 59, 255, 0.12);
-}
-
-.fretboard-clickable {
-  cursor: pointer;
-}
-
-.fretboard-clickable:hover .fretboard-dot {
-  stroke-width: 3;
-}
-
-.fretboard-hit:focus-visible,
-.fretboard-clickable:focus-visible {
-  outline: 2px solid var(--purple-deep);
-  outline-offset: 2px;
 }
