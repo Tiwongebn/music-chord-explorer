@@ -1782,6 +1782,89 @@ select {
   opacity: 0.8;
 }
 
+/* Song lookup mode */
+
+.search-mode {
+  display: inline-flex;
+  margin: 6px 0 12px;
+}
+
+.song-title {
+  font-size: 1.05rem;
+}
+
+.song-artist {
+  margin: 2px 0 8px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.song-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.song-key select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.2rem 0.4rem;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.song-section {
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 2px dashed rgba(36, 30, 61, 0.15);
+}
+
+.song-section .search-source {
+  display: inline-block;
+}
+
+.song-section .saved-card-actions {
+  margin-top: 8px;
+}
+
+.song-load-all {
+  align-self: flex-start;
+  margin-top: 12px;
+}
+
+.song-missing {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 2px dashed rgba(36, 30, 61, 0.35);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.song-missing p {
+  margin: 0 0 6px;
+}
+
+.song-missing p:last-child {
+  margin-bottom: 0;
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 @media (max-width: 700px) {
   .search-submit {
     padding: 0.6rem 0.9rem;
