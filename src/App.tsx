@@ -32,9 +32,9 @@ interface LabChord {
 }
 
 const modes: { id: Mode; label: string }[] = [
-  { id: "explore", label: "🎹 Explore" },
-  { id: "build", label: "🧪 Chord Lab" },
-  { id: "progressions", label: "🗺️ Progressions" },
+  { id: "explore", label: "Explore" },
+  { id: "build", label: "Chord Lab" },
+  { id: "progressions", label: "Progressions" },
 ];
 
 // Find the catalog chord whose pitch-class pattern matches
@@ -206,54 +206,42 @@ function App() {
     <main className="app">
 
       {/* =========================
-          HEADER
+          HEADER + MODE TABS
+          One quiet row: name, tabs, sound.
       ========================== */}
       <header className="header">
-        <p className="eyebrow">
-          INTERACTIVE MUSIC THEORY
-        </p>
+        <h1 aria-label="Music Chord Explorer">
+          chord<span aria-hidden="true">/</span>explorer
+        </h1>
 
-        <h1>Music Chord Explorer</h1>
+        <nav
+          className="mode-tabs"
+          role="tablist"
+          aria-label="App mode"
+        >
+          {modes.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={mode === item.id}
+              className={mode === item.id ? "tab active" : "tab"}
+              onClick={() => setMode(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
 
-        <p className="subtitle">
-          Pick a chord, tap the keys, and watch the
-          theory come alive.
-        </p>
-
-        <div className="header-actions">
-          <button
-            className="sound-toggle"
-            type="button"
-            aria-pressed={soundOn}
-            onClick={handleSoundToggle}
-          >
-            {soundOn ? "🔊 Sound on" : "🔇 Muted"}
-          </button>
-        </div>
+        <button
+          className="sound-toggle"
+          type="button"
+          aria-pressed={soundOn}
+          onClick={handleSoundToggle}
+        >
+          {soundOn ? "Sound on" : "Muted"}
+        </button>
       </header>
-
-
-      {/* =========================
-          MODE TABS
-      ========================== */}
-      <nav
-        className="mode-tabs"
-        role="tablist"
-        aria-label="App mode"
-      >
-        {modes.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={mode === item.id}
-            className={mode === item.id ? "tab active" : "tab"}
-            onClick={() => setMode(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
 
 
       {mode === "explore" ? (

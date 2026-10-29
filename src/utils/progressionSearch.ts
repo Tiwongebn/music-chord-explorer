@@ -847,6 +847,16 @@ function romansToSteps(romans: string[], scaleType: ScaleType): RomanStep[] {
     .filter((s): s is RomanStep => s !== null);
 }
 
+// Roman numerals straight to builder chords in a given key —
+// used by the song lookup (utils/songSearch.ts).
+export function romansToChords(
+  romans: string[],
+  scaleType: ScaleType,
+  keyPitchClass: number
+): ProgressionChord[] {
+  return stepsToChords(romansToSteps(romans, scaleType), keyPitchClass);
+}
+
 const stepKey = (step: Pick<RomanStep, "offset" | "family">) =>
   `${step.offset}:${step.family}`;
 
