@@ -1215,7 +1215,12 @@ export function searchProgressions(
   });
 
   // ---- Generated ideas ----
-  const length = Math.min(Math.max(parsed.length ?? 4, 2), 8);
+  // Default to 4 chords, or — when 4+ chords were typed and no
+  // count was asked for — room for 4 more so the ideas can
+  // still continue from them.
+  const defaultLength =
+    typedSteps.length >= 4 ? typedSteps.length + 4 : 4;
+  const length = Math.min(Math.max(parsed.length ?? defaultLength, 2), 8);
   const random = mulberry32(hashString(query.toLowerCase()) + context.seed * 7919);
   const seen = new Set(results.map((r) => r.chords.map((c) => `${c.rootNote}${c.chordTypeIndex}`).join()));
 
