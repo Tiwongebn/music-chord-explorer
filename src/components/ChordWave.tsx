@@ -4,22 +4,25 @@ import { getPitchClass } from "../utils/musicTheory";
 interface ChordWaveProps {
   rootNote: string;
   intervals: number[];
-  // Bump this when the chord is played: the wave comes alive
-  // for a moment, then settles back to still.
+  // Bump this when the chord is played: the wave rises out
+  // of a flat line, moves, then eases back to flat.
   pulse: number;
 }
 
 const MIDDLE_C = 261.63;
 
-// How long the wave keeps moving after a play, roughly as
-// long as the chord rings.
-const PLAY_SECONDS = 1.6;
+// How long the wave stays up after a play, roughly as long
+// as the chord rings, and how quickly it rises and falls
+// (time constants of the easing, in seconds).
+const HOLD_SECONDS = 0.9;
+const RISE_SECONDS = 0.15;
+const FALL_SECONDS = 0.45;
 
 // Draws the chord's real waveform (its notes' sine waves
-// added together) behind the chord name. It sits still
-// until the chord is played, then drifts and swells while
-// the chord sounds. Purely decorative, so it's hidden from
-// screen readers.
+// added together) behind the chord name. At rest it is a
+// flat line; when the chord is played it eases into motion
+// and then eases back to flat. Purely decorative, so it's
+// hidden from screen readers.
 function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const phaseRef = useRef(0);
@@ -58,7 +61,8 @@ function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
 
       context.clearRect(0, 0, width, height);
 
-      const swell = 1 + energyRef.current * 0.9;
+      // Flat at rest, full height while the chord rings.
+      const swell = energyRef.current * 1.6;
 
       const layers: [number, string, number][] = [
         [0.9, "rgba(255, 181, 71, 0.55)", 2],
@@ -107,7 +111,10 @@ function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
     return () => observer.disconnect();
   }, [rootNote, intervals]);
 
-  // Animate only while a played chord is ringing.
+  // Animate only while a played chord is ringing. The
+  // height follows its target with exponential easing, so a
+  // play rises smoothly, a replay mid-fall picks up from the
+  // current height, and the fall settles gently to flat.
   useEffect(() => {
     if (pulse === 0) {
       return;
@@ -127,22 +134,28 @@ function ChordWave({ rootNote, intervals, pulse }: ChordWaveProps) {
     let last = start;
 
     const tick = (now: number) => {
-      const elapsed = (now - start) / 1000;
-      const progress = Math.min(elapsed / PLAY_SECONDS, 1);
-
-      // Swell in fast, fade out with the chord.
-      energyRef.current = Math.sin(Math.PI * progress) ** 0.6;
-      phaseRef.current += ((now - last) / 9000) * (1 - progress * 0.6);
+      const dt = Math.min((now - last) / 1000, 0.1);
       last = now;
 
-      drawRef.current();
+      const rising = (now - start) / 1000 < HOLD_SECONDS;
+      const target = rising ? 1 : 0;
+      const tau = rising ? RISE_SECONDS : FALL_SECONDS;
 
-      if (progress < 1) {
-        frameRef.current = requestAnimationFrame(tick);
-      } else {
+      energyRef.current +=
+        (target - energyRef.current) * (1 - Math.exp(-dt / tau));
+
+      // Drift with the height, so the motion slows as the
+      // line flattens instead of stopping dead.
+      phaseRef.current += (dt / 9) * (0.3 + energyRef.current);
+
+      if (!rising && energyRef.current < 0.002) {
         energyRef.current = 0;
         drawRef.current();
+        return;
       }
+
+      drawRef.current();
+      frameRef.current = requestAnimationFrame(tick);
     };
 
     frameRef.current = requestAnimationFrame(tick);
