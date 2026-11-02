@@ -406,6 +406,234 @@ select optgroup {
 
 
 /* =========================
+    METRONOME
+    Header button + a drop-down panel of controls.
+========================= */
+
+.metronome {
+  position: relative;
+}
+
+.metronome-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.4rem 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.metronome-toggle:hover,
+.metronome-toggle.is-running {
+  color: var(--fg);
+}
+
+.metronome-toggle-bpm {
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+}
+
+.metronome-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metronome-pulse.is-beat {
+  background: var(--lilac);
+  transition: none;
+}
+
+.metronome-pulse.is-downbeat {
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+  transition: none;
+}
+
+.metronome-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 20;
+  width: min(360px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  background: var(--night-raised);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.metronome-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.metronome-start {
+  padding: 0.65rem 1.2rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--amber);
+  color: var(--night);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  box-shadow: 0 0 22px var(--amber-glow);
+}
+
+.metronome-start[aria-pressed="true"] {
+  background: none;
+  color: var(--amber);
+  box-shadow: inset 0 0 0 1px var(--amber);
+}
+
+.metronome-bpm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.metronome-step {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: none;
+  color: var(--fg);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.metronome-step:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.metronome-bpm-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.metronome-bpm-value input {
+  width: 4ch;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: center;
+  font: 300 1.5rem/1.2 var(--display);
+  color: var(--fg);
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.metronome-bpm-value input::-webkit-outer-spin-button,
+.metronome-bpm-value input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.metronome-tap {
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--fg);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  touch-action: manipulation;
+}
+
+.metronome-tap:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.metronome-tap:active {
+  background: var(--amber);
+  color: var(--night);
+}
+
+.metronome-slider {
+  width: 100%;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
+.metronome-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.metronome-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metronome-select select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--night);
+}
+
+.metronome-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.metronome-accent input {
+  accent-color: var(--amber);
+}
+
+.metronome-beats {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.metronome-beat {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.metronome-beat.is-strong {
+  box-shadow: 0 0 0 2px var(--line-strong);
+}
+
+.metronome-beat.is-on {
+  background: var(--lilac);
+}
+
+.metronome-beat.is-strong.is-on {
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+}
+
+
+/* =========================
     OPEN SECTIONS (formerly panels)
 ========================= */
 
@@ -2003,6 +2231,22 @@ select optgroup {
 
   .sound-toggle {
     margin-left: auto;
+  }
+
+  /* On phones the panel hangs from the header's left edge
+     area, full width of the page gutter. */
+  .metronome {
+    position: static;
+  }
+
+  .metronome-panel {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+
+  .header {
+    position: relative;
   }
 
   .explore-wrapper,

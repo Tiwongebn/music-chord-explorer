@@ -8,6 +8,7 @@ import ChordAnalyzer from "./components/ChordAnalyzer";
 import ChordBuilder from "./components/ChordBuilder";
 import GuitarFretboard from "./components/GuitarFretboard";
 import ChordProgressions from "./components/ChordProgressions";
+import Metronome from "./components/Metronome";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
 import {
@@ -241,6 +242,8 @@ function App() {
         >
           {soundOn ? "Sound on" : "Muted"}
         </button>
+
+        <Metronome />
       </header>
 
 
