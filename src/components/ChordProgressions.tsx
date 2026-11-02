@@ -880,12 +880,13 @@ function ChordProgressions({
   return (
     <section className="panel progressions-panel">
       <div className="progressions-header">
-        <p className="eyebrow">HARMONY MAP</p>
+        <p className="eyebrow">HARMONY MAP · SKETCHPAD</p>
         <h2>Chord Progressions</h2>
         <p className="subtitle-left">
-          Pick a key, see its chords, and build a
-          progression from them, or make any chord you
-          like with the chord builder.
+          Pick a key, tap <strong>+ Add</strong> on its
+          chords (or build any chord you like), and your
+          progression grows right underneath. Play, loop
+          and save it from the same place.
         </p>
       </div>
 
@@ -1381,6 +1382,11 @@ function ChordProgressions({
 
       </div>
 
+      <h3 className="step-label">
+        <span className="step-number">1</span>
+        Chords in this key
+      </h3>
+
       <p className="prog-key-label">
         Key of <strong>{displayKeyRoot} {scaleType}</strong>
         {selectedChordType && (
@@ -1540,387 +1546,6 @@ function ChordProgressions({
         ))}
       </div>
 
-      {/* SEARCH & FIND */}
-      <section className="panel search-panel">
-        <p className="eyebrow">SEARCH &amp; FIND</p>
-        <h3>Find a progression</h3>
-
-        <div
-          className="segmented search-mode"
-          role="group"
-          aria-label="Search by"
-        >
-          <button
-            type="button"
-            className={searchMode === "song" ? "seg active" : "seg"}
-            aria-pressed={searchMode === "song"}
-            onClick={() => setSearchMode("song")}
-          >
-            A song
-          </button>
-          <button
-            type="button"
-            className={searchMode === "mood" ? "seg active" : "seg"}
-            aria-pressed={searchMode === "mood"}
-            onClick={() => setSearchMode("mood")}
-          >
-            Mood or chords
-          </button>
-        </div>
-
-        {searchMode === "song" && (
-          <>
-            <p className="builder-section-hint">
-              Type a song title or artist and load its chord
-              progression into the builder, in the original
-              key or any key you like. {songCount} well-known
-              songs so far, simplified to their main chords.
-            </p>
-
-            <form
-              className="search-form"
-              role="search"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (songMatches[0]) {
-                  handleLoadSong(
-                    songMatches[0].song,
-                    [0]
-                  );
-                }
-              }}
-            >
-              <input
-                type="search"
-                className="search-input"
-                aria-label="Search for a song"
-                placeholder='Try "Let It Be" or "Hello by Adele"'
-                value={songQuery}
-                onChange={(event) =>
-                  setSongQuery(event.target.value)
-                }
-              />
-              <button
-                type="submit"
-                className="search-submit"
-                disabled={songMatches.length === 0}
-                title="Load the top match's first section"
-              >
-                Load
-              </button>
-            </form>
-
-            <div className="search-examples">
-              {songExamples.map((example) => (
-                <button
-                  type="button"
-                  key={example}
-                  className="search-example"
-                  onClick={() => setSongQuery(example)}
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
-
-            {songQuery.trim() && songMatches.length === 0 && (
-              <div className="song-missing">
-                <p>
-                  <strong>"{songQuery.trim()}"</strong> isn't in
-                  the song list yet.
-                </p>
-                <p>
-                  <a
-                    href={webChordSearchUrl(songQuery)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Look up its chords on the web ↗
-                  </a>
-                  , then type them under{" "}
-                  <button
-                    type="button"
-                    className="link-button"
-                    onClick={() => setSearchMode("mood")}
-                  >
-                    Mood or chords
-                  </button>{" "}
-                  (e.g. "Am F C G") to load them here.
-                </p>
-              </div>
-            )}
-
-            {songMatches.length > 0 && (
-              <div className="saved-list search-results">
-                {songMatches.map(({ song }) => {
-                  const keyPitchClass = songKey(song);
-                  return (
-                    <div
-                      className="saved-card search-card song-card"
-                      key={song.id}
-                    >
-                      <strong className="song-title">
-                        {song.title}
-                      </strong>
-
-                      <p className="song-artist">
-                        {song.artist} · {song.year}
-                      </p>
-
-                      <label className="song-key">
-                        <span>Key</span>
-                        <select
-                          value={keyPitchClass}
-                          onChange={(event) =>
-                            setSongKeys((current) => ({
-                              ...current,
-                              [song.id]: Number(
-                                event.target.value
-                              ),
-                            }))
-                          }
-                        >
-                          {Array.from(
-                            { length: 12 },
-                            (_, pitchClass) => (
-                              <option
-                                key={pitchClass}
-                                value={pitchClass}
-                              >
-                                {getDisplayKeyRoot(
-                                  keyRootName(pitchClass),
-                                  accidentalPreference
-                                )}{" "}
-                                {song.scaleType}
-                                {pitchClass ===
-                                songKeyPitchClass(song)
-                                  ? " (original)"
-                                  : ""}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </label>
-
-                      {song.sections.map((section, index) => {
-                        const chords = songBars(song, [
-                          index,
-                        ]);
-                        return (
-                          <div
-                            className="song-section"
-                            key={section.name}
-                          >
-                            <span className="search-source">
-                              {section.name}
-                            </span>
-
-                            <div className="template-chip-row">
-                              {chords.map((chord, chordIndex) => (
-                                <span
-                                  className="template-chip"
-                                  key={`${chord.rootNote}-${chord.chordTypeIndex}-${chordIndex}`}
-                                >
-                                  {resolveSnapshot(chord).chordLabel}
-                                </span>
-                              ))}
-                            </div>
-
-                            <p className="search-romans">
-                              {section.romans.join(" – ")}
-                            </p>
-
-                            <div className="saved-card-actions">
-                              <button
-                                type="button"
-                                className="play-chord template-play"
-                                onClick={() =>
-                                  handlePlaySnapshotList(chords)
-                                }
-                              >
-                                ▶ Play
-                              </button>
-                              <button
-                                type="button"
-                                className="template-use"
-                                onClick={() =>
-                                  handleLoadSong(song, [index])
-                                }
-                              >
-                                Load into builder
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {song.sections.length > 1 && (
-                        <button
-                          type="button"
-                          className="template-use song-load-all"
-                          onClick={() =>
-                            handleLoadSong(
-                              song,
-                              song.sections.map((_, i) => i)
-                            )
-                          }
-                        >
-                          Load all sections in order
-                        </button>
-                      )}
-
-                      {song.note && (
-                        <p className="search-description">
-                          {song.note}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {searchMode === "mood" && (
-          <>
-          <p className="builder-section-hint">
-            Describe a mood, genre or key, or type chords
-            or numerals. We'll find classic progressions
-            and generate new ones you can load into the
-            builder.
-          </p>
-
-          <form
-            className="search-form"
-            role="search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              runSearch(searchQuery);
-            }}
-          >
-            <input
-              type="search"
-              className="search-input"
-              aria-label="Search for a chord progression"
-              placeholder='Try "sad C minor" or "Am to F"'
-              value={searchQuery}
-              onChange={(event) =>
-                setSearchQuery(event.target.value)
-              }
-            />
-            <button
-              type="submit"
-              className="search-submit"
-              disabled={!searchQuery.trim()}
-            >
-              Search
-            </button>
-          </form>
-
-          <div className="search-examples">
-            {searchExamples.map((example) => (
-              <button
-                type="button"
-                key={example}
-                className="search-example"
-                onClick={() => runSearch(example)}
-              >
-                {example}
-              </button>
-            ))}
-          </div>
-
-          {submittedQuery.trim() && (
-            <>
-              <div className="search-results-head">
-                <p className="hint">
-                  {searchResults.length} result
-                  {searchResults.length === 1 ? "" : "s"} for{" "}
-                  <strong>"{submittedQuery}"</strong>
-                </p>
-                <button
-                  type="button"
-                  className="surprise-me-btn"
-                  title="Generate different ideas for this search"
-                  onClick={() =>
-                    setSearchSeed((current) => current + 1)
-                  }
-                >
-                  More ideas
-                </button>
-              </div>
-
-              <div className="saved-list search-results">
-                {searchResults.map((result) => (
-                  <div
-                    className={`saved-card search-card search-${result.source}`}
-                    key={result.id}
-                  >
-                    <div className="saved-card-head">
-                      <strong>{result.title}</strong>
-                      <span className="saved-card-key">
-                        {getDisplayKeyRoot(
-                          keyRootName(result.keyPitchClass),
-                          accidentalPreference
-                        )}{" "}
-                        {result.scaleType}
-                      </span>
-                    </div>
-
-                    <span className="search-source">
-                      {searchSourceLabel[result.source]}
-                    </span>
-
-                    <div className="template-chip-row">
-                      {result.chords.map((chord, index) => (
-                        <span
-                          className="template-chip"
-                          key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
-                        >
-                          {resolveSnapshot(chord).chordLabel}
-                        </span>
-                      ))}
-                    </div>
-
-                    <p className="search-romans">
-                      {result.romans.join(" – ")}
-                    </p>
-
-                    <p className="search-description">
-                      {result.description}
-                    </p>
-
-                    <div className="saved-card-actions">
-                      <button
-                        type="button"
-                        className="play-chord template-play"
-                        onClick={() =>
-                          handlePlaySnapshotList(result.chords)
-                        }
-                      >
-                        ▶ Play
-                      </button>
-
-                      <button
-                        type="button"
-                        className="template-use"
-                        onClick={() =>
-                          handleLoadSearchResult(result)
-                        }
-                      >
-                        Load into builder
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-          </>
-        )}
-      </section>
-
       {/* CUSTOM PROGRESSION BUILDER */}
       <section
         className="panel builder-panel"
@@ -1928,10 +1553,10 @@ function ChordProgressions({
       >
         <div className="builder-panel-header">
           <div className="builder-panel-header-top">
-            <div>
-              <p className="eyebrow">YOUR SKETCHPAD</p>
-              <h3>Progression Builder</h3>
-            </div>
+            <h3 className="step-label">
+              <span className="step-number">2</span>
+              Your progression
+            </h3>
 
             <button
               type="button"
@@ -1942,13 +1567,6 @@ function ChordProgressions({
               Surprise me
             </button>
           </div>
-
-          <p className="builder-section-hint">
-            Add chords with <strong>+ Add</strong> or make
-            your own with <strong>Build a chord</strong>. Tap
-            any chord in your progression to change it, then
-            play, loop or save.
-          </p>
 
           <details className="builder-help">
             <summary>How it works</summary>
@@ -1992,8 +1610,9 @@ function ChordProgressions({
 
         {builderChords.length === 0 ? (
           <p className="hint builder-empty">
-            Your progression is empty. Add a chord from
-            the row above, or build your own, to get started.
+            Empty for now. Tap <strong>+ Add</strong> on a
+            chord above, or <strong>Build a chord</strong>{" "}
+            below, to start.
           </p>
         ) : (
           <>
@@ -2427,6 +2046,386 @@ function ChordProgressions({
               ))}
             </div>
           </div>
+        )}
+      </section>
+      {/* SEARCH & FIND */}
+      <section className="panel search-panel">
+        <p className="eyebrow">NEED A STARTING POINT?</p>
+        <h3>Find a progression</h3>
+
+        <div
+          className="segmented search-mode"
+          role="group"
+          aria-label="Search by"
+        >
+          <button
+            type="button"
+            className={searchMode === "song" ? "seg active" : "seg"}
+            aria-pressed={searchMode === "song"}
+            onClick={() => setSearchMode("song")}
+          >
+            A song
+          </button>
+          <button
+            type="button"
+            className={searchMode === "mood" ? "seg active" : "seg"}
+            aria-pressed={searchMode === "mood"}
+            onClick={() => setSearchMode("mood")}
+          >
+            Mood or chords
+          </button>
+        </div>
+
+        {searchMode === "song" && (
+          <>
+            <p className="builder-section-hint">
+              Type a song title or artist and load its chord
+              progression into the builder, in the original
+              key or any key you like. {songCount} well-known
+              songs so far, simplified to their main chords.
+            </p>
+
+            <form
+              className="search-form"
+              role="search"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (songMatches[0]) {
+                  handleLoadSong(
+                    songMatches[0].song,
+                    [0]
+                  );
+                }
+              }}
+            >
+              <input
+                type="search"
+                className="search-input"
+                aria-label="Search for a song"
+                placeholder='Try "Let It Be" or "Hello by Adele"'
+                value={songQuery}
+                onChange={(event) =>
+                  setSongQuery(event.target.value)
+                }
+              />
+              <button
+                type="submit"
+                className="search-submit"
+                disabled={songMatches.length === 0}
+                title="Load the top match's first section"
+              >
+                Load
+              </button>
+            </form>
+
+            <div className="search-examples">
+              {songExamples.map((example) => (
+                <button
+                  type="button"
+                  key={example}
+                  className="search-example"
+                  onClick={() => setSongQuery(example)}
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+
+            {songQuery.trim() && songMatches.length === 0 && (
+              <div className="song-missing">
+                <p>
+                  <strong>"{songQuery.trim()}"</strong> isn't in
+                  the song list yet.
+                </p>
+                <p>
+                  <a
+                    href={webChordSearchUrl(songQuery)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Look up its chords on the web ↗
+                  </a>
+                  , then type them under{" "}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => setSearchMode("mood")}
+                  >
+                    Mood or chords
+                  </button>{" "}
+                  (e.g. "Am F C G") to load them here.
+                </p>
+              </div>
+            )}
+
+            {songMatches.length > 0 && (
+              <div className="saved-list search-results">
+                {songMatches.map(({ song }) => {
+                  const keyPitchClass = songKey(song);
+                  return (
+                    <div
+                      className="saved-card search-card song-card"
+                      key={song.id}
+                    >
+                      <strong className="song-title">
+                        {song.title}
+                      </strong>
+
+                      <p className="song-artist">
+                        {song.artist} · {song.year}
+                      </p>
+
+                      <label className="song-key">
+                        <span>Key</span>
+                        <select
+                          value={keyPitchClass}
+                          onChange={(event) =>
+                            setSongKeys((current) => ({
+                              ...current,
+                              [song.id]: Number(
+                                event.target.value
+                              ),
+                            }))
+                          }
+                        >
+                          {Array.from(
+                            { length: 12 },
+                            (_, pitchClass) => (
+                              <option
+                                key={pitchClass}
+                                value={pitchClass}
+                              >
+                                {getDisplayKeyRoot(
+                                  keyRootName(pitchClass),
+                                  accidentalPreference
+                                )}{" "}
+                                {song.scaleType}
+                                {pitchClass ===
+                                songKeyPitchClass(song)
+                                  ? " (original)"
+                                  : ""}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </label>
+
+                      {song.sections.map((section, index) => {
+                        const chords = songBars(song, [
+                          index,
+                        ]);
+                        return (
+                          <div
+                            className="song-section"
+                            key={section.name}
+                          >
+                            <span className="search-source">
+                              {section.name}
+                            </span>
+
+                            <div className="template-chip-row">
+                              {chords.map((chord, chordIndex) => (
+                                <span
+                                  className="template-chip"
+                                  key={`${chord.rootNote}-${chord.chordTypeIndex}-${chordIndex}`}
+                                >
+                                  {resolveSnapshot(chord).chordLabel}
+                                </span>
+                              ))}
+                            </div>
+
+                            <p className="search-romans">
+                              {section.romans.join(" – ")}
+                            </p>
+
+                            <div className="saved-card-actions">
+                              <button
+                                type="button"
+                                className="play-chord template-play"
+                                onClick={() =>
+                                  handlePlaySnapshotList(chords)
+                                }
+                              >
+                                ▶ Play
+                              </button>
+                              <button
+                                type="button"
+                                className="template-use"
+                                onClick={() =>
+                                  handleLoadSong(song, [index])
+                                }
+                              >
+                                Load into builder
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {song.sections.length > 1 && (
+                        <button
+                          type="button"
+                          className="template-use song-load-all"
+                          onClick={() =>
+                            handleLoadSong(
+                              song,
+                              song.sections.map((_, i) => i)
+                            )
+                          }
+                        >
+                          Load all sections in order
+                        </button>
+                      )}
+
+                      {song.note && (
+                        <p className="search-description">
+                          {song.note}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {searchMode === "mood" && (
+          <>
+          <p className="builder-section-hint">
+            Describe a mood, genre or key, or type chords
+            or numerals. We'll find classic progressions
+            and generate new ones you can load into the
+            builder.
+          </p>
+
+          <form
+            className="search-form"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              runSearch(searchQuery);
+            }}
+          >
+            <input
+              type="search"
+              className="search-input"
+              aria-label="Search for a chord progression"
+              placeholder='Try "sad C minor" or "Am to F"'
+              value={searchQuery}
+              onChange={(event) =>
+                setSearchQuery(event.target.value)
+              }
+            />
+            <button
+              type="submit"
+              className="search-submit"
+              disabled={!searchQuery.trim()}
+            >
+              Search
+            </button>
+          </form>
+
+          <div className="search-examples">
+            {searchExamples.map((example) => (
+              <button
+                type="button"
+                key={example}
+                className="search-example"
+                onClick={() => runSearch(example)}
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+
+          {submittedQuery.trim() && (
+            <>
+              <div className="search-results-head">
+                <p className="hint">
+                  {searchResults.length} result
+                  {searchResults.length === 1 ? "" : "s"} for{" "}
+                  <strong>"{submittedQuery}"</strong>
+                </p>
+                <button
+                  type="button"
+                  className="surprise-me-btn"
+                  title="Generate different ideas for this search"
+                  onClick={() =>
+                    setSearchSeed((current) => current + 1)
+                  }
+                >
+                  More ideas
+                </button>
+              </div>
+
+              <div className="saved-list search-results">
+                {searchResults.map((result) => (
+                  <div
+                    className={`saved-card search-card search-${result.source}`}
+                    key={result.id}
+                  >
+                    <div className="saved-card-head">
+                      <strong>{result.title}</strong>
+                      <span className="saved-card-key">
+                        {getDisplayKeyRoot(
+                          keyRootName(result.keyPitchClass),
+                          accidentalPreference
+                        )}{" "}
+                        {result.scaleType}
+                      </span>
+                    </div>
+
+                    <span className="search-source">
+                      {searchSourceLabel[result.source]}
+                    </span>
+
+                    <div className="template-chip-row">
+                      {result.chords.map((chord, index) => (
+                        <span
+                          className="template-chip"
+                          key={`${chord.rootNote}-${chord.chordTypeIndex}-${index}`}
+                        >
+                          {resolveSnapshot(chord).chordLabel}
+                        </span>
+                      ))}
+                    </div>
+
+                    <p className="search-romans">
+                      {result.romans.join(" – ")}
+                    </p>
+
+                    <p className="search-description">
+                      {result.description}
+                    </p>
+
+                    <div className="saved-card-actions">
+                      <button
+                        type="button"
+                        className="play-chord template-play"
+                        onClick={() =>
+                          handlePlaySnapshotList(result.chords)
+                        }
+                      >
+                        ▶ Play
+                      </button>
+
+                      <button
+                        type="button"
+                        className="template-use"
+                        onClick={() =>
+                          handleLoadSearchResult(result)
+                        }
+                      >
+                        Load into builder
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          </>
         )}
       </section>
     </section>
