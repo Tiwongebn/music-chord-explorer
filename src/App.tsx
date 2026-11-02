@@ -5,12 +5,12 @@ import PianoKeyboard from "./components/PianoKeyboard";
 import ChordSelector from "./components/ChordSelector";
 import ChordDisplay from "./components/ChordDisplay";
 import ChordAnalyzer from "./components/ChordAnalyzer";
-import ChordBuilder from "./components/ChordBuilder";
 import GuitarFretboard from "./components/GuitarFretboard";
 import ChordProgressions from "./components/ChordProgressions";
 import Metronome from "./components/Metronome";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
+import { catalogIndexFor } from "./utils/chordBuild";
 import {
   playNote,
   playNotes,
@@ -24,40 +24,15 @@ import {
   type AccidentalPreference,
 } from "./utils/musicTheory";
 
-type Mode = "explore" | "build" | "progressions";
-
-interface LabChord {
-  intervals: number[];
-  intervalNames: string[];
-  symbol: string;
-}
+// The chord builder lives inside Progressions (build a chord
+// and drop it straight into a progression, or edit one that's
+// already there), so there are two modes.
+type Mode = "explore" | "progressions";
 
 const modes: { id: Mode; label: string }[] = [
   { id: "explore", label: "Explore" },
-  { id: "build", label: "Chord Lab" },
   { id: "progressions", label: "Progressions" },
 ];
-
-// Find the catalog chord whose pitch-class pattern matches
-// the given interval pattern (compared mod 12, order-free).
-function findMatchingChordIndex(pattern: number[]): number {
-  const target = pattern
-    .map((interval) => interval % 12)
-    .sort((a, b) => a - b);
-
-  return chordTypes.findIndex((chord) => {
-    const chordPattern = chord.intervals
-      .map((interval) => interval % 12)
-      .sort((a, b) => a - b);
-
-    return (
-      chordPattern.length === target.length &&
-      chordPattern.every(
-        (interval, index) => interval === target[index]
-      )
-    );
-  });
-}
 
 function App() {
   const [mode, setMode] = useState<Mode>("explore");
@@ -75,11 +50,6 @@ function App() {
 
   // Sound output toggle
   const [soundOn, setSoundOn] = useState(true);
-
-  // The chord currently assembled in the Chord Lab.
-  const [labChord, setLabChord] = useState<LabChord | null>(
-    null
-  );
 
   // Start fetching the piano samples right away so the
   // first key press already sounds like a piano.
@@ -146,23 +116,6 @@ function App() {
     playNotes(chordNotes.map((note) => `${note}4`));
   };
 
-  const labNotes = labChord
-    ? calculateChordNotes(
-        rootNote,
-        labChord.intervals,
-        labChord.intervalNames,
-        accidentalPreference
-      )
-    : [];
-
-  const labChordName = labChord
-    ? `${formatNoteForDisplay(displayedRootNote)}${formatNoteForDisplay(labChord.symbol)}`
-    : "";
-
-  const handlePlayLabChord = () => {
-    playNotes(labNotes.map((note) => `${note}4`));
-  };
-
   // Analyzer -> selector: apply the detected chord.
   // The analyzer only exists inside Explore, so this never
   // fights the user for tab control.
@@ -171,9 +124,7 @@ function App() {
       return;
     }
 
-    const match = findMatchingChordIndex(
-      detectedChord.pattern
-    );
+    const match = catalogIndexFor(detectedChord.pattern);
 
     if (match === -1) {
       return;
@@ -187,21 +138,6 @@ function App() {
     );
     setSelectedChordIndex(match);
   };
-
-  // Chord Lab -> Explore: keep the Explore chord in sync
-  // in the background. ChordBuilder reports from an effect
-  // that depends on this callback, so it must stay stable
-  // (no deps) or every render would re-trigger the effect.
-  // Never call setMode() from here.
-  const handleChordBuild = useCallback((chord: LabChord) => {
-    setLabChord(chord);
-
-    const match = findMatchingChordIndex(chord.intervals);
-
-    if (match !== -1) {
-      setSelectedChordIndex(match);
-    }
-  }, []);
 
   return (
     <main className="app">
@@ -345,56 +281,6 @@ function App() {
 
         </>
       ) : null}
-
-      {mode === "build" && (
-
-        /* =========================
-            CHORD LAB (BUILDER)
-        ========================== */
-        <div className="lab-layout">
-          <section className="panel lab-panel">
-            <ChordBuilder
-              rootNote={rootNote}
-              accidentalPreference={accidentalPreference}
-              onRootChange={setRootNote}
-              onChordBuild={handleChordBuild}
-            />
-          </section>
-
-          {labChord && (
-            <section className="panel chord-display-panel">
-              <ChordDisplay
-                chordName={labChordName}
-                notes={labNotes}
-                intervalNames={labChord.intervalNames}
-                intervals={labChord.intervals}
-                onPlay={handlePlayLabChord}
-              />
-            </section>
-          )}
-
-          {labChord && (
-            <section className="panel guitar-panel">
-              <GuitarFretboard
-                chordName={labChordName}
-                rootNote={rootNote}
-                notes={labNotes}
-                intervals={labChord.intervals}
-              />
-            </section>
-          )}
-
-          <section className="panel piano-panel">
-            <PianoKeyboard
-              chordNotes={labNotes}
-              accidentalPreference={accidentalPreference}
-              selectedNotes={selectedNotes}
-              onNoteToggle={handleNoteToggle}
-              onClearSelection={handleClearSelection}
-            />
-          </section>
-        </div>
-      )}
 
       {mode === "progressions" && (
         <ChordProgressions

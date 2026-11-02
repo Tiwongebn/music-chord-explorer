@@ -35,6 +35,20 @@ export const chordQualities: ChordBuilderOption[] = [
     symbol: "aug",
     intervalName: "Major 3rd",
   },
+  {
+    id: "sus2",
+    label: "Sus 2",
+    interval: 2,
+    symbol: "sus2",
+    intervalName: "Major 2nd",
+  },
+  {
+    id: "sus4",
+    label: "Sus 4",
+    interval: 5,
+    symbol: "sus4",
+    intervalName: "Perfect 4th",
+  },
 ];
 
 export const chordExtensions: ChordBuilderOption[] = [

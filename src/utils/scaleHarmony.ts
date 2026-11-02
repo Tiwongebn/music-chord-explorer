@@ -141,16 +141,26 @@ export function buildScaleChords(
 // whatever key/scale/chord-type the Progressions controls are
 // currently set to (only the sharps/flats *spelling* still
 // follows the shared preference, exactly like Explore).
+// A chord's shape: either an index into chordTypes, or the
+// intervals/symbol of a chord made in the chord builder.
+export type ChordShape =
+  | number
+  | Pick<ChordType, "intervals" | "intervalNames" | "symbol">;
+
+function shapeOf(shape: ChordShape) {
+  return typeof shape === "number" ? chordTypes[shape] : shape;
+}
+
 export function resolveChordSnapshot(
   rawRootNote: string,
-  chordTypeIndex: number,
+  chordShape: ChordShape,
   preference: AccidentalPreference
 ): {
   chordLabel: string;
   notes: string[];
   rawNotes: string[];
 } {
-  const voicing = chordTypes[chordTypeIndex];
+  const voicing = shapeOf(chordShape);
 
   if (!voicing) {
     return { chordLabel: "?", notes: [], rawNotes: [] };
@@ -171,7 +181,7 @@ export function resolveChordSnapshot(
   const displayRoot = formatNoteForDisplay(preferredRoot);
 
   return {
-    chordLabel: `${displayRoot}${voicing.symbol}`,
+    chordLabel: `${displayRoot}${formatNoteForDisplay(voicing.symbol)}`,
     notes: chordNotes.map((note) =>
       formatNoteForDisplay(note)
     ),
@@ -214,7 +224,7 @@ export type ChordKeyRelation =
 // reported for them — only "chromatic" still applies.
 export function classifyChordInKey(
   rootNote: string,
-  chordTypeIndex: number,
+  chordShape: ChordShape,
   keyRoot: string,
   scaleType: ScaleType
 ): ChordKeyRelation {
@@ -237,7 +247,7 @@ export function classifyChordInKey(
     return "chromatic";
   }
 
-  const voicing = chordTypes[chordTypeIndex];
+  const voicing = shapeOf(chordShape);
 
   if (!voicing) {
     return "diatonic";
