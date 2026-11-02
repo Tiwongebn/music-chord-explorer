@@ -68,18 +68,21 @@ export function useMetronome(): UseMetronomeReturn {
   }, [getEngine]);
 
   const toggle = useCallback(() => {
-    const engine = getEngine();
-
-    if (engine.isRunning()) {
+    // Go by the UI state, not engine.isRunning(): during the
+    // brief audio-unlock wait the engine isn't running yet,
+    // but a second tap must still mean "stop".
+    if (isRunning) {
       stop();
       return;
     }
 
     setIsRunning(true);
-    engine.start().catch(() => {
-      setIsRunning(false);
-    });
-  }, [getEngine, stop]);
+    getEngine()
+      .start()
+      .catch(() => {
+        setIsRunning(false);
+      });
+  }, [getEngine, isRunning, stop]);
 
   const tap = useCallback(() => {
     const now = performance.now();

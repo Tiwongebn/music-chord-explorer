@@ -116,6 +116,9 @@ export function createMetronome(
   const settings: MetronomeSettings = { ...initial };
 
   let timer: number | null = null;
+  // Bumped by every start()/stop() so a start that is still
+  // waiting on Tone.start() can tell it has been superseded.
+  let generation = 0;
   let nextBeatTime = 0;
   let beatIndex = 0;
   const pendingVisuals = new Set<number>();
@@ -197,9 +200,19 @@ export function createMetronome(
         return;
       }
 
+      // A newer start() or a stop() bumps the generation, so
+      // only the latest request survives the audio-unlock wait
+      // (Start, Stop, Start quickly still ends up running).
+      const myGeneration = ++generation;
+
       // Browsers keep audio suspended until a user gesture;
       // start() is always called from a click.
       await Tone.start();
+
+      // stop() (or a newer start) ran while we were waiting.
+      if (myGeneration !== generation) {
+        return;
+      }
 
       beatIndex = 0;
       nextBeatTime = Tone.getContext().currentTime + 0.05;
@@ -208,6 +221,8 @@ export function createMetronome(
     },
 
     stop() {
+      generation += 1;
+
       if (timer !== null) {
         window.clearInterval(timer);
         timer = null;
