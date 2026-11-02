@@ -1616,13 +1616,47 @@ select optgroup {
     SEARCH & FIND + SONG LOOKUP
 ========================= */
 
-.search-panel,
-.builder-panel {
+.search-panel {
   margin-top: 112px;
 }
 
-.search-panel h3,
-.builder-panel-header h3 {
+/* The progression sits right under the chords it is built
+   from: one flow, joined by a hairline, not a new section. */
+.builder-panel {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+/* Small numbered step headings that walk the page:
+   1 · chords in this key, 2 · your progression. */
+.step-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--amber);
+  border-radius: 50%;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  box-shadow: 0 0 10px var(--amber-glow);
+}
+
+.search-panel h3 {
   margin: 10px 0 18px;
   font: 300 clamp(2rem, 4.5vw, 3rem)/1.05 var(--display);
   letter-spacing: -0.03em;
@@ -1883,7 +1917,7 @@ select optgroup {
 }
 
 .builder-help {
-  margin: 0 0 28px;
+  margin: 0 0 24px;
   color: var(--muted);
   font-size: 0.85rem;
 }
@@ -2404,9 +2438,13 @@ button.builder-slot-chord:hover,
     letter-spacing: 0.06em;
   }
 
-  .search-panel,
-  .builder-panel {
+  .search-panel {
     margin-top: 80px;
+  }
+
+  .builder-panel {
+    margin-top: 32px;
+    padding-top: 24px;
   }
 
   .builder-slot {
