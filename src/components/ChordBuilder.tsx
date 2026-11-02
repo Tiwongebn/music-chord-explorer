@@ -1,340 +1,291 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
+import ChordDisplay from "./ChordDisplay";
+import GuitarFretboard from "./GuitarFretboard";
+import PianoKeyboard from "./PianoKeyboard";
 import {
-  chordQualities,
-  chordExtensions,
   chordAlterations,
+  chordExtensions,
+  chordQualities,
 } from "../data/chordBuilder";
+import { buildChord, type ChordSpec } from "../utils/chordBuild";
 import {
+  calculateChordNotes,
+  convertRootNote,
   formatNoteForDisplay,
   getNotesByPreference,
   type AccidentalPreference,
 } from "../utils/musicTheory";
+import {
+  playChordOn,
+  playNote,
+  type InstrumentId,
+} from "../utils/audio";
 
-interface BuiltChord {
-  intervals: number[];
-  intervalNames: string[];
-  symbol: string;
-  name: string;
-}
-
-// Diminished and augmented triads change the 5th, not
-// just the 3rd.
-const fifthByQuality: Record<
-  string,
-  { interval: number; name: string }
-> = {
-  diminished: { interval: 6, name: "Diminished 5th" },
-  augmented: { interval: 8, name: "Augmented 5th" },
-};
-
-const perfectFifth = { interval: 7, name: "Perfect 5th" };
-
-// 9ths, 11ths and 13ths sit an octave above the root.
-function isCompound(intervalName: string): boolean {
-  return /\b(9|11|13)th\b/.test(intervalName);
-}
-
+// The chord builder, shown inline in the Progression Builder.
+// It builds a new chord to add, or edits one already in the
+// progression; the parent remounts it (via `key`) whenever a
+// different chord is opened, so its local state always starts
+// from initialRoot / initialSpec.
 interface ChordBuilderProps {
-  rootNote: string;
+  // Slot number being edited (1-based), or null when adding.
+  editingNumber: number | null;
+  initialRoot: string;
+  initialSpec: ChordSpec;
   accidentalPreference: AccidentalPreference;
-  onRootChange: (root: string) => void;
-  onChordBuild?: (chord: BuiltChord) => void;
+  sound: InstrumentId;
+  // Stops any looping progression before a preview plays.
+  onBeforePlay?: () => void;
+  onSubmit: (rootNote: string, spec: ChordSpec) => void;
+  onCancel: () => void;
+}
+
+function toggle(list: string[], id: string): string[] {
+  return list.includes(id)
+    ? list.filter((item) => item !== id)
+    : [...list, id];
 }
 
 function ChordBuilder({
-  rootNote,
+  editingNumber,
+  initialRoot,
+  initialSpec,
   accidentalPreference,
-  onRootChange,
-  onChordBuild,
+  sound,
+  onBeforePlay,
+  onSubmit,
+  onCancel,
 }: ChordBuilderProps) {
-  const [quality, setQuality] =
-    useState("major");
+  const [rootNote, setRootNote] = useState(initialRoot);
+  const [spec, setSpec] = useState<ChordSpec>(initialSpec);
 
-  const [selectedExtensions, setSelectedExtensions] =
-    useState<string[]>([]);
+  // The chord card, fretboard and keyboard (what the old
+  // Chord Lab tab showed) stay folded away until asked for,
+  // so the builder doesn't push the progression off screen.
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
 
-  const [selectedAlterations, setSelectedAlterations] =
-    useState<string[]>([]);
+  // Keep the root spelled the way the rest of the app is
+  // (e.g. "A#" becomes "Bb" when Flats is picked).
+  const displayRoot = convertRootNote(rootNote, accidentalPreference);
 
-  const selectedQuality =
-    chordQualities.find(
-      (item) => item.id === quality
-    );
+  const built = useMemo(() => buildChord(spec), [spec]);
 
-  const toggleExtension = (id: string) => {
-    setSelectedExtensions((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id]
-    );
-  };
-
-  const toggleAlteration = (id: string) => {
-    setSelectedAlterations((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id]
-    );
-  };
-
-  const builtChord = useMemo(() => {
-    const extensions =
-      chordExtensions.filter((extension) =>
-        selectedExtensions.includes(extension.id)
-      );
-
-    const alterations =
-      chordAlterations.filter((alteration) =>
-        selectedAlterations.includes(alteration.id)
-      );
-
-    const fifth =
-      fifthByQuality[quality] ?? perfectFifth;
-
-    // ♭5 / ♯5 replace the 5th instead of sitting next to it.
-    const hasAlteredFifth = alterations.some(
-      (alteration) =>
-        alteration.id === "b5" || alteration.id === "#5"
-    );
-
-    const parts = [
-      { interval: 0, name: "Root" },
-      {
-        interval: selectedQuality?.interval ?? 4,
-        name: selectedQuality?.intervalName ?? "Major 3rd",
-      },
-      ...(hasAlteredFifth ? [] : [fifth]),
-      ...[...extensions, ...alterations].map((item) => ({
-        interval: isCompound(item.intervalName)
-          ? item.interval + 12
-          : item.interval,
-        name: item.intervalName,
-      })),
-    ];
-
-    // Drop duplicates that land on the same pitch class
-    // (e.g. 6th and 13th), keeping the first one.
-    const seen = new Set<number>();
-
-    const uniqueParts = parts
-      .filter((part) => {
-        const pitchClass = part.interval % 12;
-
-        if (seen.has(pitchClass)) {
-          return false;
-        }
-
-        seen.add(pitchClass);
-        return true;
-      })
-      .sort((a, b) => a.interval - b.interval);
-
-    let symbol =
-  selectedQuality?.symbol ?? "";
-
-const hasMajor7 =
-  selectedExtensions.includes("maj7");
-
-const hasDominant7 =
-  selectedExtensions.includes("b7");
-
-const has9 =
-  selectedExtensions.includes("9");
-
-const has11 =
-  selectedExtensions.includes("11");
-
-const has13 =
-  selectedExtensions.includes("13");
-
-if (has13) {
-  symbol += "13";
-} else if (has11) {
-  symbol += "11";
-} else if (has9) {
-  symbol += "9";
-} else if (hasMajor7) {
-  symbol += "maj7";
-} else if (hasDominant7) {
-  symbol += "7";
-} else if (
-  selectedExtensions.includes("6")
-) {
-  symbol += "6";
-}
-
-const alterationSymbols =
-  alterations.map(
-    (alteration) => alteration.symbol
+  const notes = calculateChordNotes(
+    displayRoot,
+    built.intervals,
+    built.intervalNames,
+    accidentalPreference
   );
 
-symbol += alterationSymbols.join("");
+  const chordName = `${formatNoteForDisplay(displayRoot)}${formatNoteForDisplay(built.symbol)}`;
 
-return {
-  intervals: uniqueParts.map((part) => part.interval),
-  intervalNames: uniqueParts.map((part) => part.name),
-  symbol,
-  name: `${selectedQuality?.label ?? "Major"} Chord`,
-  extensions,
-  alterations,
-};
-  }, [
-    quality,
-    selectedQuality,
-    selectedExtensions,
-    selectedAlterations,
-  ]);
+  const handlePlay = () => {
+    onBeforePlay?.();
+    playChordOn(notes, sound);
+  };
 
-  // Let the parent component know whenever the
-  // built chord changes.
-  useEffect(() => {
-    onChordBuild?.(builtChord);
-  }, [builtChord, onChordBuild]);
+  const handleNoteToggle = useCallback((note: string) => {
+    playNote(note);
+    setSelectedNotes((current) => toggle(current, note));
+  }, []);
+
+  const isEditing = editingNumber !== null;
 
   return (
-    <section className="chord-builder">
-
-      <div className="builder-header">
+    <section
+      className="chord-builder inline-builder"
+      aria-label={isEditing ? `Edit chord ${editingNumber}` : "Build a chord"}
+    >
+      <div className="inline-builder-head">
         <p className="eyebrow">
-          BUILD A CHORD
+          {isEditing ? `EDIT CHORD ${editingNumber}` : "BUILD A CHORD"}
         </p>
 
-        <h2>Chord Builder</h2>
-
-        <p>
-          Build a chord by selecting its individual
-          components.
-        </p>
+        <button
+          type="button"
+          className="slot-btn"
+          aria-label="Close chord builder"
+          onClick={onCancel}
+        >
+          ×
+        </button>
       </div>
-
 
       {/* ROOT */}
+      <div className="builder-group">
+        <h3 id="builder-root-label">Root</h3>
 
-      <div className="builder-control">
-        <label htmlFor="builder-root">
-          Root Note
-        </label>
-
-        <select
-          id="builder-root"
-          value={rootNote}
-          onChange={(event) =>
-            onRootChange(event.target.value)
-          }
+        <div
+          className="root-pills"
+          role="group"
+          aria-labelledby="builder-root-label"
         >
-          {getNotesByPreference(
-            accidentalPreference
-          ).map((note) => (
-            <option key={note} value={note}>
+          {getNotesByPreference(accidentalPreference).map((note) => (
+            <button
+              key={note}
+              type="button"
+              className={displayRoot === note ? "root-pill active" : "root-pill"}
+              aria-pressed={displayRoot === note}
+              onClick={() => setRootNote(note)}
+            >
               {formatNoteForDisplay(note)}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
+      <div className="inline-builder-options">
+        {/* QUALITY */}
+        <div className="builder-group">
+          <h3>Quality</h3>
 
-      {/* QUALITY */}
-
-      <div className="builder-group">
-
-        <h3>Chord Quality</h3>
-
-        <div className="builder-options">
-
-          {chordQualities.map((item) => (
-            <label
-              className="builder-option"
-              key={item.id}
-            >
-              <input
-                type="radio"
-                name="chord-quality"
-                checked={quality === item.id}
-                onChange={() =>
-                  setQuality(item.id)
-                }
-              />
-
-              <span>
-                {item.label}
-              </span>
-            </label>
-          ))}
-
+          <div className="builder-options">
+            {chordQualities.map((item) => (
+              <label className="builder-option" key={item.id}>
+                <input
+                  type="radio"
+                  name="chord-quality"
+                  checked={spec.quality === item.id}
+                  onChange={() =>
+                    setSpec((current) => ({ ...current, quality: item.id }))
+                  }
+                />
+                <span>{item.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
-      </div>
+        {/* EXTENSIONS */}
+        <div className="builder-group">
+          <h3>Extensions</h3>
 
-
-      {/* EXTENSIONS */}
-
-      <div className="builder-group">
-
-        <h3>Extensions</h3>
-
-        <div className="builder-options">
-
-          {chordExtensions.map((item) => (
-            <label
-              className="builder-option"
-              key={item.id}
-            >
-              <input
-                type="checkbox"
-                checked={selectedExtensions.includes(
-                  item.id
-                )}
-                onChange={() =>
-                  toggleExtension(item.id)
-                }
-              />
-
-              <span>
-                {item.label}
-              </span>
-            </label>
-          ))}
-
+          <div className="builder-options">
+            {chordExtensions.map((item) => (
+              <label className="builder-option" key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={spec.extensions.includes(item.id)}
+                  onChange={() =>
+                    setSpec((current) => ({
+                      ...current,
+                      extensions: toggle(current.extensions, item.id),
+                    }))
+                  }
+                />
+                <span>{item.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
+        {/* ALTERATIONS */}
+        <div className="builder-group">
+          <h3>Alterations</h3>
+
+          <div className="builder-options">
+            {chordAlterations.map((item) => (
+              <label className="builder-option" key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={spec.alterations.includes(item.id)}
+                  onChange={() =>
+                    setSpec((current) => ({
+                      ...current,
+                      alterations: toggle(current.alterations, item.id),
+                    }))
+                  }
+                />
+                <span>{item.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       </div>
 
-
-      {/* ALTERATIONS */}
-
-      <div className="builder-group">
-
-        <h3>Alterations</h3>
-
-        <div className="builder-options">
-
-          {chordAlterations.map((item) => (
-            <label
-              className="builder-option"
-              key={item.id}
-            >
-              <input
-                type="checkbox"
-                checked={selectedAlterations.includes(
-                  item.id
-                )}
-                onChange={() =>
-                  toggleAlteration(item.id)
-                }
-              />
-
-              <span>
-                {item.label}
-              </span>
-            </label>
-          ))}
-
+      {/* RESULT + ACTIONS */}
+      <div className="inline-builder-result">
+        <div className="inline-builder-name">
+          <strong key={chordName}>{chordName}</strong>
+          <span className="inline-builder-notes">
+            {notes.map((note) => formatNoteForDisplay(note)).join(" · ")}
+          </span>
+          <span className="inline-builder-intervals">
+            {built.intervalNames.join(" · ")}
+          </span>
         </div>
 
+        <div className="inline-builder-actions">
+          <button
+            type="button"
+            className="clear-selection"
+            onClick={handlePlay}
+          >
+            ▶ Hear it
+          </button>
+
+          <button
+            type="button"
+            className="play-chord"
+            onClick={() => onSubmit(displayRoot, spec)}
+          >
+            {isEditing ? "Update chord" : "+ Add to progression"}
+          </button>
+
+          <button
+            type="button"
+            className="clear-selection"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
 
+      <button
+        type="button"
+        className="glossary-toggle inline-builder-details-toggle"
+        aria-expanded={showDetails}
+        onClick={() => setShowDetails((current) => !current)}
+      >
+        {showDetails
+          ? "− Hide chord card, guitar & piano"
+          : "Show chord card, guitar & piano"}
+      </button>
 
+      {showDetails && (
+        <div className="inline-builder-details">
+          <section className="panel chord-display-panel">
+            <ChordDisplay
+              chordName={chordName}
+              notes={notes}
+              intervalNames={built.intervalNames}
+              intervals={built.intervals}
+              onPlay={handlePlay}
+            />
+          </section>
+
+          <section className="panel guitar-panel">
+            <GuitarFretboard
+              chordName={chordName}
+              rootNote={displayRoot}
+              notes={notes}
+              intervals={built.intervals}
+            />
+          </section>
+
+          <section className="panel piano-panel">
+            <PianoKeyboard
+              chordNotes={notes}
+              accidentalPreference={accidentalPreference}
+              selectedNotes={selectedNotes}
+              onNoteToggle={handleNoteToggle}
+              onClearSelection={() => setSelectedNotes([])}
+            />
+          </section>
+        </div>
+      )}
     </section>
   );
 }

@@ -52,6 +52,14 @@ import {
   webChordSearchUrl,
 } from "../utils/songSearch";
 import type { Song } from "../data/songs";
+import ChordBuilder from "./ChordBuilder";
+import {
+  buildChord,
+  catalogIndexFor,
+  DEFAULT_CHORD_SPEC,
+  specForIntervals,
+  type ChordSpec,
+} from "../utils/chordBuild";
 import {
   INSTRUMENTS,
   isInstrumentId,
@@ -150,6 +158,32 @@ const searchSourceLabel: Record<SearchResult["source"], string> = {
   library: "Classic",
   generated: "Generated",
 };
+
+// What the inline chord builder is working on: a new chord
+// (index null) or the progression slot at `index`. `id`
+// changes every time it opens, to remount the builder fresh.
+interface BuilderTarget {
+  id: number;
+  index: number | null;
+  rootNote: string;
+  spec: ChordSpec;
+}
+
+// The builder settings for a chord already in a progression.
+function specForChord(chord: ProgressionChord): ChordSpec {
+  if (chord.build) {
+    return chord.build;
+  }
+
+  const catalogChord =
+    chord.chordTypeIndex === undefined
+      ? undefined
+      : chordTypes[chord.chordTypeIndex];
+
+  return catalogChord
+    ? specForIntervals(catalogChord.intervals)
+    : DEFAULT_CHORD_SPEC;
+}
 
 const relationClass: Record<ChordKeyRelation, string> = {
   diatonic: "",
@@ -303,6 +337,26 @@ function ChordProgressions({
   const [songKeys, setSongKeys] = useState<Record<string, number>>({});
   const builderPanelRef = useRef<HTMLElement>(null);
 
+  // The inline chord builder inside the Progression Builder:
+  // null while closed.
+  const [builderTarget, setBuilderTarget] =
+    useState<BuilderTarget | null>(null);
+  const chordBuilderRef = useRef<HTMLDivElement>(null);
+
+  // Bring the builder into view whenever it opens on a new
+  // chord (it sits below the slots, which can be long).
+  const builderTargetId = builderTarget?.id;
+  useEffect(() => {
+    if (builderTargetId === undefined) {
+      return;
+    }
+
+    chordBuilderRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [builderTargetId]);
+
   // The progression the user is composing: a plain list of
   // frozen chord snapshots (root note + chord-type index).
   // Each entry is fully independent of the key/scale/chord
@@ -382,7 +436,7 @@ function ChordProgressions({
 
     return classifyChordInKey(
       chord.rootNote!,
-      chord.chordTypeIndex!,
+      chord.build ? buildChord(chord.build) : chord.chordTypeIndex!,
       rootNote,
       scaleType
     );
@@ -402,7 +456,7 @@ function ChordProgressions({
 
     return resolveChordSnapshot(
       chord.rootNote!,
-      chord.chordTypeIndex!,
+      chord.build ? buildChord(chord.build) : chord.chordTypeIndex!,
       accidentalPreference
     );
   };
@@ -527,6 +581,7 @@ function ChordProgressions({
   // something fun to mash the button on.
   const handleSurpriseMe = () => {
     stopLoop();
+    closeSlotEditor();
 
     const degrees = generateRandomProgression(scaleType, 4);
 
@@ -591,6 +646,7 @@ function ChordProgressions({
   // Toggles between chord and rest at a given index.
   const handleToggleRest = (index: number) => {
     stopLoop();
+    closeSlotEditor();
 
     setBuilderChords((current) =>
       current.map((chord, i) => {
@@ -617,6 +673,7 @@ function ChordProgressions({
 
   const handleRemoveFromBuilder = (index: number) => {
     stopLoop();
+    closeSlotEditor();
 
     setBuilderChords((current) =>
       current.filter((_, i) => i !== index)
@@ -628,6 +685,7 @@ function ChordProgressions({
     direction: -1 | 1
   ) => {
     stopLoop();
+    closeSlotEditor();
 
     setBuilderChords((current) => {
       const target = index + direction;
@@ -647,8 +705,84 @@ function ChordProgressions({
 
   const handleClearBuilder = () => {
     stopLoop();
+    closeSlotEditor();
     setBuilderChords([]);
   };
+
+  // Opens the chord builder for a new chord. Starts from the
+  // chord tapped in the row above, if any, so "tap a chord,
+  // then tweak it" works; otherwise from the key's root.
+  const handleOpenNewChord = () => {
+    const highlighted = highlightedDegree
+      ? chordByDegree(highlightedDegree)
+      : null;
+
+    setBuilderTarget((current) => ({
+      id: (current?.id ?? 0) + 1,
+      index: null,
+      rootNote: highlighted?.rawRootNote ?? rootNote,
+      spec: highlighted
+        ? specForIntervals(
+            chordTypes[highlighted.chordTypeIndex].intervals
+          )
+        : DEFAULT_CHORD_SPEC,
+    }));
+  };
+
+  // Opens the chord builder on a slot already in the
+  // progression (a rest opens as a plain major chord).
+  const handleEditSlot = (index: number) => {
+    const chord = builderChords[index];
+
+    setBuilderTarget((current) => ({
+      id: (current?.id ?? 0) + 1,
+      index,
+      rootNote:
+        chord.type === "chord" && chord.rootNote
+          ? chord.rootNote
+          : rootNote,
+      spec:
+        chord.type === "chord"
+          ? specForChord(chord)
+          : DEFAULT_CHORD_SPEC,
+    }));
+  };
+
+  // Adds the built chord, or replaces the slot being edited
+  // (keeping its beat count).
+  const handleSubmitBuiltChord = (
+    chordRoot: string,
+    spec: ChordSpec
+  ) => {
+    stopLoop();
+
+    const index = builderTarget?.index ?? null;
+    const entry: ProgressionChord = {
+      type: "chord",
+      rootNote: chordRoot,
+      chordTypeIndex: catalogIndexFor(buildChord(spec).intervals),
+      build: spec,
+      beats: DEFAULT_CHORD_BEATS,
+    };
+
+    setBuilderChords((current) =>
+      index === null
+        ? [...current, entry]
+        : current.map((chord, i) =>
+            i === index ? { ...entry, beats: chord.beats } : chord
+          )
+    );
+    setBuilderTarget(null);
+  };
+
+  // Slot indexes go stale when slots move, vanish or get
+  // replaced, so an open slot editor closes then. A builder
+  // making a new chord stays open.
+  function closeSlotEditor() {
+    setBuilderTarget((current) =>
+      current?.index === null ? current : null
+    );
+  }
 
   const handleSaveBuilder = () => {
     const name = progressionName.trim();
@@ -690,6 +824,7 @@ function ChordProgressions({
     nextScaleType: ScaleType
   ) => {
     stopLoop();
+    closeSlotEditor();
     setBuilderChords(chords);
     onRootChange(
       convertRootNote(
@@ -734,6 +869,7 @@ function ChordProgressions({
 
   const handleLoadSaved = (saved: SavedProgression) => {
     stopLoop();
+    closeSlotEditor();
     setBuilderChords(saved.chords);
     setTimeSignatureId(saved.timeSignatureId);
     setSwingEnabled(saved.swingEnabled);
@@ -748,7 +884,8 @@ function ChordProgressions({
         <h2>Chord Progressions</h2>
         <p className="subtitle-left">
           Pick a key, see its chords, and build a
-          progression from them.
+          progression from them, or make any chord you
+          like with the chord builder.
         </p>
       </div>
 
@@ -1807,8 +1944,10 @@ function ChordProgressions({
           </div>
 
           <p className="builder-section-hint">
-            Add chords with <strong>+ Add</strong>, then
-            play, loop or save your progression.
+            Add chords with <strong>+ Add</strong> or make
+            your own with <strong>Build a chord</strong>. Tap
+            any chord in your progression to change it, then
+            play, loop or save.
           </p>
 
           <details className="builder-help">
@@ -1824,6 +1963,12 @@ function ChordProgressions({
                 Add <strong>rests</strong> for silence,
                 and use Playback &amp; Groove for swing,
                 accents and rhythm patterns.
+              </li>
+              <li>
+                <strong>Build a chord</strong> lets you pick
+                any root, quality, extensions and
+                alterations. Tap a chord in the progression
+                (or its ✎ button) to edit it the same way.
               </li>
               <li>
                 Reorder, resize or remove chords with the
@@ -1848,7 +1993,7 @@ function ChordProgressions({
         {builderChords.length === 0 ? (
           <p className="hint builder-empty">
             Your progression is empty. Add a chord from
-            the row above to get started.
+            the row above, or build your own, to get started.
           </p>
         ) : (
           <>
@@ -1874,18 +2019,16 @@ function ChordProgressions({
                       0;
 
                   const isRest = chord.type === 'rest';
+                  const isEditing = builderTarget?.index === index;
+
+                  const slotClasses = ["builder-slot"];
+                  if (isRest) slotClasses.push("rest-slot");
+                  if (endsBar) slotClasses.push("bar-end");
+                  if (isEditing) slotClasses.push("editing");
 
                   return (
                     <li
-                      className={
-                        isRest
-                          ? endsBar
-                            ? "builder-slot rest-slot bar-end"
-                            : "builder-slot rest-slot"
-                          : endsBar
-                            ? "builder-slot bar-end"
-                            : "builder-slot"
-                      }
+                      className={slotClasses.join(" ")}
                       key={`${chord.type}-${index}`}
                     >
                       <span className="builder-slot-index">
@@ -1898,9 +2041,15 @@ function ChordProgressions({
                         </span>
                       ) : (
                         <>
-                          <span className="builder-slot-chord">
+                          <button
+                            type="button"
+                            className="builder-slot-chord"
+                            title="Edit this chord"
+                            aria-label={`Edit chord ${index + 1}, ${resolved!.chordLabel}`}
+                            onClick={() => handleEditSlot(index)}
+                          >
                             {resolved!.chordLabel}
-                          </span>
+                          </button>
 
                           {relation !== "diatonic" && (
                             <span
@@ -1967,6 +2116,17 @@ function ChordProgressions({
                       </div>
 
                       <div className="builder-slot-actions">
+                        <button
+                          type="button"
+                          className={isEditing ? "slot-btn active" : "slot-btn"}
+                          title="Edit in the chord builder"
+                          aria-label={`Edit chord ${index + 1}`}
+                          aria-pressed={isEditing}
+                          onClick={() => handleEditSlot(index)}
+                        >
+                          ✎
+                        </button>
+
                         <button
                           type="button"
                           className="slot-btn"
@@ -2041,6 +2201,26 @@ function ChordProgressions({
           </>
         )}
 
+        {builderTarget && (
+          <div ref={chordBuilderRef}>
+            <ChordBuilder
+              key={builderTarget.id}
+              editingNumber={
+                builderTarget.index === null
+                  ? null
+                  : builderTarget.index + 1
+              }
+              initialRoot={builderTarget.rootNote}
+              initialSpec={builderTarget.spec}
+              accidentalPreference={accidentalPreference}
+              sound={sound}
+              onBeforePlay={stopLoop}
+              onSubmit={handleSubmitBuiltChord}
+              onCancel={() => setBuilderTarget(null)}
+            />
+          </div>
+        )}
+
         <div className="builder-actions">
           <button
             type="button"
@@ -2064,6 +2244,20 @@ function ChordProgressions({
             onClick={handleToggleBuilderLoop}
           >
             {loopHandle ? "■ Stop loop" : "Loop"}
+          </button>
+
+          <button
+            type="button"
+            className="clear-selection"
+            aria-expanded={builderTarget?.index === null}
+            title="Make any chord and add it to the progression"
+            onClick={() =>
+              builderTarget?.index === null
+                ? setBuilderTarget(null)
+                : handleOpenNewChord()
+            }
+          >
+            ✎ Build a chord
           </button>
 
           <button

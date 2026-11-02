@@ -17,6 +17,7 @@
 
 import { defaultTimeSignatureId } from "../data/rhythm";
 import { getDefaultStyleId } from "../data/playStyles";
+import type { ChordSpec } from "./chordBuild";
 
 // How long a chord holds, in beats, before the next one
 // starts. 1 beat at this app's default ~70 BPM works out to
@@ -34,7 +35,15 @@ export interface ProgressionChord {
   rootNote?: string;
   // For type === 'chord': index into chordTypes (src/data/chords.ts).
   // For type === 'rest': ignored.
+  // Chords made or edited in the chord builder keep the
+  // catalog match here when there is one, or -1 when the
+  // builder made something the catalog doesn't name.
   chordTypeIndex?: number;
+  // For chords made or edited in the chord builder: the exact
+  // quality/extensions/alterations picked. When present it
+  // decides the chord's notes and name, and lets the builder
+  // reopen the chord with the same settings.
+  build?: ChordSpec;
   // How many beats this entry (chord or rest) holds for.
   // See rhythm.ts for the selectable range.
   beats: number;
