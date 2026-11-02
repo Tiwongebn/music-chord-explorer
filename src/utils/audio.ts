@@ -195,51 +195,92 @@ export async function playNote(
 
 // ---- Guitar ----------------------------------------------
 //
-// Real acoustic-guitar samples (see public/samples/guitar/
-// CREDITS.md), fetched only once the guitar panel asks for
-// them. Until they arrive, or if they fail to load, a
+// Real guitar recordings (see the CREDITS.md next to each set
+// under public/samples/), fetched only when a guitar is first
+// needed. Until they arrive, or if they fail to load, a
 // Karplus-Strong pluck (Tone.PluckSynth, no download) stands
 // in. Either way each guitar string is its own voice, so
 // re-plucking a string cuts its old note off like a real one.
 
 const GUITAR_STRINGS = 6;
 
-// Roughly every minor third from E2 to D5; Tone repitches the
-// gaps. Guitar range here is E2 up to G5 (fret 15, high e).
-const GUITAR_SAMPLE_NOTES = [
-  "E2", "G2", "A#2", "C#3", "E3", "G3",
-  "A#3", "C#4", "E4", "G4", "B4", "D5",
-];
+export type GuitarKind = "acoustic" | "nylon" | "electric";
 
-let guitarSampler: Tone.Sampler | null = null;
-let guitarFailed = false;
+// Roughly every minor third across the guitar's range (E2 up to
+// G5, fret 15 on the high e); Tone repitches the gaps.
+const SAMPLED_GUITARS: Record<
+  GuitarKind,
+  { dir: string; notes: string[]; volume: number }
+> = {
+  acoustic: {
+    dir: "guitar",
+    volume: -9,
+    notes: [
+      "E2", "G2", "A#2", "C#3", "E3", "G3",
+      "A#3", "C#4", "E4", "G4", "B4", "D5",
+    ],
+  },
+  nylon: {
+    dir: "guitar-nylon",
+    volume: -9,
+    notes: [
+      "E2", "G#2", "B2", "D3", "F#3", "A3",
+      "C#4", "E4", "G#4", "B4", "D5", "G5",
+    ],
+  },
+  electric: {
+    dir: "guitar-electric",
+    // Recorded quieter than the other two (about 5 dB lower RMS).
+    volume: -6,
+    notes: [
+      "E2", "A2", "C3", "D#3", "F#3", "A3", "C4",
+      "D#4", "F#4", "A4", "C5", "D#5", "F#5",
+    ],
+  },
+};
+
+const guitarSamplers: Partial<Record<GuitarKind, Tone.Sampler>> = {};
+const guitarFailed: Partial<Record<GuitarKind, boolean>> = {};
 let pluckers: Tone.PluckSynth[] = [];
 // Last note sounding on each string, so a re-pluck can cut it.
 const ringing: (string | null)[] = Array(GUITAR_STRINGS).fill(null);
 
-function ensureGuitarSampler(): Tone.Sampler {
-  if (!guitarSampler) {
-    const urls: Record<string, string> = {};
+function ensureGuitarSampler(kind: GuitarKind = "acoustic"): Tone.Sampler {
+  const existing = guitarSamplers[kind];
 
-    for (const note of GUITAR_SAMPLE_NOTES) {
-      urls[note] = `${note.replace("#", "s")}.mp3`;
-    }
-
-    guitarSampler = new Tone.Sampler({
-      urls,
-      release: 0.4,
-      baseUrl: `${import.meta.env.BASE_URL}samples/guitar/`,
-      onerror: () => {
-        guitarFailed = true;
-      },
-    }).toDestination();
-
-    // The samples are recorded hot; a six-string strum peaks near
-    // 0.7 at this level, so it should not clip.
-    guitarSampler.volume.value = -9;
+  if (existing) {
+    return existing;
   }
 
-  return guitarSampler;
+  const { dir, notes, volume } = SAMPLED_GUITARS[kind];
+  const urls: Record<string, string> = {};
+
+  for (const note of notes) {
+    urls[note] = `${note.replace("#", "s")}.mp3`;
+  }
+
+  const sampler = new Tone.Sampler({
+    urls,
+    release: 0.4,
+    baseUrl: `${import.meta.env.BASE_URL}samples/${dir}/`,
+    onerror: () => {
+      guitarFailed[kind] = true;
+    },
+  }).toDestination();
+
+  // All three sets peak near -3 dBFS; at these levels a six-string
+  // strum peaks well under 1, so it should not clip.
+  sampler.volume.value = volume;
+  guitarSamplers[kind] = sampler;
+
+  return sampler;
+}
+
+// True once a guitar's recordings are decoded and usable.
+function guitarReady(kind: GuitarKind): boolean {
+  const sampler = ensureGuitarSampler(kind);
+
+  return !guitarFailed[kind] && sampler.loaded;
 }
 
 // Start fetching the guitar samples (about 2 MB). Safe to call
@@ -294,7 +335,7 @@ export async function playGuitarString(
   const time = Tone.now() + when;
   const sampler = ensureGuitarSampler();
 
-  if (guitarFailed || !sampler.loaded) {
+  if (!guitarReady("acoustic")) {
     getPluckers()[string].triggerAttack(name, time);
     return;
   }
@@ -334,12 +375,12 @@ export function strumGuitar(
 
 // ---- Instruments for chord playback -----------------------
 //
-// Progressions can play on the piano or on one of three guitars.
-// "acoustic" uses the real samples above (Karplus-Strong until
-// they load); "nylon" and "electric" are pure Karplus-Strong
-// voices (Tone.PluckSynth) with different tone, so they cost no
-// download. Guitars play real shapes from guitarVoicings, one
-// note per string, so strums and arpeggios rake across strings.
+// Progressions can play on the piano or on one of three guitars,
+// each from its own recordings above (about 1-2 MB per guitar,
+// fetched only once that guitar is picked). While a set loads, a
+// Karplus-Strong voice tuned to that guitar stands in. Guitars
+// play real shapes from guitarVoicings, one note per string, so
+// strums and arpeggios rake across strings.
 
 export type InstrumentId = "piano" | "acoustic" | "nylon" | "electric";
 
@@ -362,8 +403,8 @@ interface SynthGuitar {
 const synthGuitars: Partial<Record<InstrumentId, SynthGuitar>> = {};
 let guitarRoom: Tone.Reverb | null = null;
 
-// A short, quiet room shared by the synth guitars. Without it a
-// bare Karplus-Strong pluck sounds boxy.
+// A short, quiet room shared by the stand-in synth guitars.
+// Without it a bare Karplus-Strong pluck sounds boxy.
 function getGuitarRoom(): Tone.Reverb {
   if (!guitarRoom) {
     guitarRoom = new Tone.Reverb({ decay: 1.4, wet: 0.2 }).toDestination();
@@ -372,17 +413,17 @@ function getGuitarRoom(): Tone.Reverb {
   return guitarRoom;
 }
 
+// Stand-ins used only until each guitar's recordings load.
 const SYNTH_TONES = {
   // Soft, round: less pick noise, darker filter.
   nylon: { attackNoise: 0.7, dampening: 2100, resonance: 0.975, volume: -4 },
   // Bright and sustaining, through a light chorus.
   electric: { attackNoise: 1.1, dampening: 5200, resonance: 0.985, volume: -9 },
-  // Stand-in for the acoustic samples while they load.
   acoustic: { attackNoise: 1.5, dampening: 3600, resonance: 0.97, volume: -9 },
 } as const;
 
 function getSynthGuitar(
-  kind: "acoustic" | "nylon" | "electric"
+  kind: GuitarKind
 ): SynthGuitar {
   const existing = synthGuitars[kind];
 
@@ -426,19 +467,15 @@ function getSynthGuitar(
   return guitar;
 }
 
-// Warm up whatever the chosen instrument needs, ahead of the
-// first press (samples for acoustic, the reverb impulse for the
-// synth guitars).
+// Start fetching the chosen instrument's recordings ahead of
+// the first press (plus the stand-in's reverb impulse).
 export function preloadInstrument(instrument: InstrumentId): void {
   if (instrument === "piano") {
     ensureSampler();
     return;
   }
 
-  if (instrument === "acoustic") {
-    ensureGuitarSampler();
-  }
-
+  ensureGuitarSampler(instrument);
   getGuitarRoom();
 }
 
@@ -458,9 +495,8 @@ function schedulePlucks(
   endTime: number
 ): void {
   const sorted = [...plucks].sort((a, b) => a.time - b.time);
-  const sampler =
-    instrument === "acoustic" ? ensureGuitarSampler() : null;
-  const useSamples = sampler !== null && !guitarFailed && sampler.loaded;
+  const sampler = ensureGuitarSampler(instrument);
+  const useSamples = guitarReady(instrument);
   const synth = useSamples ? null : getSynthGuitar(instrument);
 
   sorted.forEach((pluck, index) => {
@@ -472,7 +508,7 @@ function schedulePlucks(
       next ? next.time : endTime
     );
 
-    if (useSamples && sampler) {
+    if (useSamples) {
       sampler.triggerAttackRelease(
         pluck.note,
         stopAt - pluck.time,
