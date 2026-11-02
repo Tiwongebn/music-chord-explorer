@@ -635,6 +635,25 @@ export interface TimedChord {
 // (boosts volume on marked beats for dynamics), patterns
 // (applies rhythmic articulation like strums or arpeggios),
 // and bass layer (plays root notes underneath at specific times).
+// Extra delay for a pattern event under swing. Events that land
+// on the off-beat eighth (halfway through a beat) are pushed to
+// the swung position, e.g. 2/3 of the beat for 2:1 swing.
+// `beatPosition` is the event's position in beats from the start
+// of the progression.
+function swingDelay(
+  beatPosition: number,
+  secondsPerBeat: number,
+  swingRatio: number
+): number {
+  const fraction = beatPosition % 1;
+
+  if (Math.abs(fraction - 0.5) > 0.01) {
+    return 0;
+  }
+
+  return secondsPerBeat * (swingRatio / (swingRatio + 1) - 0.5);
+}
+
 export function playTimedProgression(
   chords: TimedChord[],
   secondsPerBeat: number,
@@ -740,7 +759,16 @@ export function playTimedProgression(
         );
 
         for (const event of patternEvents) {
-          const eventTime = when + event.offsetSeconds;
+          const eventTime =
+            when +
+            event.offsetSeconds +
+            (swingEnabled
+              ? swingDelay(
+                  (elapsed + event.offsetSeconds) / secondsPerBeat,
+                  secondsPerBeat,
+                  swingRatio
+                )
+              : 0);
           const notesToPlay = event.noteIndices.map(
             (idx) => chord.notes[idx]
           );
@@ -874,6 +902,14 @@ function playGuitarProgression(
           event.noteIndices.length > 1 &&
           event.noteIndices[0] > event.noteIndices[event.noteIndices.length - 1];
 
+        const eventSwing = swingEnabled
+          ? swingDelay(
+              (elapsed + event.offsetSeconds) / secondsPerBeat,
+              secondsPerBeat,
+              swingRatio
+            )
+          : 0;
+
         event.noteIndices.forEach((noteIndex, order) => {
           const item = strings[noteIndex];
 
@@ -889,6 +925,7 @@ function playGuitarProgression(
             time:
               chordStart +
               event.offsetSeconds +
+              eventSwing +
               Math.max(0, order * stagger + jitter) / 1000,
             // Upstrokes catch the treble strings lightly.
             velocity: Math.min(
