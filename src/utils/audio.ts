@@ -16,6 +16,7 @@
 import * as Tone from "tone";
 import { applyPattern } from "../data/patterns";
 import type { RhythmPattern } from "../data/patterns";
+import { voiceChordForGuitar } from "./guitarVoicings";
 
 let enabled = true;
 
@@ -331,6 +332,249 @@ export function strumGuitar(
   });
 }
 
+// ---- Instruments for chord playback -----------------------
+//
+// Progressions can play on the piano or on one of three guitars.
+// "acoustic" uses the real samples above (Karplus-Strong until
+// they load); "nylon" and "electric" are pure Karplus-Strong
+// voices (Tone.PluckSynth) with different tone, so they cost no
+// download. Guitars play real shapes from guitarVoicings, one
+// note per string, so strums and arpeggios rake across strings.
+
+export type InstrumentId = "piano" | "acoustic" | "nylon" | "electric";
+
+export const INSTRUMENTS: { id: InstrumentId; label: string }[] = [
+  { id: "piano", label: "Piano" },
+  { id: "acoustic", label: "Acoustic guitar" },
+  { id: "nylon", label: "Nylon guitar" },
+  { id: "electric", label: "Electric guitar (clean)" },
+];
+
+export function isInstrumentId(value: unknown): value is InstrumentId {
+  return INSTRUMENTS.some((instrument) => instrument.id === value);
+}
+
+interface SynthGuitar {
+  voices: Tone.PluckSynth[];
+  gains: Tone.Gain[]; // per string, so accents can change level
+}
+
+const synthGuitars: Partial<Record<InstrumentId, SynthGuitar>> = {};
+let guitarRoom: Tone.Reverb | null = null;
+
+// A short, quiet room shared by the synth guitars. Without it a
+// bare Karplus-Strong pluck sounds boxy.
+function getGuitarRoom(): Tone.Reverb {
+  if (!guitarRoom) {
+    guitarRoom = new Tone.Reverb({ decay: 1.4, wet: 0.2 }).toDestination();
+  }
+
+  return guitarRoom;
+}
+
+const SYNTH_TONES = {
+  // Soft, round: less pick noise, darker filter.
+  nylon: { attackNoise: 0.7, dampening: 2100, resonance: 0.975, volume: -4 },
+  // Bright and sustaining, through a light chorus.
+  electric: { attackNoise: 1.1, dampening: 5200, resonance: 0.985, volume: -9 },
+  // Stand-in for the acoustic samples while they load.
+  acoustic: { attackNoise: 1.5, dampening: 3600, resonance: 0.97, volume: -9 },
+} as const;
+
+function getSynthGuitar(
+  kind: "acoustic" | "nylon" | "electric"
+): SynthGuitar {
+  const existing = synthGuitars[kind];
+
+  if (existing) {
+    return existing;
+  }
+
+  const tone = SYNTH_TONES[kind];
+  let output: Tone.ToneAudioNode = getGuitarRoom();
+
+  if (kind === "electric") {
+    output = new Tone.Chorus({
+      frequency: 1.2,
+      delayTime: 3.5,
+      depth: 0.35,
+      wet: 0.35,
+    })
+      .connect(getGuitarRoom())
+      .start();
+  }
+
+  const gains = Array.from({ length: GUITAR_STRINGS }, () =>
+    new Tone.Gain(0.8).connect(output)
+  );
+  const voices = gains.map((gain) => {
+    const voice = new Tone.PluckSynth({
+      attackNoise: tone.attackNoise,
+      dampening: tone.dampening,
+      resonance: tone.resonance,
+      release: 0.25,
+    }).connect(gain);
+
+    voice.volume.value = tone.volume;
+
+    return voice;
+  });
+
+  const guitar = { voices, gains };
+  synthGuitars[kind] = guitar;
+
+  return guitar;
+}
+
+// Warm up whatever the chosen instrument needs, ahead of the
+// first press (samples for acoustic, the reverb impulse for the
+// synth guitars).
+export function preloadInstrument(instrument: InstrumentId): void {
+  if (instrument === "piano") {
+    ensureSampler();
+    return;
+  }
+
+  if (instrument === "acoustic") {
+    ensureGuitarSampler();
+  }
+
+  getGuitarRoom();
+}
+
+interface Pluck {
+  string: number;
+  note: string; // clean name, e.g. "G3"
+  time: number; // absolute AudioContext seconds
+  velocity: number; // 0..1
+}
+
+// Schedule the plucks of one chord. Each string rings until it is
+// plucked again or the chord ends (`endTime`), like a guitarist
+// letting a shape ring and then changing to the next one.
+function schedulePlucks(
+  instrument: Exclude<InstrumentId, "piano">,
+  plucks: Pluck[],
+  endTime: number
+): void {
+  const sorted = [...plucks].sort((a, b) => a.time - b.time);
+  const sampler =
+    instrument === "acoustic" ? ensureGuitarSampler() : null;
+  const useSamples = sampler !== null && !guitarFailed && sampler.loaded;
+  const synth = useSamples ? null : getSynthGuitar(instrument);
+
+  sorted.forEach((pluck, index) => {
+    const next = sorted
+      .slice(index + 1)
+      .find((other) => other.string === pluck.string);
+    const stopAt = Math.max(
+      pluck.time + 0.06,
+      next ? next.time : endTime
+    );
+
+    if (useSamples && sampler) {
+      sampler.triggerAttackRelease(
+        pluck.note,
+        stopAt - pluck.time,
+        pluck.time,
+        pluck.velocity
+      );
+      return;
+    }
+
+    if (synth) {
+      synth.gains[pluck.string].gain.setValueAtTime(
+        pluck.velocity,
+        pluck.time
+      );
+      synth.voices[pluck.string].triggerAttack(pluck.note, pluck.time);
+      synth.voices[pluck.string].triggerRelease(stopAt);
+    }
+  });
+}
+
+// Pitch classes (0 = C) of chord notes like ["C", "Eb", "G"].
+function pitchClassesOf(notes: string[]): number[] {
+  return notes
+    .map((note) => noteToMidi(`${note}4`))
+    .filter((midi) => !Number.isNaN(midi))
+    .map((midi) => midi % 12);
+}
+
+// Guitar shape for a chord as a list of clean note names, low
+// string first. Falls back to stacking the notes from the A
+// string's register if no shape can be found.
+function guitarStringsFor(
+  notes: string[],
+  previousCenter: number | null
+): { strings: { string: number; note: string }[]; center: number | null } {
+  const pcs = pitchClassesOf(notes);
+  const voicing = voiceChordForGuitar(pcs, previousCenter);
+
+  if (voicing) {
+    return {
+      strings: voicing.strings.map((item) => ({
+        string: item.string,
+        note: Tone.Frequency(noteToMidi(item.note), "midi").toNote(),
+      })),
+      center: voicing.center,
+    };
+  }
+
+  // Each note goes on the next string up, starting above G#2.
+  const count = Math.min(pcs.length, GUITAR_STRINGS);
+  let midi = 44;
+  const strings = pcs.slice(0, count).map((pc, index) => {
+    midi += ((pc - midi) % 12 + 12) % 12 || 12;
+
+    return {
+      string: GUITAR_STRINGS - count + index,
+      note: Tone.Frequency(midi, "midi").toNote(),
+    };
+  });
+
+  return { strings, center: previousCenter };
+}
+
+// Strum one chord on a guitar right now, e.g. for chord previews.
+export function strumChord(
+  notes: string[],
+  instrument: Exclude<InstrumentId, "piano">,
+  ringSeconds = 2.2
+): void {
+  if (!enabled) {
+    return;
+  }
+
+  void Tone.start();
+
+  const { strings } = guitarStringsFor(notes, null);
+  const start = Tone.now();
+
+  schedulePlucks(
+    instrument,
+    strings.map((item, index) => ({
+      ...item,
+      time: start + index * 0.028,
+      velocity: 0.8,
+    })),
+    start + ringSeconds
+  );
+}
+
+// Play a chord preview on the chosen instrument.
+export function playChordOn(
+  notes: string[],
+  instrument: InstrumentId
+): void {
+  if (instrument === "piano") {
+    playNotes(notes.map((note) => `${note}4`));
+    return;
+  }
+
+  strumChord(notes, instrument);
+}
+
 // Play several notes together (or arpeggiated if you pass a
 // stagger). `notes` use octave numbers, e.g. ["C4","E4","G4"].
 export function playNotes(
@@ -391,6 +635,25 @@ export interface TimedChord {
 // (boosts volume on marked beats for dynamics), patterns
 // (applies rhythmic articulation like strums or arpeggios),
 // and bass layer (plays root notes underneath at specific times).
+// Extra delay for a pattern event under swing. Events that land
+// on the off-beat eighth (halfway through a beat) are pushed to
+// the swung position, e.g. 2/3 of the beat for 2:1 swing.
+// `beatPosition` is the event's position in beats from the start
+// of the progression.
+function swingDelay(
+  beatPosition: number,
+  secondsPerBeat: number,
+  swingRatio: number
+): number {
+  const fraction = beatPosition % 1;
+
+  if (Math.abs(fraction - 0.5) > 0.01) {
+    return 0;
+  }
+
+  return secondsPerBeat * (swingRatio / (swingRatio + 1) - 0.5);
+}
+
 export function playTimedProgression(
   chords: TimedChord[],
   secondsPerBeat: number,
@@ -399,6 +662,7 @@ export function playTimedProgression(
     swingRatio?: number; // e.g. 2 for 2:1 swing (typical jazz)
     accentBoost?: number; // dB to add to accented notes, e.g. 6
     pattern?: RhythmPattern; // rhythmic pattern to apply
+    instrument?: InstrumentId; // defaults to piano
     bassLayer?: (
       rootNote: string,
       beats: number,
@@ -411,8 +675,19 @@ export function playTimedProgression(
     swingRatio = 2,
     accentBoost = 6,
     pattern = undefined,
+    instrument = "piano",
     bassLayer = undefined,
   } = options;
+
+  if (instrument !== "piano") {
+    playGuitarProgression(chords, secondsPerBeat, instrument, {
+      swingEnabled,
+      swingRatio,
+      accentBoost,
+      pattern,
+    });
+    return;
+  }
 
   let elapsed = 0;
   let beatInMeasure = 0; // for first-measure accents
@@ -484,7 +759,16 @@ export function playTimedProgression(
         );
 
         for (const event of patternEvents) {
-          const eventTime = when + event.offsetSeconds;
+          const eventTime =
+            when +
+            event.offsetSeconds +
+            (swingEnabled
+              ? swingDelay(
+                  (elapsed + event.offsetSeconds) / secondsPerBeat,
+                  secondsPerBeat,
+                  swingRatio
+                )
+              : 0);
           const notesToPlay = event.noteIndices.map(
             (idx) => chord.notes[idx]
           );
@@ -538,6 +822,124 @@ export function playTimedProgression(
 
     elapsed += duration;
     beatInMeasure = (beatInMeasure + chord.beats) % beatsPerMeasure;
+  }
+}
+
+// Guitar flavour of playTimedProgression(): same timing, swing,
+// accents and patterns, but each chord becomes a real guitar
+// shape and pattern note indices refer to its strings (low to
+// high), so "Strum ↓" rakes from the bass string up and
+// "Syncopated" thumbs the bass string on the off-beat.
+function playGuitarProgression(
+  chords: TimedChord[],
+  secondsPerBeat: number,
+  instrument: Exclude<InstrumentId, "piano">,
+  options: {
+    swingEnabled: boolean;
+    swingRatio: number;
+    accentBoost: number;
+    pattern?: RhythmPattern;
+  }
+): void {
+  if (!enabled) {
+    return;
+  }
+
+  // Must be called inside the click; scheduling below works off
+  // the context clock, which picks up once the context resumes.
+  void Tone.start();
+
+  const { swingEnabled, swingRatio, accentBoost, pattern } = options;
+  const start = Tone.now();
+  let elapsed = 0;
+  let center: number | null = null;
+
+  for (const chord of chords) {
+    const duration = chord.beats * secondsPerBeat;
+    let swingOffset = 0;
+
+    if (swingEnabled && chord.beats === 1) {
+      const beatFraction = (elapsed / secondsPerBeat) % 1;
+
+      if (Math.abs(beatFraction - 0.5) < 0.01) {
+        swingOffset =
+          (secondsPerBeat / swingRatio) * ((swingRatio - 1) / swingRatio);
+      }
+    }
+
+    const chordStart = start + elapsed + swingOffset;
+    const chordEnd = start + elapsed + duration;
+
+    if (!chord.isRest && chord.notes.length > 0) {
+      const voiced = guitarStringsFor(chord.notes, center);
+      center = voiced.center;
+
+      const strings = voiced.strings;
+      const names = strings.map((item) => item.note);
+      // Accents push the strings harder; the boost is in dB.
+      const level = Math.min(
+        1,
+        0.72 *
+          (chord.isAccented && accentBoost
+            ? Tone.dbToGain(accentBoost)
+            : 1)
+      );
+      const events = pattern
+        ? applyPattern(names, duration, pattern)
+        : [{ offsetSeconds: 0, noteIndices: names.map((_, i) => i) }];
+      const plucks: Pluck[] = [];
+
+      for (const event of events) {
+        // Guitar strums need a wider rake than a piano roll to
+        // read as a strum; block chords get a few ms of human
+        // spread so all six strings don't land on one sample.
+        const stagger = event.staggerMs
+          ? Math.max(event.staggerMs, 24)
+          : event.noteIndices.length > 1
+            ? 5
+            : 0;
+        const isUpstroke =
+          event.noteIndices.length > 1 &&
+          event.noteIndices[0] > event.noteIndices[event.noteIndices.length - 1];
+
+        const eventSwing = swingEnabled
+          ? swingDelay(
+              (elapsed + event.offsetSeconds) / secondsPerBeat,
+              secondsPerBeat,
+              swingRatio
+            )
+          : 0;
+
+        event.noteIndices.forEach((noteIndex, order) => {
+          const item = strings[noteIndex];
+
+          if (!item) {
+            return;
+          }
+
+          const jitter = stagger ? (Math.random() - 0.5) * 4 : 0;
+
+          plucks.push({
+            string: item.string,
+            note: item.note,
+            time:
+              chordStart +
+              event.offsetSeconds +
+              eventSwing +
+              Math.max(0, order * stagger + jitter) / 1000,
+            // Upstrokes catch the treble strings lightly.
+            velocity: Math.min(
+              1,
+              level * (isUpstroke ? 0.8 : 1) * (0.95 + Math.random() * 0.1)
+            ),
+          });
+        });
+      }
+
+      schedulePlucks(instrument, plucks, chordEnd);
+    }
+
+    elapsed += duration;
   }
 }
 
@@ -625,6 +1027,7 @@ export function playTimedProgressionLoop(
     swingRatio?: number;
     accentBoost?: number;
     pattern?: RhythmPattern;
+    instrument?: InstrumentId;
     bassLayer?: (
       rootNote: string,
       beats: number,
