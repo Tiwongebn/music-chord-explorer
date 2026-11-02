@@ -2015,6 +2015,33 @@ select optgroup {
   margin-bottom: 32px;
 }
 
+/* Compact instrument picker beside Play / Loop, same quiet
+   label style as the song cards' key picker. */
+.builder-sound {
+  display: inline-flex;
+  margin-left: auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .builder-sound {
+    margin-left: 0;
+  }
+}
+
+.builder-sound select {
+  min-width: 0;
+  padding: 0.2rem 1.6rem 0.2rem 0;
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 /* In the builder row only Play is lit; Loop starts quiet and
    glows while it runs. */
 .builder-actions .loop-btn {

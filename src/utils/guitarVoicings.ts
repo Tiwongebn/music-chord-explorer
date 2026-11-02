@@ -199,3 +199,96 @@ export function voicingToStrings(
     fret < 0 ? [] : [{ string, note: noteAt(string, fret) }]
   );
 }
+
+// ---- Progression voicings ----------------------------------
+//
+// Picks a guitar shape for each chord of a progression. The best
+// few shapes are candidates, and the one closest up the neck to
+// the previous chord wins ties, so a progression doesn't jump
+// between open position and the 10th fret on every change.
+
+const progressionCache = new Map<string, GuitarVoicing[]>();
+
+function candidatesFor(pitchClasses: number[]): GuitarVoicing[] {
+  const key = pitchClasses.join(",");
+  const cached = progressionCache.get(key);
+
+  if (cached) {
+    return cached;
+  }
+
+  const rootPc = pitchClasses[0];
+  const intervals = pitchClasses.map((pc) => (pc - rootPc + 12) % 12);
+  let found: GuitarVoicing[] = [];
+
+  // Big extended chords may not fit on six strings; fall back to
+  // the core chord (root, 3rd, 5th, 7th), then the plain triad.
+  for (const size of [intervals.length, 4, 3]) {
+    found = findGuitarVoicings(rootPc, intervals.slice(0, size), 4);
+
+    if (found.length > 0) {
+      break;
+    }
+  }
+
+  progressionCache.set(key, found);
+
+  return found;
+}
+
+function neckCenter(voicing: GuitarVoicing): number {
+  const fretted = voicing.frets.filter((fret) => fret > 0);
+
+  return fretted.length
+    ? fretted.reduce((sum, fret) => sum + fret, 0) / fretted.length
+    : 0;
+}
+
+export interface ProgressionVoicing {
+  strings: { string: number; note: string }[];
+  center: number; // average fretted position, for the next chord
+}
+
+// `pitchClasses` lists the chord tones root first (0 = C).
+// Returns null when no playable shape exists.
+export function voiceChordForGuitar(
+  pitchClasses: number[],
+  previousCenter: number | null = null
+): ProgressionVoicing | null {
+  if (pitchClasses.length === 0) {
+    return null;
+  }
+
+  const candidates = candidatesFor(pitchClasses);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  let best = candidates[0];
+
+  if (previousCenter !== null) {
+    let bestCost = Infinity;
+
+    candidates.forEach((voicing, rank) => {
+      // Keep the root in the bass unless nothing else is close.
+      const bass = voicing.frets.findIndex((fret) => fret >= 0);
+      const rootInBass =
+        pitchClassAt(bass, voicing.frets[bass]) === pitchClasses[0];
+      const cost =
+        rank +
+        Math.abs(neckCenter(voicing) - previousCenter) * 0.35 +
+        (rootInBass ? 0 : 2.5);
+
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = voicing;
+      }
+    });
+  }
+
+  return {
+    strings: voicingToStrings(best.frets),
+    center: neckCenter(best),
+  };
+}

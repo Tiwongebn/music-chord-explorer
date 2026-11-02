@@ -53,12 +53,27 @@ import {
 } from "../utils/songSearch";
 import type { Song } from "../data/songs";
 import {
-  playNotes,
+  INSTRUMENTS,
+  isInstrumentId,
+  playChordOn,
+  preloadInstrument,
   playTimedProgression,
   playTimedProgressionLoop,
+  type InstrumentId,
   type ProgressionLoopHandle,
   type TimedChord,
 } from "../utils/audio";
+
+const SOUND_STORAGE_KEY = "chord-explorer:progression-sound";
+
+function loadSound(): InstrumentId {
+  try {
+    const saved = window.localStorage.getItem(SOUND_STORAGE_KEY);
+    return isInstrumentId(saved) ? saved : "piano";
+  } catch {
+    return "piano";
+  }
+}
 import {
   DEFAULT_CHORD_BEATS,
   deleteProgression,
@@ -227,6 +242,32 @@ function ChordProgressions({
   const [patternId, setPatternId] = useState(
     getDefaultPatternId()
   );
+
+  // Which instrument plays chords and progressions on this tab.
+  // Remembered per browser so a guitarist doesn't have to pick
+  // it again every visit.
+  const [sound, setSound] = useState<InstrumentId>(loadSound);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SOUND_STORAGE_KEY, sound);
+    } catch {
+      // Storage blocked (private mode); the choice just won't stick.
+    }
+
+    // Fetch samples / build the reverb shortly after the choice,
+    // so the first press already sounds right.
+    const id = window.setTimeout(() => preloadInstrument(sound), 300);
+
+    return () => window.clearTimeout(id);
+  }, [sound]);
+
+  const handleSoundChange = (value: string) => {
+    if (isInstrumentId(value)) {
+      stopLoop();
+      setSound(value);
+    }
+  };
 
   // Handle for the builder's currently-looping playback, if
   // any. Non-null exactly while the loop button shows "Stop".
@@ -404,7 +445,7 @@ function ChordProgressions({
 
   const handlePlayChord = (chord: ScaleChord) => {
     stopLoop();
-    playNotes(chord.rawNotes.map((note) => `${note}4`));
+    playChordOn(chord.rawNotes, sound);
   };
 
   // Resolves a list of frozen chord snapshots to the
@@ -448,6 +489,7 @@ function ChordProgressions({
       swingEnabled,
       accentBoost: accentType === 'none' ? 0 : 5,
       pattern,
+      instrument: sound,
       bassLayer: style?.bassLayer,
     });
   };
@@ -472,6 +514,7 @@ function ChordProgressions({
           swingEnabled,
           accentBoost: accentType === 'none' ? 0 : 5,
           pattern,
+          instrument: sound,
           bassLayer: style?.bassLayer,
         }
       )
@@ -1004,6 +1047,36 @@ function ChordProgressions({
                 : "control-group-content is-collapsed"
             }
           >
+          <div className="selector-group">
+            <label
+              className="selector-label"
+              htmlFor="prog-sound"
+            >
+              Sound
+              <span
+                className="help-icon"
+                tabIndex={0}
+                title="Which instrument plays your chords and progressions. Guitars play real chord shapes, so pair them with a Strum pattern below for a strummed feel."
+              >
+                ⓘ
+              </span>
+            </label>
+
+            <select
+              id="prog-sound"
+              value={sound}
+              onChange={(event) =>
+                handleSoundChange(event.target.value)
+              }
+            >
+              {INSTRUMENTS.map((instrument) => (
+                <option key={instrument.id} value={instrument.id}>
+                  {instrument.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="selector-group tempo-group">
             <label
               className="selector-label"
@@ -2019,6 +2092,23 @@ function ChordProgressions({
           >
             Clear
           </button>
+
+          <label className="builder-sound">
+            <span className="builder-sound-label">Sound</span>
+            <select
+              value={sound}
+              aria-label="Sound for playback"
+              onChange={(event) =>
+                handleSoundChange(event.target.value)
+              }
+            >
+              {INSTRUMENTS.map((instrument) => (
+                <option key={instrument.id} value={instrument.id}>
+                  {instrument.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="builder-save-row">
