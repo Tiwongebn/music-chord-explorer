@@ -86,6 +86,7 @@ kbd {
 .chord-analyzer h2,
 .fretboard-header h2,
 .tips-card h2,
+.why-explore h2,
 .selected-notes h3,
 .analyzed-notes h4,
 .saved-progressions h4,
@@ -1835,6 +1836,165 @@ select optgroup {
   .sub-actions {
     justify-content: flex-start;
   }
+}
+
+/* "Why this chord?": a chord's job in its key (home,
+   moving away, tension...) and where it likes to go. One
+   colour per job, reused on every chip. */
+.why-btn {
+  color: var(--mint);
+  font-weight: 600;
+}
+
+.why-explore-panel {
+  order: 2;
+}
+
+.why-explore .hint {
+  margin: 10px 0 0;
+  max-width: 62ch;
+}
+
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.role-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.role-home { color: var(--mint); }
+.role-away { color: var(--lilac); }
+.role-tension { color: var(--rose); }
+.role-detour { color: var(--amber); }
+.role-borrowed { color: var(--lilac); }
+.role-colour { color: var(--muted); }
+
+.why-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin-top: 14px;
+}
+
+.why-chord {
+  color: var(--amber);
+  font: 500 1.9rem/1.1 var(--display);
+  letter-spacing: -0.02em;
+}
+
+.why-roman,
+.why-key {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.why-key strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.why-body {
+  margin-top: 12px;
+  max-width: 68ch;
+}
+
+.why-summary,
+.why-goes,
+.why-context {
+  margin: 8px 0 0;
+  color: var(--fg);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.why-goes {
+  color: var(--amber);
+}
+
+.why-arrow {
+  font-weight: 600;
+}
+
+.why-context {
+  color: var(--muted);
+}
+
+.why-theory {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.why-foot,
+.why-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  margin-top: 16px;
+}
+
+.why-card-foot {
+  margin-top: 6px;
+}
+
+.why-card-foot .why-goes {
+  margin: 0;
+}
+
+.why-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.why-foot .why-legend {
+  margin: 0;
+}
+
+.why-list {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.why-card {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.why-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.why-card .why-summary {
+  max-width: 72ch;
+}
+
+.why-none {
+  margin-top: 16px;
 }
 
 /* =========================
