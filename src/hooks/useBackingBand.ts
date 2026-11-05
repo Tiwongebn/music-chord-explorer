@@ -160,7 +160,9 @@ export function useBackingBand(): UseBackingBandReturn {
         // Comping voicings, carried chord to chord.
         let pianoCenter: number | null = null;
         let guitarCenter: number | null = null;
-        const voiced = new Map<number, { midi: number; string?: number }[]>();
+        // Keyed by chord and instrument, so changing the Sound
+        // mid-chord switches voicings straight away.
+        const voiced = new Map<string, { midi: number; string?: number }[]>();
 
         openBand(beatTime);
 
@@ -183,7 +185,8 @@ export function useBackingBand(): UseBackingBandReturn {
         };
 
         const voicingFor = (index: number, instrument: InstrumentId) => {
-          const cached = voiced.get(index);
+          const key = `${index}:${instrument}`;
+          const cached = voiced.get(key);
 
           if (cached) {
             return cached;
@@ -221,7 +224,7 @@ export function useBackingBand(): UseBackingBandReturn {
             }
           }
 
-          voiced.set(index, notes);
+          voiced.set(key, notes);
 
           return notes;
         };
@@ -344,6 +347,7 @@ export function useBackingBand(): UseBackingBandReturn {
     return () => {
       halt();
       closeBand();
+      silenceVoicings();
     };
   }, [halt]);
 
