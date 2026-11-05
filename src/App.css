@@ -1255,6 +1255,143 @@ select optgroup {
 }
 
 
+/* Substitution ideas: same framed sheet as the chord
+   builder, one row per idea, each led by its new chord. */
+.sub-btn {
+  color: var(--amber-deep);
+}
+
+.sub-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.sub-intro p {
+  flex: 1 1 280px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.sub-original {
+  color: var(--fg);
+}
+
+.sub-applied {
+  margin: 16px 0 0;
+  color: var(--mint);
+  font-size: 0.85rem;
+}
+
+.sub-undo {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sub-empty {
+  margin: 20px 0 0;
+}
+
+.sub-list {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sub-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 28px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.sub-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sub-kind {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sub-kind-tritone {
+  color: var(--rose);
+}
+
+.sub-kind-relative {
+  color: var(--lilac);
+}
+
+.sub-kind-passing {
+  color: var(--mint);
+}
+
+.sub-chord {
+  color: var(--amber);
+  font: 500 1.6rem/1.1 var(--display);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.sub-notes {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.sub-explanation {
+  margin: 0;
+  color: var(--fg);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.sub-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .sub-card {
+    grid-template-columns: 1fr;
+  }
+
+  .sub-card-head {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+  }
+
+  .sub-kind {
+    flex-basis: 100%;
+  }
+
+  .sub-actions {
+    justify-content: flex-start;
+  }
+}
+
 /* =========================
     PROGRESSIONS
 ========================= */
