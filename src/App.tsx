@@ -6,6 +6,7 @@ import ChordSelector from "./components/ChordSelector";
 import ChordDisplay from "./components/ChordDisplay";
 import ChordAnalyzer from "./components/ChordAnalyzer";
 import GuitarFretboard from "./components/GuitarFretboard";
+import JazzVoicings from "./components/JazzVoicings";
 import ChordProgressions from "./components/ChordProgressions";
 import Metronome from "./components/Metronome";
 import { chordTypes } from "./data/chords";
@@ -276,6 +277,15 @@ function App() {
                 notes={chordNotes}
                 intervals={selectedChord.intervals}
                 guideTones={guideTones}
+              />
+            </section>
+
+            <section className="panel jazz-panel">
+              <JazzVoicings
+                chordName={chordName}
+                rootNote={rootNote}
+                intervals={selectedChord.intervals}
+                accidentalPreference={accidentalPreference}
               />
             </section>
 

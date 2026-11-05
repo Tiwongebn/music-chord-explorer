@@ -44,6 +44,7 @@ import {
 import {
   keyRootName,
   parseChordName,
+  romansToChords,
   searchProgressions,
   type SearchResult,
 } from "../utils/progressionSearch";
@@ -55,15 +56,30 @@ import {
   type JazzProgression,
 } from "../data/jazzProgressions";
 import {
+  standardBarCount,
+  standardForm,
+  standardLevels,
+  jazzStandards,
+  type JazzStandard,
+} from "../data/jazzStandards";
+import {
   searchSongs,
+  searchStandards,
   songChords,
   songCount,
   songKeyPitchClass,
+  standardKeyPitchClass,
   webChordSearchUrl,
 } from "../utils/songSearch";
 import type { Song } from "../data/songs";
 import ChordBuilder from "./ChordBuilder";
 import ProgressionScaleHints from "./ProgressionScaleHints";
+import SubstitutionPanel from "./SubstitutionPanel";
+import {
+  applySubstitution,
+  suggestSubstitutions,
+  type Substitution,
+} from "../utils/substitutions";
 import {
   buildChord,
   catalogIndexFor,
@@ -162,6 +178,7 @@ const songExamples = [
   "Someone Like You",
   "Hotel California",
   "Stand by Me",
+  "Autumn Leaves",
 ];
 
 const searchSourceLabel: Record<SearchResult["source"], string> = {
@@ -354,6 +371,15 @@ function ChordProgressions({
   const [jazzKeyChoice, setJazzKeyChoice] = useState<number | null>(
     null
   );
+  // Jazz standards tab: whole tunes to learn, or the common
+  // progressions they're built from. standardKeys holds
+  // per-tune transpositions, like songKeys.
+  const [jazzView, setJazzView] = useState<"tunes" | "progressions">(
+    "tunes"
+  );
+  const [standardKeys, setStandardKeys] = useState<
+    Record<string, number>
+  >({});
   const builderPanelRef = useRef<HTMLElement>(null);
 
   // The inline chord builder inside the Progression Builder:
@@ -361,6 +387,33 @@ function ChordProgressions({
   const [builderTarget, setBuilderTarget] =
     useState<BuilderTarget | null>(null);
   const chordBuilderRef = useRef<HTMLDivElement>(null);
+
+  // The "Try a substitution" sheet: the slot it is open on,
+  // or null while closed. Only one of it and the chord
+  // builder is open at a time.
+  const [subIndex, setSubIndex] = useState<number | null>(null);
+  const [subOpenCount, setSubOpenCount] = useState(0);
+  const subPanelRef = useRef<HTMLDivElement>(null);
+
+  // The progression just before and just after the last
+  // substitution was used, so it can be undone while nothing
+  // else has changed the progression since.
+  const [subUndo, setSubUndo] = useState<{
+    before: ProgressionChord[];
+    after: ProgressionChord[];
+    label: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (subOpenCount === 0) {
+      return;
+    }
+
+    subPanelRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [subOpenCount]);
 
   // Bring the builder into view whenever it opens on a new
   // chord (it sits below the slots, which can be long).
@@ -500,6 +553,10 @@ function ChordProgressions({
   );
 
   const songMatches = useMemo(() => searchSongs(songQuery), [songQuery]);
+  const standardMatches = useMemo(
+    () => searchStandards(songQuery),
+    [songQuery]
+  );
 
   const followUps = highlightedDegree
     ? progressionMap[scaleType][highlightedDegree] ?? []
@@ -732,6 +789,7 @@ function ChordProgressions({
   // chord tapped in the row above, if any, so "tap a chord,
   // then tweak it" works; otherwise from the key's root.
   const handleOpenNewChord = () => {
+    setSubIndex(null);
     const highlighted = highlightedDegree
       ? chordByDegree(highlightedDegree)
       : null;
@@ -751,6 +809,7 @@ function ChordProgressions({
   // Opens the chord builder on a slot already in the
   // progression (a rest opens as a plain major chord).
   const handleEditSlot = (index: number) => {
+    setSubIndex(null);
     const chord = builderChords[index];
 
     setBuilderTarget((current) => ({
@@ -801,7 +860,97 @@ function ChordProgressions({
     setBuilderTarget((current) =>
       current?.index === null ? current : null
     );
+    setSubIndex(null);
   }
+
+  // Opens (or closes, when tapped again) the substitution
+  // ideas for one slot.
+  const handleToggleSubstitutions = (index: number) => {
+    if (subIndex === index) {
+      setSubIndex(null);
+      return;
+    }
+
+    setBuilderTarget(null);
+    setSubIndex(index);
+    setSubOpenCount((count) => count + 1);
+  };
+
+  const substitutionContext = {
+    label: (chord: ProgressionChord) => resolveSnapshot(chord).chordLabel,
+    noteName: (pitchClass: number) =>
+      formatNoteForDisplay(notes[((pitchClass % 12) + 12) % 12]),
+  };
+
+  const substitutionCards =
+    subIndex === null
+      ? []
+      : suggestSubstitutions(
+          builderChords,
+          subIndex,
+          substitutionContext
+        ).map((substitution) => {
+          const resolved = resolveSnapshot(substitution.featured);
+          return {
+            substitution,
+            label: resolved.chordLabel,
+            notes: resolved.rawNotes.map(formatNoteForDisplay),
+          };
+        });
+
+  // The chord before and after a slot, so a substitution is
+  // heard in context. The last slot is followed by the first
+  // one, since that is what it leads into when looping.
+  const neighboursOf = (index: number) => {
+    const before = builderChords[index - 1];
+    const after =
+      builderChords.length > 1
+        ? builderChords[(index + 1) % builderChords.length]
+        : undefined;
+    return {
+      before: before?.type === "chord" ? [before] : [],
+      after: after?.type === "chord" ? [after] : [],
+    };
+  };
+
+  const handleHearOriginal = () => {
+    if (subIndex === null) return;
+    const { before, after } = neighboursOf(subIndex);
+    handlePlaySnapshotList([
+      ...before,
+      builderChords[subIndex],
+      ...after,
+    ]);
+  };
+
+  const handleHearSubstitution = (substitution: Substitution) => {
+    if (subIndex === null) return;
+    const { before, after } = neighboursOf(subIndex);
+    handlePlaySnapshotList([
+      ...before,
+      ...substitution.replacement,
+      ...after,
+    ]);
+  };
+
+  const handleApplySubstitution = (substitution: Substitution) => {
+    if (subIndex === null) return;
+    stopLoop();
+    const next = applySubstitution(builderChords, subIndex, substitution);
+    setSubUndo({
+      before: builderChords,
+      after: next,
+      label: resolveSnapshot(substitution.featured).chordLabel,
+    });
+    setBuilderChords(next);
+  };
+
+  const handleUndoSubstitution = () => {
+    if (!subUndo) return;
+    stopLoop();
+    setBuilderChords(subUndo.before);
+    setSubUndo(null);
+  };
 
   const handleSaveBuilder = () => {
     const name = progressionName.trim();
@@ -909,6 +1058,216 @@ function ChordProgressions({
       jazzKey,
       progression.scaleType
     );
+
+  const standardKey = (standard: JazzStandard) =>
+    standardKeys[standard.id] ?? standardKeyPitchClass(standard);
+
+  // Lead sheets spell chords by the key signature (B♭maj7 in
+  // G minor, never A♯maj7), so tune charts do too. Keys with
+  // no clear side (C major, A minor, F♯/G♭) follow the
+  // Sharps/Flats setting.
+  const standardSpelling = (
+    keyPitchClass: number,
+    scaleType: ScaleType
+  ): AccidentalPreference => {
+    const majorTonic = (keyPitchClass + (scaleType === "minor" ? 3 : 0)) % 12;
+    if ([5, 10, 3, 8, 1].includes(majorTonic)) return "flats";
+    if ([7, 2, 9, 4, 11].includes(majorTonic)) return "sharps";
+    return accidentalPreference;
+  };
+
+  const standardSectionChords = (
+    standard: JazzStandard,
+    sectionIndexes: number[]
+  ) =>
+    jazzChords(
+      standard,
+      sectionIndexes,
+      standardKey(standard),
+      timeSignature.beatsPerBar
+    );
+
+  const handleLoadStandard = (
+    standard: JazzStandard,
+    sectionIndexes: number[]
+  ) =>
+    loadIntoBuilder(
+      standardSectionChords(standard, sectionIndexes),
+      standardKey(standard),
+      standard.scaleType
+    );
+
+  // One tune as a card with a bar-by-bar chord chart, shared
+  // by the Jazz standards tab and the song search results.
+  const renderStandardCard = (standard: JazzStandard) => {
+    const keyPitchClass = standardKey(standard);
+    const form = standardForm(standard);
+    const usualKey = standardKeyPitchClass(standard);
+    const chartPreference = standardSpelling(
+      keyPitchClass,
+      standard.scaleType
+    );
+    const builtOn = standard.uses
+      .map((id) => jazzProgressions.find((p) => p.id === id))
+      .filter((p): p is JazzProgression => p !== undefined);
+    return (
+      <div
+        className="saved-card search-card song-card jazz-card standard-card"
+        key={standard.id}
+      >
+        <div className="saved-card-head">
+          <strong className="song-title">{standard.title}</strong>
+          <span className="saved-card-key">{standard.level}</span>
+        </div>
+
+        <p className="song-artist">
+          {standard.composer} · {standard.year} · Jazz standard
+        </p>
+
+        <p className="search-description">{standard.why}</p>
+
+        <label className="song-key">
+          <span>Key</span>
+          <select
+            value={keyPitchClass}
+            onChange={(event) =>
+              setStandardKeys((current) => ({
+                ...current,
+                [standard.id]: Number(event.target.value),
+              }))
+            }
+          >
+            {Array.from({ length: 12 }, (_, pitchClass) => (
+              <option key={pitchClass} value={pitchClass}>
+                {getDisplayKeyRoot(
+                  keyRootName(pitchClass),
+                  standardSpelling(pitchClass, standard.scaleType)
+                )}{" "}
+                {standard.scaleType}
+                {pitchClass === usualKey ? " (usual key)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {standard.sections.map((section, index) => (
+          <div className="song-section" key={section.name}>
+            <span className="search-source">
+              {section.name} · {section.bars.length} bars
+            </span>
+
+            <ol
+              className="standard-chart"
+              aria-label={`${standard.title}, ${section.name}`}
+            >
+              {section.bars.map((bar, barIndex) => (
+                <li className="standard-bar" key={barIndex}>
+                  {romansToChords(
+                    bar,
+                    standard.scaleType,
+                    keyPitchClass
+                  ).map((chord, chordIndex) => (
+                    <span
+                      className="standard-chord"
+                      key={chordIndex}
+                    >
+                      <span className="standard-chord-name">
+                        {
+                          resolveChordSnapshot(
+                            chord.rootNote!,
+                            chord.chordTypeIndex!,
+                            chartPreference
+                          ).chordLabel
+                        }
+                      </span>
+                      <span className="standard-chord-roman">
+                        {bar[chordIndex]}
+                      </span>
+                    </span>
+                  ))}
+                </li>
+              ))}
+            </ol>
+
+            <div className="saved-card-actions">
+              <button
+                type="button"
+                className="play-chord template-play"
+                onClick={() =>
+                  handlePlaySnapshotList(
+                    standardSectionChords(standard, [index])
+                  )
+                }
+              >
+                ▶ Play
+              </button>
+              <button
+                type="button"
+                className="template-use"
+                onClick={() => handleLoadStandard(standard, [index])}
+              >
+                Load into builder
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {form.length > 1 && (
+          <button
+            type="button"
+            className="template-use song-load-all"
+            onClick={() => handleLoadStandard(standard, form)}
+          >
+            Load the whole tune
+            {standard.form
+              ? `, ${form
+                  .map((i) => standard.sections[i].name.charAt(0))
+                  .join("")}`
+              : ""}{" "}
+            · {standardBarCount(standard)} bars
+          </button>
+        )}
+
+        {standard.simplified && (
+          <p className="jazz-heard-in">
+            Simplified: {standard.simplified}
+          </p>
+        )}
+
+        {builtOn.length > 0 && (
+          <p className="standard-built-on">
+            Built on{" "}
+            {builtOn.map((progression, i) => (
+              <span key={progression.id}>
+                {i > 0 && (i === builtOn.length - 1 ? " and " : ", ")}
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => {
+                    setSearchMode("jazz");
+                    setJazzView("progressions");
+                  }}
+                >
+                  {progression.name}
+                </button>
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  // Jazz standards that match the song search, listed above
+  // the songs when one of them is the better match.
+  const standardsFirst =
+    standardMatches.length > 0 &&
+    standardMatches[0].score > (songMatches[0]?.score ?? 0);
+  const standardResults = standardMatches.length > 0 && (
+    <div className="saved-list search-results jazz-results standard-results">
+      {standardMatches.map(({ standard }) => renderStandardCard(standard))}
+    </div>
+  );
 
   const handleLoadSaved = (saved: SavedProgression) => {
     stopLoop();
@@ -1632,6 +1991,13 @@ function ChordProgressions({
                 (or its ✎ button) to edit it the same way.
               </li>
               <li>
+                Tap <strong>✦</strong> on a chord for
+                substitution ideas (tritone subs, relative
+                minor/major swaps and passing diminished
+                chords). Hear each one in context, then use
+                it if you like it.
+              </li>
+              <li>
                 Reorder, resize or remove chords with the
                 buttons on each one.
               </li>
@@ -1682,11 +2048,12 @@ function ChordProgressions({
 
                   const isRest = chord.type === 'rest';
                   const isEditing = builderTarget?.index === index;
+                  const isSubbing = subIndex === index;
 
                   const slotClasses = ["builder-slot"];
                   if (isRest) slotClasses.push("rest-slot");
                   if (endsBar) slotClasses.push("bar-end");
-                  if (isEditing) slotClasses.push("editing");
+                  if (isEditing || isSubbing) slotClasses.push("editing");
 
                   return (
                     <li
@@ -1778,6 +2145,19 @@ function ChordProgressions({
                       </div>
 
                       <div className="builder-slot-actions">
+                        {!isRest && (
+                          <button
+                            type="button"
+                            className={isSubbing ? "slot-btn sub-btn active" : "slot-btn sub-btn"}
+                            title="Try a substitution"
+                            aria-label={`Substitution ideas for chord ${index + 1}`}
+                            aria-pressed={isSubbing}
+                            onClick={() => handleToggleSubstitutions(index)}
+                          >
+                            ✦
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           className={isEditing ? "slot-btn active" : "slot-btn"}
@@ -1893,6 +2273,26 @@ function ChordProgressions({
               })}
             />
           </>
+        )}
+
+        {subIndex !== null && builderChords[subIndex]?.type === "chord" && (
+          <div ref={subPanelRef}>
+            <SubstitutionPanel
+              chordNumber={subIndex + 1}
+              chordLabel={resolveSnapshot(builderChords[subIndex]).chordLabel}
+              cards={substitutionCards}
+              appliedLabel={
+                subUndo && subUndo.after === builderChords
+                  ? subUndo.label
+                  : null
+              }
+              onHearOriginal={handleHearOriginal}
+              onHear={handleHearSubstitution}
+              onApply={handleApplySubstitution}
+              onUndo={handleUndoSubstitution}
+              onClose={() => setSubIndex(null)}
+            />
+          </div>
         )}
 
         {builderTarget && (
@@ -2161,6 +2561,57 @@ function ChordProgressions({
 
         {searchMode === "jazz" && (
           <>
+            <div
+              className="segmented jazz-view"
+              role="group"
+              aria-label="Show"
+            >
+              <button
+                type="button"
+                className={jazzView === "tunes" ? "seg active" : "seg"}
+                aria-pressed={jazzView === "tunes"}
+                onClick={() => setJazzView("tunes")}
+              >
+                Tunes to learn
+              </button>
+              <button
+                type="button"
+                className={
+                  jazzView === "progressions" ? "seg active" : "seg"
+                }
+                aria-pressed={jazzView === "progressions"}
+                onClick={() => setJazzView("progressions")}
+              >
+                Common progressions
+              </button>
+            </div>
+          </>
+        )}
+
+        {searchMode === "jazz" && jazzView === "tunes" && (
+          <>
+            <p className="builder-section-hint">
+              Beginner-friendly standards as simplified chord
+              charts, one box per bar. Play a section, then
+              load it or the whole tune into the builder, in
+              the usual key or any key you like.
+            </p>
+
+            {standardLevels.map((level) => (
+              <div className="standard-level" key={level}>
+                <h4 className="standard-level-title">{level}</h4>
+                <div className="saved-list search-results jazz-results standard-results">
+                  {jazzStandards
+                    .filter((standard) => standard.level === level)
+                    .map(renderStandardCard)}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {searchMode === "jazz" && jazzView === "progressions" && (
+          <>
             <p className="builder-section-hint">
               The progressions jazz players reach for most.
               Pick a key and load any of them into the
@@ -2298,7 +2749,8 @@ function ChordProgressions({
               Type a song title or artist and load its chord
               progression into the builder, in the original
               key or any key you like. {songCount} well-known
-              songs so far, simplified to their main chords.
+              songs and {jazzStandards.length} jazz standards
+              so far, simplified to their main chords.
             </p>
 
             <form
@@ -2306,11 +2758,16 @@ function ChordProgressions({
               role="search"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (songMatches[0]) {
+                // Load whichever match is listed first.
+                if (standardsFirst) {
+                  handleLoadStandard(standardMatches[0].standard, [0]);
+                } else if (songMatches[0]) {
                   handleLoadSong(
                     songMatches[0].song,
                     [0]
                   );
+                } else if (standardMatches[0]) {
+                  handleLoadStandard(standardMatches[0].standard, [0]);
                 }
               }}
             >
@@ -2327,7 +2784,10 @@ function ChordProgressions({
               <button
                 type="submit"
                 className="search-submit"
-                disabled={songMatches.length === 0}
+                disabled={
+                  songMatches.length === 0 &&
+                  standardMatches.length === 0
+                }
                 title="Load the top match's first section"
               >
                 Load
@@ -2347,7 +2807,9 @@ function ChordProgressions({
               ))}
             </div>
 
-            {songQuery.trim() && songMatches.length === 0 && (
+            {songQuery.trim() &&
+              songMatches.length === 0 &&
+              standardMatches.length === 0 && (
               <div className="song-missing">
                 <p>
                   <strong>"{songQuery.trim()}"</strong> isn't in
@@ -2373,6 +2835,8 @@ function ChordProgressions({
                 </p>
               </div>
             )}
+
+            {standardsFirst && standardResults}
 
             {songMatches.length > 0 && (
               <div className="saved-list search-results">
@@ -2503,6 +2967,8 @@ function ChordProgressions({
                 })}
               </div>
             )}
+
+            {!standardsFirst && standardResults}
           </>
         )}
 
