@@ -2557,7 +2557,10 @@ function ChordProgressions({
               role="search"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (songMatches[0]) {
+                // Load whichever match is listed first.
+                if (standardsFirst) {
+                  handleLoadStandard(standardMatches[0].standard, [0]);
+                } else if (songMatches[0]) {
                   handleLoadSong(
                     songMatches[0].song,
                     [0]
