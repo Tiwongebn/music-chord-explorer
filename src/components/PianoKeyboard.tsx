@@ -6,6 +6,7 @@ import {
 } from "react";
 import {
   formatNoteForDisplay,
+  getPitchClass,
   type AccidentalPreference,
 } from "../utils/musicTheory";
 
@@ -15,6 +16,9 @@ interface PianoKeyboardProps {
   selectedNotes: string[];
   onNoteToggle: (note: string) => void;
   onClearSelection?: () => void;
+  // Pitch classes (C = 0) of the chord's guide tones (3rd
+  // and 7th), drawn in mint instead of amber. Empty = off.
+  guideTones?: number[];
 }
 
 interface PianoKey {
@@ -143,6 +147,7 @@ function PianoKeyboard({
   selectedNotes,
   onNoteToggle,
   onClearSelection,
+  guideTones = [],
 }: PianoKeyboardProps) {
   const isPointerDown = useRef(false);
   // What the current press/drag does: "add" if it started on
@@ -232,6 +237,9 @@ function PianoKeyboard({
     normalizeNote
   );
 
+  const isGuide = (note: string) =>
+    guideTones.includes(getPitchClass(note));
+
   // Selection is per key (with octave), so tapping C4 only
   // lights C4 — not every C on the keyboard.
   const isKeySelected = (noteWithOctave: string) =>
@@ -296,8 +304,11 @@ function PianoKeyboard({
       </div>
 
       <p className="piano-description">
-        Amber keys are the chord · pink keys are your
-        picks · <kbd>A</kbd>–<kbd>L</kbd> &amp;{" "}
+        Amber keys are the chord ·{" "}
+        {guideTones.length > 0 && (
+          <>mint keys are its guide tones (3rd &amp; 7th) · </>
+        )}
+        pink keys are your picks · <kbd>A</kbd>–<kbd>L</kbd> &amp;{" "}
         <kbd>W</kbd>/<kbd>E</kbd>/<kbd>T</kbd>/<kbd>Y</kbd>/<kbd>U</kbd> = keyboard
       </p>
 
@@ -330,7 +341,7 @@ function PianoKeyboard({
                   key={`${note}${octave}`}
                   className={`piano-key white ${
                     isChordNote ? "active" : ""
-                  } ${isSelected ? "selected" : ""} ${
+                  } ${isChordNote && isGuide(note) ? "guide" : ""} ${isSelected ? "selected" : ""} ${
                     isKeyboardActive ? "keyboard-active" : ""
                   }`}
                   type="button"
@@ -390,7 +401,7 @@ function PianoKeyboard({
                   key={`${key.note}${octave}`}
                   className={`piano-key black ${
                     isChordNote ? "active" : ""
-                  } ${
+                  } ${isChordNote && isGuide(key.note) ? "guide" : ""} ${
                     isSelected ? "selected" : ""
                   } ${
                     isKeyboardActive ? "keyboard-active" : ""

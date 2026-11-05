@@ -21,6 +21,9 @@ interface GuitarFretboardProps {
   // Spelled chord tones (already respect Sharps/Flats).
   notes: string[];
   intervals: number[];
+  // Pitch classes (C = 0) of the guide tones (3rd and 7th),
+  // drawn in mint. Empty = off.
+  guideTones?: number[];
 }
 
 // Gap between neighbouring strings as a strum sweeps across.
@@ -46,6 +49,7 @@ function GuitarFretboard({
   rootNote,
   notes,
   intervals,
+  guideTones = [],
 }: GuitarFretboardProps) {
   const [view, setView] = useState<"shape" | "neck">("shape");
   const [shapeIndex, setShapeIndex] = useState(0);
@@ -210,7 +214,11 @@ function GuitarFretboard({
                       cx={x}
                       cy={TOP - 10}
                       r={6}
-                      className="fretboard-open"
+                      className={
+                        guideTones.includes(pc) && !isRoot
+                          ? "fretboard-open guide"
+                          : "fretboard-open"
+                      }
                     />
                   );
                 }
@@ -226,7 +234,9 @@ function GuitarFretboard({
                       className={
                         isRoot
                           ? "fretboard-dot root"
-                          : "fretboard-dot"
+                          : guideTones.includes(pc)
+                            ? "fretboard-dot guide"
+                            : "fretboard-dot"
                       }
                     />
                     <text
@@ -325,7 +335,9 @@ function GuitarFretboard({
               )}
 
               <p className="fretboard-hint">
-                Amber dots are the root. × means skip that
+                Amber dots are the root
+                {guideTones.length > 0 && ", mint dots the guide tones (3rd & 7th)"}
+                . × means skip that
                 string; a ring above the nut is an open string.
                 Tap a string to pluck it.
               </p>
@@ -419,7 +431,9 @@ function GuitarFretboard({
                           className={
                             pc === rootPc
                               ? "fretboard-dot root"
-                              : "fretboard-dot"
+                              : guideTones.includes(pc)
+                                ? "fretboard-dot guide"
+                                : "fretboard-dot"
                           }
                         />
                         <text

@@ -1005,6 +1005,451 @@ select optgroup {
 
 
 /* =========================
+    IMPROVISING HINTS
+    Which scale to play over the chord, and its guide
+    tones (3rd & 7th). Mint marks a guide tone everywhere
+    in the app: here, on the big piano and on the guitar.
+========================= */
+
+.scale-panel {
+  order: 2;
+}
+
+.piano-key.active.guide.white {
+  background: var(--mint);
+  box-shadow: 0 0 22px rgba(126, 224, 176, 0.45);
+}
+
+.piano-key.active.guide.black {
+  background: #4fbf8a;
+  color: var(--night);
+  box-shadow: 0 0 18px rgba(126, 224, 176, 0.4);
+}
+
+/* Your own picks still win over the chord colours. */
+.piano-key.selected.guide.white {
+  background: var(--rose);
+}
+
+.piano-key.selected.guide.black {
+  background: #d95768;
+}
+
+.fretboard-dot.guide {
+  fill: var(--mint);
+}
+
+.fretboard-open.guide {
+  stroke: var(--mint);
+  stroke-width: 2.5;
+}
+
+.scale-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.scale-hints-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 24px;
+}
+
+.scale-hints-head h2,
+.scale-hints-rows h3 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scale-hints-name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.scale-hints-root {
+  color: var(--amber);
+}
+
+.scale-hints-aka {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.scale-hints-sound {
+  margin: -8px 0 0;
+  max-width: 62ch;
+  color: var(--fg);
+}
+
+.scale-hints-picker .seg {
+  font-size: 0.85rem;
+}
+
+/* Role colours, shared by the note chips, the mini piano
+   and the neck. */
+.scale-hints {
+  --role-root: var(--amber);
+  --role-guide: var(--mint);
+  --role-chord: var(--fg);
+  --role-scale: var(--line-strong);
+  --role-avoid: var(--rose);
+}
+
+.scale-hints-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scale-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 52px;
+  padding: 8px 10px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+
+.scale-note-degree {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.scale-note-name {
+  font-family: var(--display);
+  font-size: 1.05rem;
+}
+
+.scale-note.role-root {
+  border-color: var(--role-root);
+  background: var(--role-root);
+}
+
+.scale-note.role-guide {
+  border-color: var(--role-guide);
+  background: var(--role-guide);
+}
+
+.scale-note.role-root .scale-note-degree,
+.scale-note.role-root .scale-note-name,
+.scale-note.role-guide .scale-note-degree,
+.scale-note.role-guide .scale-note-name {
+  color: var(--night);
+}
+
+.scale-note.role-chord {
+  border-color: var(--role-chord);
+}
+
+.scale-note.role-avoid {
+  border-style: dashed;
+  border-color: var(--role-avoid);
+}
+
+.scale-note.role-avoid .scale-note-name {
+  color: var(--role-avoid);
+}
+
+.scale-hints-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: -6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.scale-hints-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+}
+
+.swatch.role-root { background: var(--role-root); }
+.swatch.role-guide { background: var(--role-guide); }
+.swatch.role-chord { border-color: var(--role-chord); }
+.swatch.role-scale { background: var(--role-scale); }
+.swatch.role-avoid { border: 1.5px dashed var(--role-avoid); }
+
+/* Mini two-octave piano. Keys are just markers, so it can
+   stay small and never scroll. */
+.scale-piano {
+  display: flex;
+  gap: 3px;
+  height: 120px;
+  max-width: 620px;
+}
+
+.scale-piano-octave {
+  position: relative;
+  display: flex;
+  flex: 1;
+  gap: 3px;
+}
+
+.scale-piano-white,
+.scale-piano-black {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.scale-piano-white {
+  flex: 1;
+  padding-bottom: 8px;
+  border-radius: 0 0 5px 5px;
+  background: #e9e3f1;
+  color: var(--night);
+}
+
+.scale-piano-black {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  width: 9%;
+  height: 58%;
+  padding-bottom: 6px;
+  transform: translateX(calc(-50% - 1.5px));
+  border: 2px solid var(--night);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background: #0c0a12;
+  color: var(--fg);
+  font-size: 0.6rem;
+}
+
+.scale-piano-white.on.role-scale {
+  background: #b8aecb;
+}
+
+.scale-piano-black.on.role-scale {
+  background: var(--line-strong);
+}
+
+.scale-piano-white.on.role-chord,
+.scale-piano-black.on.role-chord {
+  background: var(--fg);
+  color: var(--night);
+  box-shadow: inset 0 -4px 0 var(--amber-deep);
+}
+
+.scale-piano-black.on.role-chord {
+  background: #cfc6dd;
+}
+
+.scale-piano-white.on.role-root,
+.scale-piano-black.on.role-root {
+  background: var(--role-root);
+  color: var(--night);
+}
+
+.scale-piano-white.on.role-guide,
+.scale-piano-black.on.role-guide {
+  background: var(--role-guide);
+  color: var(--night);
+}
+
+.scale-piano-white.on.role-avoid,
+.scale-piano-black.on.role-avoid {
+  background: var(--role-avoid);
+  color: var(--night);
+}
+
+/* Guitar neck. */
+.scale-neck {
+  overflow-x: auto;
+}
+
+.scale-neck svg {
+  min-width: 600px;
+  width: 100%;
+  max-width: 820px;
+}
+
+.scale-neck-box {
+  fill: rgba(255, 181, 71, 0.08);
+  stroke: rgba(255, 181, 71, 0.35);
+  stroke-dasharray: 4 4;
+}
+
+.scale-dot {
+  opacity: 0.45;
+}
+
+.scale-dot.in-box {
+  opacity: 1;
+}
+
+.scale-dot circle {
+  stroke: var(--night);
+  stroke-width: 2;
+}
+
+.scale-dot circle.role-root { fill: var(--role-root); }
+.scale-dot circle.role-guide { fill: var(--role-guide); }
+.scale-dot circle.role-chord { fill: var(--fg); }
+.scale-dot circle.role-scale { fill: #6b6280; }
+.scale-dot circle.role-avoid { fill: var(--role-avoid); }
+
+.scale-dot text {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--night);
+  pointer-events: none;
+}
+
+.scale-dot circle.role-scale + text {
+  fill: var(--fg);
+}
+
+.scale-hints-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.scale-hints-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 68ch;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.scale-hints-tips p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.scale-hints-tips strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.scale-hints-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.scale-hints-mark input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--mint);
+}
+
+/* Progressions: one row per chord. */
+.scale-hints-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.scale-hints-rows > p {
+  margin: 0;
+}
+
+.scale-row-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scale-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: none;
+  color: var(--fg);
+  text-align: left;
+}
+
+.scale-row:hover {
+  border-color: var(--muted);
+}
+
+.scale-row.active {
+  border-color: var(--amber);
+}
+
+.scale-row-chord {
+  font-family: var(--display);
+  font-size: 0.95rem;
+}
+
+.scale-row-scale {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.scale-row-guides {
+  font-size: 0.75rem;
+  color: var(--mint);
+}
+
+.scale-hints-rows .scale-hints {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 700px) {
+  .scale-piano {
+    height: 96px;
+  }
+
+  .scale-note {
+    min-width: 44px;
+    padding: 6px 8px 4px;
+  }
+
+  .scale-row {
+    flex: 1 1 calc(50% - 4px);
+  }
+}
+
+
+/* =========================
     ANALYZER
 ========================= */
 

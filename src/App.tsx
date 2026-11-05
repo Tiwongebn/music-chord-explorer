@@ -13,6 +13,8 @@ import TwoFiveOneTrainer from "./components/TwoFiveOneTrainer";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
 import { catalogIndexFor } from "./utils/chordBuild";
+import { guidePitchClasses } from "./utils/scaleHints";
+import ScaleHints from "./components/ScaleHints";
 import {
   playNote,
   playNotes,
@@ -23,6 +25,7 @@ import {
   calculateChordNotes,
   convertRootNote,
   formatNoteForDisplay,
+  getPitchClass,
   type AccidentalPreference,
 } from "./utils/musicTheory";
 
@@ -50,6 +53,10 @@ function App() {
   const [selectedNotes, setSelectedNotes] = useState<
     string[]
   >([]);
+
+  // Guide tones (3rd & 7th) drawn in mint on the piano and
+  // guitar; switched from the improvising hints.
+  const [markGuides, setMarkGuides] = useState(true);
 
   // Sound output toggle
   const [soundOn, setSoundOn] = useState(true);
@@ -82,6 +89,13 @@ function App() {
 
   const chordName =
     `${formatNoteForDisplay(displayedRootNote)}${selectedChord.symbol}`;
+
+  const guideTones = markGuides
+    ? guidePitchClasses(
+        getPitchClass(rootNote),
+        selectedChord.intervals
+      )
+    : [];
 
   const handleSoundToggle = () => {
     const next = !soundOn;
@@ -235,6 +249,7 @@ function App() {
                 selectedNotes={selectedNotes}
                 onNoteToggle={handleNoteToggle}
                 onClearSelection={handleClearSelection}
+                guideTones={guideTones}
               />
             </section>
 
@@ -246,12 +261,26 @@ function App() {
               }
             />
 
+            {/* Which scale to improvise over this chord,
+                and its guide tones. */}
+            <section className="panel scale-panel">
+              <ScaleHints
+                chordName={chordName}
+                root={displayedRootNote}
+                intervals={selectedChord.intervals}
+                accidentalPreference={accidentalPreference}
+                markGuides={markGuides}
+                onMarkGuidesChange={setMarkGuides}
+              />
+            </section>
+
             <section className="panel guitar-panel">
               <GuitarFretboard
                 chordName={chordName}
                 rootNote={rootNote}
                 notes={chordNotes}
                 intervals={selectedChord.intervals}
+                guideTones={guideTones}
               />
             </section>
 
