@@ -2539,3 +2539,82 @@ button.builder-slot-chord:hover,
   font-style: italic;
   line-height: 1.5;
 }
+
+/* Beginner jazz standards (Jazz standards → Tunes to learn,
+   and in the song search): a bar-by-bar chord chart. */
+.jazz-view {
+  margin: 14px 0 4px;
+}
+
+.standard-level {
+  margin-top: 22px;
+}
+
+.standard-level-title {
+  margin: 0;
+  color: var(--muted);
+  font: 500 0.7rem/1.4 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.standard-results {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+}
+
+.standard-card .song-key {
+  margin-top: 10px;
+}
+
+.standard-chart {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--line-strong);
+}
+
+.standard-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  min-height: 3.1rem;
+  padding: 6px 6px 6px 8px;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
+}
+
+.standard-chord {
+  display: flex;
+  flex-direction: column;
+}
+
+.standard-chord-name {
+  white-space: nowrap;
+  font: 500 0.95rem/1.25 var(--display);
+}
+
+.standard-chord-roman {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.standard-built-on {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .standard-bar {
+    padding: 5px 4px 5px 5px;
+  }
+
+  .standard-chord-name {
+    font-size: 0.8rem;
+  }
+}
