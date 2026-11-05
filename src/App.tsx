@@ -8,6 +8,7 @@ import ChordAnalyzer from "./components/ChordAnalyzer";
 import GuitarFretboard from "./components/GuitarFretboard";
 import ChordProgressions from "./components/ChordProgressions";
 import Metronome from "./components/Metronome";
+import TwoFiveOneTrainer from "./components/TwoFiveOneTrainer";
 import { chordTypes } from "./data/chords";
 import { analyzeChord } from "./utils/chordAnalyzer";
 import { catalogIndexFor } from "./utils/chordBuild";
@@ -26,12 +27,13 @@ import {
 
 // The chord builder lives inside Progressions (build a chord
 // and drop it straight into a progression, or edit one that's
-// already there), so there are two modes.
-type Mode = "explore" | "progressions";
+// already there). The ii–V–I trainer has a tab of its own.
+type Mode = "explore" | "progressions" | "trainer";
 
 const modes: { id: Mode; label: string }[] = [
   { id: "explore", label: "Explore" },
   { id: "progressions", label: "Progressions" },
+  { id: "trainer", label: "ii–V–I" },
 ];
 
 function App() {
@@ -162,7 +164,9 @@ function App() {
               type="button"
               role="tab"
               aria-selected={mode === item.id}
-              className={mode === item.id ? "tab active" : "tab"}
+              className={`${mode === item.id ? "tab active" : "tab"}${
+                item.id === "trainer" ? " tab-roman" : ""
+              }`}
               onClick={() => setMode(item.id)}
             >
               {item.label}
@@ -292,6 +296,8 @@ function App() {
           }
         />
       )}
+
+      {mode === "trainer" && <TwoFiveOneTrainer />}
 
     </main>
   );

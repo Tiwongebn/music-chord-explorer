@@ -101,7 +101,10 @@ export interface MetronomeSettings {
 }
 
 export interface MetronomeEngine {
-  start: () => Promise<void>;
+  // `startAt` (AudioContext seconds) puts the first click at an
+  // exact time, so another part of the app can play in time with
+  // it; by default the first click is right away.
+  start: (startAt?: number) => Promise<void>;
   stop: () => void;
   update: (settings: Partial<MetronomeSettings>) => void;
   isRunning: () => boolean;
@@ -195,7 +198,7 @@ export function createMetronome(
   }
 
   return {
-    async start() {
+    async start(startAt?: number) {
       if (timer !== null) {
         return;
       }
@@ -215,7 +218,10 @@ export function createMetronome(
       }
 
       beatIndex = 0;
-      nextBeatTime = Tone.getContext().currentTime + 0.05;
+      nextBeatTime = Math.max(
+        startAt ?? 0,
+        Tone.getContext().currentTime + 0.05
+      );
       tick();
       timer = window.setInterval(tick, TICK_MS);
     },

@@ -1107,3 +1107,85 @@ export function playTimedProgressionLoop(
     },
   };
 }
+// ---- Exact voicings at exact times ------------------------
+//
+// The ii–V–I trainer voices every note itself (register, string
+// and all) and runs its own clock, so it schedules chords at
+// absolute audio-context times. Sharing that clock with the
+// metronome (createMetronome's startAt) keeps chords and clicks
+// locked together.
+
+export interface ScheduledVoicing {
+  time: number; // absolute AudioContext seconds
+  duration: number; // seconds the chord rings
+  notes: { midi: number; string?: number }[]; // low to high
+  velocity?: number; // 0..1
+}
+
+// Unlock audio (call inside a click) and return the clock.
+export async function startAudioClock(): Promise<number> {
+  await Tone.start();
+
+  return Tone.getContext().currentTime;
+}
+
+export function audioClockNow(): number {
+  return Tone.getContext().currentTime;
+}
+
+export function scheduleVoicing(
+  voicing: ScheduledVoicing,
+  instrument: InstrumentId
+): void {
+  if (!enabled || voicing.notes.length === 0) {
+    return;
+  }
+
+  const { time, duration, notes, velocity = 0.75 } = voicing;
+
+  if (instrument === "piano") {
+    const active = ensureSampler();
+    const usable = !samplerFailed && active.loaded;
+
+    notes.forEach((note, index) => {
+      const name = Tone.Frequency(note.midi, "midi").toNote();
+      // A hair of spread so the chord doesn't land as one click.
+      const at = time + index * 0.006;
+
+      if (usable) {
+        active.triggerAttackRelease(name, duration, at, velocity);
+      } else {
+        getFallback().triggerAttackRelease(name, duration, at, velocity);
+      }
+    });
+    return;
+  }
+
+  // Guitar: a quick downstroke across the voicing's strings.
+  schedulePlucks(
+    instrument,
+    notes.map((note, index) => ({
+      string: note.string ?? Math.max(0, GUITAR_STRINGS - notes.length + index),
+      note: Tone.Frequency(note.midi, "midi").toNote(),
+      time: time + index * 0.022,
+      velocity,
+    })),
+    time + duration
+  );
+}
+
+// Cut everything the trainer left ringing (used by Stop).
+export function silenceVoicings(): void {
+  const now = Tone.now();
+
+  sampler?.releaseAll(now);
+  fallback?.releaseAll(now);
+
+  for (const guitar of Object.values(guitarSamplers)) {
+    guitar?.releaseAll(now);
+  }
+
+  for (const guitar of Object.values(synthGuitars)) {
+    guitar?.voices.forEach((voice) => voice.triggerRelease(now));
+  }
+}
