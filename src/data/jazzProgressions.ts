@@ -37,7 +37,7 @@ export interface JazzProgression {
 
 type SectionSpec = [name: string, bars: string];
 
-function parseBars(spec: string): string[][] {
+export function parseBars(spec: string): string[][] {
   return spec
     .split("|")
     .map((bar) => bar.trim().split(/\s+/).filter(Boolean))
@@ -134,7 +134,7 @@ function beatsForChord(chordsInBar: number, beatsPerBar: number): number {
 // The chords of one or more sections in order, voiced in
 // `keyPitchClass`, each holding its share of the bar.
 export function jazzChords(
-  progression: JazzProgression,
+  progression: Pick<JazzProgression, "scaleType" | "sections">,
   sectionIndexes: number[],
   keyPitchClass: number,
   beatsPerBar: number

@@ -400,12 +400,9 @@ export const songs: Song[] = [
   ], { aliases: ["Every Little Thing Gonna Be Alright"] }),
 
   // ---- Jazz standards ----
-  song("Autumn Leaves", "Joseph Kosma", 1945, "G", "minor", [
-    ["A section", "iv7 VII7 IIImaj7 VImaj7 iiø7 V7 i i"],
-  ]),
-  song("Fly Me to the Moon", "Frank Sinatra", 1964, "C", "major", [
-    ["A section", "vi7 ii7 V7 Imaj7 IVmaj7 viiø7 III7 vi7"],
-  ]),
+  // Autumn Leaves, Fly Me to the Moon and other tunes jazz
+  // players learn first live in data/jazzStandards.ts as full
+  // bar-by-bar charts; the song search finds them there too.
   song("Blue Moon", "Rodgers & Hart", 1934, "C", "major", [
     ["Whole song", "I vi ii V"],
   ]),
