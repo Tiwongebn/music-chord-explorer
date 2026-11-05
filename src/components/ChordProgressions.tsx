@@ -5,6 +5,7 @@ import {
   generateRandomProgression,
   progressionMap,
   progressionsGlossary,
+  scaleIntervals,
   type ScaleType,
 } from "../data/scales";
 import { chordTypes } from "../data/chords";
@@ -37,6 +38,7 @@ import {
   convertRootNote,
   formatNoteForDisplay,
   getNotesByPreference,
+  getPitchClass,
   type AccidentalPreference,
 } from "../utils/musicTheory";
 import {
@@ -61,6 +63,7 @@ import {
 } from "../utils/songSearch";
 import type { Song } from "../data/songs";
 import ChordBuilder from "./ChordBuilder";
+import ProgressionScaleHints from "./ProgressionScaleHints";
 import {
   buildChord,
   catalogIndexFor,
@@ -1857,6 +1860,38 @@ function ChordProgressions({
               beats total · bar lines shown every{" "}
               {timeSignature.beatsPerBar} beats
             </p>
+
+            <ProgressionScaleHints
+              accidentalPreference={accidentalPreference}
+              songKey={{
+                name: `${displayKeyRoot} ${scaleType}`,
+                pitchClasses: scaleIntervals[scaleType].map(
+                  (step) => (getPitchClass(rootNote) + step) % 12
+                ),
+              }}
+              chords={builderChords.flatMap((chord) => {
+                if (chord.type === "rest" || !chord.rootNote) {
+                  return [];
+                }
+
+                const shape = chord.build
+                  ? buildChord(chord.build)
+                  : chordTypes[chord.chordTypeIndex ?? -1];
+
+                return shape
+                  ? [
+                      {
+                        label: resolveSnapshot(chord).chordLabel,
+                        root: convertRootNote(
+                          chord.rootNote,
+                          accidentalPreference
+                        ),
+                        intervals: shape.intervals,
+                      },
+                    ]
+                  : [];
+              })}
+            />
           </>
         )}
 
