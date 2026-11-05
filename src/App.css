@@ -2522,3 +2522,20 @@ button.builder-slot-chord:hover,
     transition: none !important;
   }
 }
+
+/* Jazz standards library (Find a progression → Jazz standards) */
+.jazz-key {
+  margin: 14px 0 4px;
+}
+
+.jazz-card .search-description {
+  margin: 0 0 2px;
+}
+
+.jazz-heard-in {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-style: italic;
+  line-height: 1.5;
+}

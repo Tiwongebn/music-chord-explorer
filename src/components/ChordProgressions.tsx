@@ -41,9 +41,17 @@ import {
 } from "../utils/musicTheory";
 import {
   keyRootName,
+  parseChordName,
   searchProgressions,
   type SearchResult,
 } from "../utils/progressionSearch";
+import {
+  jazzBarsLabel,
+  jazzChords,
+  jazzForm,
+  jazzProgressions,
+  type JazzProgression,
+} from "../data/jazzProgressions";
 import {
   searchSongs,
   songChords,
@@ -332,9 +340,17 @@ function ChordProgressions({
   // load its chords. Results update as you type (the lookup
   // is deterministic, so nothing reshuffles). songKeys holds
   // per-song transpositions picked on the result cards.
-  const [searchMode, setSearchMode] = useState<"song" | "mood">("song");
+  const [searchMode, setSearchMode] = useState<
+    "song" | "mood" | "jazz"
+  >("song");
   const [songQuery, setSongQuery] = useState("");
   const [songKeys, setSongKeys] = useState<Record<string, number>>({});
+
+  // Jazz library: one key for every card. null follows the
+  // key the page is set to, until a key is picked here.
+  const [jazzKeyChoice, setJazzKeyChoice] = useState<number | null>(
+    null
+  );
   const builderPanelRef = useRef<HTMLElement>(null);
 
   // The inline chord builder inside the Progression Builder:
@@ -865,6 +881,30 @@ function ChordProgressions({
       songBars(song, sectionIndexes),
       songKey(song),
       song.scaleType
+    );
+
+  const jazzKey =
+    jazzKeyChoice ?? parseChordName(rootNote)?.pitchClass ?? 0;
+
+  const jazzSectionChords = (
+    progression: JazzProgression,
+    sectionIndexes: number[]
+  ) =>
+    jazzChords(
+      progression,
+      sectionIndexes,
+      jazzKey,
+      timeSignature.beatsPerBar
+    );
+
+  const handleLoadJazz = (
+    progression: JazzProgression,
+    sectionIndexes: number[]
+  ) =>
+    loadIntoBuilder(
+      jazzSectionChords(progression, sectionIndexes),
+      jazzKey,
+      progression.scaleType
     );
 
   const handleLoadSaved = (saved: SavedProgression) => {
@@ -2074,7 +2114,148 @@ function ChordProgressions({
           >
             Mood or chords
           </button>
+          <button
+            type="button"
+            className={searchMode === "jazz" ? "seg active" : "seg"}
+            aria-pressed={searchMode === "jazz"}
+            onClick={() => setSearchMode("jazz")}
+          >
+            Jazz standards
+          </button>
         </div>
+
+        {searchMode === "jazz" && (
+          <>
+            <p className="builder-section-hint">
+              The progressions jazz players reach for most.
+              Pick a key and load any of them into the
+              builder, or play them here first.
+            </p>
+
+            <label className="song-key jazz-key">
+              <span>Key</span>
+              <select
+                value={jazzKey}
+                onChange={(event) =>
+                  setJazzKeyChoice(Number(event.target.value))
+                }
+              >
+                {Array.from({ length: 12 }, (_, pitchClass) => (
+                  <option key={pitchClass} value={pitchClass}>
+                    {getDisplayKeyRoot(
+                      keyRootName(pitchClass),
+                      accidentalPreference
+                    )}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="saved-list search-results jazz-results">
+              {jazzProgressions.map((progression) => {
+                const form = jazzForm(progression);
+                const hasForm = form.length > 1;
+                return (
+                  <div
+                    className="saved-card search-card song-card jazz-card"
+                    key={progression.id}
+                  >
+                    <div className="saved-card-head">
+                      <strong className="song-title">
+                        {progression.name}
+                      </strong>
+                      <span className="saved-card-key">
+                        {getDisplayKeyRoot(
+                          keyRootName(jazzKey),
+                          accidentalPreference
+                        )}{" "}
+                        {progression.scaleType}
+                      </span>
+                    </div>
+
+                    <p className="search-description">
+                      {progression.description}
+                    </p>
+
+                    {progression.sections.map((section, index) => {
+                      const chords = jazzSectionChords(progression, [
+                        index,
+                      ]);
+                      return (
+                        <div
+                          className="song-section"
+                          key={section.name}
+                        >
+                          <span className="search-source">
+                            {section.name} · {section.bars.length}{" "}
+                            bars
+                          </span>
+
+                          <div className="template-chip-row">
+                            {chords.map((chord, chordIndex) => (
+                              <span
+                                className="template-chip"
+                                key={`${chord.rootNote}-${chord.chordTypeIndex}-${chordIndex}`}
+                              >
+                                {resolveSnapshot(chord).chordLabel}
+                              </span>
+                            ))}
+                          </div>
+
+                          <p className="search-romans">
+                            {jazzBarsLabel(section)}
+                          </p>
+
+                          <div className="saved-card-actions">
+                            <button
+                              type="button"
+                              className="play-chord template-play"
+                              onClick={() =>
+                                handlePlaySnapshotList(chords)
+                              }
+                            >
+                              ▶ Play
+                            </button>
+                            <button
+                              type="button"
+                              className="template-use"
+                              onClick={() =>
+                                handleLoadJazz(progression, [index])
+                              }
+                            >
+                              Load into builder
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {hasForm && (
+                      <button
+                        type="button"
+                        className="template-use song-load-all"
+                        onClick={() =>
+                          handleLoadJazz(progression, form)
+                        }
+                      >
+                        Load the whole form,{" "}
+                        {form
+                          .map((i) =>
+                            progression.sections[i].name.charAt(0)
+                          )
+                          .join("")}
+                      </button>
+                    )}
+
+                    <p className="jazz-heard-in">
+                      Heard in {progression.heardIn}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {searchMode === "song" && (
           <>
