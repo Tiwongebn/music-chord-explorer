@@ -871,11 +871,15 @@ function ChordProgressions({
           };
         });
 
-  // The chord before and after a slot (not wrapping round),
-  // so a substitution is heard in context.
+  // The chord before and after a slot, so a substitution is
+  // heard in context. The last slot is followed by the first
+  // one, since that is what it leads into when looping.
   const neighboursOf = (index: number) => {
     const before = builderChords[index - 1];
-    const after = builderChords[index + 1];
+    const after =
+      builderChords.length > 1
+        ? builderChords[(index + 1) % builderChords.length]
+        : undefined;
     return {
       before: before?.type === "chord" ? [before] : [],
       after: after?.type === "chord" ? [after] : [],

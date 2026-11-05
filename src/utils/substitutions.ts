@@ -145,22 +145,22 @@ function listNotes(names: string[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
-// The chord after `index`, wrapping round to the first one
-// (progressions loop), skipping rests. null if there is none.
+// The chord right after `index`, wrapping round to the first
+// one for the last slot (progressions loop). null when that
+// slot is a rest or there is no other slot, since a passing
+// chord inserted before a rest wouldn't lead anywhere.
 function nextChordAfter(
   chords: ProgressionChord[],
   index: number
 ): { chord: ProgressionChord; wraps: boolean } | null {
-  for (let step = 1; step < chords.length; step++) {
-    const position = index + step;
-    const chord = chords[position % chords.length];
-
-    if (chord.type === "chord") {
-      return { chord, wraps: position >= chords.length };
-    }
+  if (chords.length < 2) {
+    return null;
   }
 
-  return null;
+  const wraps = index + 1 >= chords.length;
+  const chord = chords[wraps ? 0 : index + 1];
+
+  return chord.type === "chord" ? { chord, wraps } : null;
 }
 
 function tritoneSub(
