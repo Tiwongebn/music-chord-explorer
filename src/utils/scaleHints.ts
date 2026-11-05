@@ -366,7 +366,9 @@ export function guideTonesFor(
           ? { semitones: 11, label: "7" }
           : { semitones: 10, label: "♭7" };
 
-    if (keyHas && !isDim && !keyHas.has(added.semitones)) {
+    // In a key a diminished triad is usually the vii (Bdim in
+    // C), so its ♭7 from the key makes it m7♭5.
+    if (keyHas && !keyHas.has(added.semitones)) {
       if (keyHas.has(10)) {
         added = { semitones: 10, label: "♭7" };
       } else if (keyHas.has(11)) {

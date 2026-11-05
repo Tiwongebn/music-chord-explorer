@@ -64,12 +64,32 @@ function joinNotes(notes: string[]): string {
   return `${notes.slice(0, -1).join(", ")} and ${notes[notes.length - 1]}`;
 }
 
-// A five-fret box with the root on the low E string: where a
-// beginner can play the whole scale without shifting.
-function boxFor(rootPc: number): [number, number] {
-  const fret = (rootPc - 4 + 12) % 12;
+interface Box {
+  low: number;
+  high: number;
+  // String (0 = low E) and fret the box's root sits on.
+  rootString: number;
+  rootFret: number;
+}
 
-  return fret === 0 ? [0, 4] : [Math.max(0, fret - 1), fret + 3];
+// A five-fret box where a beginner can play the whole scale
+// without shifting: root on the low E string, or on the A
+// string when the low-E root is too high to fit the 12 frets
+// on screen (D, E♭).
+function boxFor(rootPc: number): Box {
+  const lowE = (rootPc - 4 + 12) % 12;
+
+  if (lowE === 0) {
+    return { low: 0, high: 4, rootString: 0, rootFret: 0 };
+  }
+
+  if (lowE + 3 <= NECK_FRETS) {
+    return { low: lowE - 1, high: lowE + 3, rootString: 0, rootFret: lowE };
+  }
+
+  const onA = (rootPc - 9 + 12) % 12;
+
+  return { low: onA - 1, high: onA + 3, rootString: 1, rootFret: onA };
 }
 
 // One octave up from the root and back down, as MIDI notes.
@@ -172,10 +192,10 @@ function ScaleHints({
 
     preloadGuitar();
 
-    const rootMidi = STANDARD_TUNING[0] + (box[0] === 0 ? 0 : box[0] + 1);
+    const rootMidi = STANDARD_TUNING[box.rootString] + box.rootFret;
 
     scaleRun(rootMidi, shown).forEach((midi, index) => {
-      const spot = placeOnGuitar(midi, box);
+      const spot = placeOnGuitar(midi, [box.low, box.high]);
 
       if (spot) {
         playGuitarString(
@@ -210,7 +230,7 @@ function ScaleHints({
     preloadGuitar();
 
     sorted.forEach((midi, index) => {
-      const spot = placeOnGuitar(midi - 12, box);
+      const spot = placeOnGuitar(midi - 12, [box.low, box.high]);
 
       if (spot) {
         playGuitarString(
@@ -350,9 +370,9 @@ function ScaleHints({
                 aria-label={`${rootName} ${shown.name} on the guitar neck, frets 0 to ${NECK_FRETS}`}
               >
                 <rect
-                  x={box[0] === 0 ? 14 : 38 + (box[0] - 1) * 48}
+                  x={box.low === 0 ? 14 : 38 + (box.low - 1) * 48}
                   y={8}
-                  width={(box[1] - Math.max(box[0], 1) + 1) * 48 + (box[0] === 0 ? 24 : 0)}
+                  width={(box.high - Math.max(box.low, 1) + 1) * 48 + (box.low === 0 ? 24 : 0)}
                   height={5 * 24 + 24}
                   rx={10}
                   className="scale-neck-box"
@@ -407,7 +427,7 @@ function ScaleHints({
                         }
 
                         const x = fret === 0 ? 22 : 38 + fret * 48 - 24;
-                        const inBox = fret >= box[0] && fret <= box[1];
+                        const inBox = fret >= box.low && fret <= box.high;
 
                         return (
                           <g
@@ -430,8 +450,9 @@ function ScaleHints({
 
           {view === "guitar" && (
             <p className="hint">
-              The lit box (frets {box[0]}–{box[1]}) holds the whole
-              scale with the root on the low E string. Start there.
+              The lit box (frets {box.low}–{box.high}) holds the whole
+              scale with the root on the {box.rootString === 0 ? "low E" : "A"}{" "}
+              string. Start there.
             </p>
           )}
 
