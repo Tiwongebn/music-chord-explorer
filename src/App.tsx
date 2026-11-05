@@ -15,6 +15,7 @@ import { analyzeChord } from "./utils/chordAnalyzer";
 import { catalogIndexFor } from "./utils/chordBuild";
 import { guidePitchClasses } from "./utils/scaleHints";
 import ScaleHints from "./components/ScaleHints";
+import { ChordRoles } from "./components/WhyThisChord";
 import {
   playNote,
   playNotes,
@@ -25,6 +26,7 @@ import {
   calculateChordNotes,
   convertRootNote,
   formatNoteForDisplay,
+  getNotesByPreference,
   getPitchClass,
   type AccidentalPreference,
 } from "./utils/musicTheory";
@@ -260,6 +262,21 @@ function App() {
                 handleUseDetectedChord
               }
             />
+
+            {/* Why this chord? Its job in the keys it
+                lives in, and where it likes to go. */}
+            <section className="panel why-explore-panel">
+              <ChordRoles
+                chordName={chordName}
+                rootPitchClass={getPitchClass(rootNote)}
+                intervals={selectedChord.intervals}
+                name={(pitchClass) =>
+                  formatNoteForDisplay(
+                    getNotesByPreference(accidentalPreference)[pitchClass]
+                  )
+                }
+              />
+            </section>
 
             {/* Which scale to improvise over this chord,
                 and its guide tones. */}

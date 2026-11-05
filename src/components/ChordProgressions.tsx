@@ -75,6 +75,7 @@ import type { Song } from "../data/songs";
 import ChordBuilder from "./ChordBuilder";
 import ProgressionScaleHints from "./ProgressionScaleHints";
 import SubstitutionPanel from "./SubstitutionPanel";
+import { WhyChordPanel } from "./WhyThisChord";
 import {
   applySubstitution,
   suggestSubstitutions,
@@ -394,6 +395,24 @@ function ChordProgressions({
   const [subIndex, setSubIndex] = useState<number | null>(null);
   const [subOpenCount, setSubOpenCount] = useState(0);
   const subPanelRef = useRef<HTMLDivElement>(null);
+
+  // The "Why this chord?" sheet: the slot it explains, or
+  // null while closed. Like the substitution sheet, only one
+  // slot sheet is open at a time.
+  const [whyIndex, setWhyIndex] = useState<number | null>(null);
+  const [whyOpenCount, setWhyOpenCount] = useState(0);
+  const whyPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (whyOpenCount === 0) {
+      return;
+    }
+
+    whyPanelRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [whyOpenCount]);
 
   // The progression just before and just after the last
   // substitution was used, so it can be undone while nothing
@@ -790,6 +809,7 @@ function ChordProgressions({
   // then tweak it" works; otherwise from the key's root.
   const handleOpenNewChord = () => {
     setSubIndex(null);
+    setWhyIndex(null);
     const highlighted = highlightedDegree
       ? chordByDegree(highlightedDegree)
       : null;
@@ -810,6 +830,7 @@ function ChordProgressions({
   // progression (a rest opens as a plain major chord).
   const handleEditSlot = (index: number) => {
     setSubIndex(null);
+    setWhyIndex(null);
     const chord = builderChords[index];
 
     setBuilderTarget((current) => ({
@@ -861,6 +882,7 @@ function ChordProgressions({
       current?.index === null ? current : null
     );
     setSubIndex(null);
+    setWhyIndex(null);
   }
 
   // Opens (or closes, when tapped again) the substitution
@@ -872,8 +894,46 @@ function ChordProgressions({
     }
 
     setBuilderTarget(null);
+    setWhyIndex(null);
     setSubIndex(index);
     setSubOpenCount((count) => count + 1);
+  };
+
+  // Opens (or closes) "Why this chord?" for one slot.
+  const handleToggleWhy = (index: number) => {
+    if (whyIndex === index) {
+      setWhyIndex(null);
+      return;
+    }
+
+    setBuilderTarget(null);
+    setSubIndex(null);
+    setWhyIndex(index);
+    setWhyOpenCount((count) => count + 1);
+  };
+
+  // A progression chord as the explainer reads it.
+  const functionChordOf = (chord: ProgressionChord) => ({
+    root: getPitchClass(chord.rootNote ?? "C"),
+    intervals: chord.build
+      ? buildChord(chord.build).intervals
+      : chordTypes[chord.chordTypeIndex ?? 0]?.intervals ?? [0, 4, 7],
+    label: resolveSnapshot(chord).chordLabel,
+  });
+
+  // The next chord after a slot, skipping rests; past the
+  // end it wraps to the first chord, as the loop does.
+  const nextChordAfter = (index: number) => {
+    for (let step = 1; step < builderChords.length; step++) {
+      const position = index + step;
+      const candidate = builderChords[position % builderChords.length];
+
+      if (candidate.type === "chord") {
+        return { chord: candidate, wraps: position >= builderChords.length };
+      }
+    }
+
+    return null;
   };
 
   const substitutionContext = {
@@ -1991,6 +2051,11 @@ function ChordProgressions({
                 (or its ✎ button) to edit it the same way.
               </li>
               <li>
+                Tap <strong>?</strong> on a chord to see
+                its job in the key (home, moving away or
+                tension) and where it usually goes next.
+              </li>
+              <li>
                 Tap <strong>✦</strong> on a chord for
                 substitution ideas (tritone subs, relative
                 minor/major swaps and passing diminished
@@ -2049,11 +2114,12 @@ function ChordProgressions({
                   const isRest = chord.type === 'rest';
                   const isEditing = builderTarget?.index === index;
                   const isSubbing = subIndex === index;
+                  const isExplaining = whyIndex === index;
 
                   const slotClasses = ["builder-slot"];
                   if (isRest) slotClasses.push("rest-slot");
                   if (endsBar) slotClasses.push("bar-end");
-                  if (isEditing || isSubbing) slotClasses.push("editing");
+                  if (isEditing || isSubbing || isExplaining) slotClasses.push("editing");
 
                   return (
                     <li
@@ -2145,6 +2211,19 @@ function ChordProgressions({
                       </div>
 
                       <div className="builder-slot-actions">
+                        {!isRest && (
+                          <button
+                            type="button"
+                            className={isExplaining ? "slot-btn why-btn active" : "slot-btn why-btn"}
+                            title="Why this chord?"
+                            aria-label={`Why chord ${index + 1}?`}
+                            aria-pressed={isExplaining}
+                            onClick={() => handleToggleWhy(index)}
+                          >
+                            ?
+                          </button>
+                        )}
+
                         {!isRest && (
                           <button
                             type="button"
@@ -2274,6 +2353,35 @@ function ChordProgressions({
             />
           </>
         )}
+
+        {whyIndex !== null && builderChords[whyIndex]?.type === "chord" && (() => {
+          const chord = builderChords[whyIndex];
+          const next = nextChordAfter(whyIndex);
+
+          return (
+            <div ref={whyPanelRef}>
+              <WhyChordPanel
+                key={whyIndex}
+                chordNumber={whyIndex + 1}
+                chordLabel={resolveSnapshot(chord).chordLabel}
+                chord={functionChordOf(chord)}
+                keyName={`${displayKeyRoot} ${scaleType}`}
+                songKey={{ root: getPitchClass(rootNote), scale: scaleType }}
+                name={(pitchClass) =>
+                  formatNoteForDisplay(notes[((pitchClass % 12) + 12) % 12])
+                }
+                next={next ? functionChordOf(next.chord) : undefined}
+                nextWraps={next?.wraps}
+                onHearMove={
+                  next
+                    ? () => handlePlaySnapshotList([chord, next.chord])
+                    : undefined
+                }
+                onClose={() => setWhyIndex(null)}
+              />
+            </div>
+          );
+        })()}
 
         {subIndex !== null && builderChords[subIndex]?.type === "chord" && (
           <div ref={subPanelRef}>
