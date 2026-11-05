@@ -2873,6 +2873,488 @@ button.builder-slot-chord:hover,
   }
 }
 
+
+/* =========================
+    ii–V–I TRAINER
+========================= */
+
+/* Roman numerals carry meaning in their case (ii is minor). */
+.tab.tab-roman {
+  text-transform: none;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+}
+
+.trainer-panel {
+  margin-top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.trainer-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trainer-intro .eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: none;
+}
+
+.trainer-intro .hint {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.trainer-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 22px;
+  margin: 0;
+  font: 300 2rem/1.15 var(--display);
+}
+
+.trainer-key-chords {
+  font: 400 0.95rem/1.4 var(--mono);
+  color: var(--amber);
+  white-space: pre-wrap;
+}
+
+.trainer-controls,
+.trainer-transport-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px 56px;
+  align-items: flex-start;
+}
+
+.trainer-controls .selector-group,
+.trainer-transport-settings .selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trainer-keys {
+  flex: 1 1 100%;
+}
+
+.trainer-style-hint {
+  margin: 0;
+  max-width: 44ch;
+}
+
+.trainer-transport {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.trainer-transport-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+}
+
+.trainer-loop:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.trainer-beats {
+  display: inline-flex;
+  gap: 8px;
+  opacity: 0.4;
+}
+
+.trainer-beats.is-on {
+  opacity: 1;
+}
+
+.trainer-beat {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition: background 0.08s ease, box-shadow 0.08s ease;
+}
+
+.trainer-beat.is-beat {
+  background: var(--fg);
+}
+
+.trainer-beat.is-downbeat {
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+}
+
+.trainer-status {
+  min-height: 1.4em;
+  color: var(--fg);
+}
+
+.trainer-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.trainer-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.trainer-check input {
+  accent-color: var(--amber);
+  width: 16px;
+  height: 16px;
+}
+
+.trainer-run {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.trainer-run-key.is-current {
+  color: var(--amber);
+  text-shadow: 0 0 12px var(--amber-glow);
+}
+
+/* Voice-leading map */
+.vl-map {
+  margin: 0;
+  overflow-x: auto;
+}
+
+.vl-map svg {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  min-width: 340px;
+}
+
+.vl-col {
+  fill: transparent;
+  transition: fill 0.12s ease;
+}
+
+.vl-col.is-active {
+  fill: rgba(255, 181, 71, 0.1);
+}
+
+.vl-head {
+  font: 500 13px var(--mono);
+  fill: var(--fg);
+}
+
+.vl-head.is-next {
+  fill: var(--muted);
+}
+
+.vl-line {
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.vl-line.held {
+  stroke: var(--mint);
+}
+
+.vl-line.step {
+  stroke: var(--amber);
+}
+
+.vl-line.leap {
+  stroke: var(--line-strong);
+  stroke-dasharray: 4 5;
+}
+
+.vl-line.is-next {
+  opacity: 0.45;
+}
+
+.vl-note rect {
+  fill: var(--night-raised);
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.vl-note.is-next {
+  opacity: 0.5;
+}
+
+.vl-note-name {
+  font: 500 12px var(--mono);
+  fill: var(--fg);
+}
+
+.vl-note-label {
+  font: 400 10px var(--mono);
+  fill: var(--amber);
+}
+
+.vl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.vl-key::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  margin-right: 8px;
+  vertical-align: middle;
+  border-top: 2.5px solid currentColor;
+}
+
+.vl-key.held::before {
+  color: var(--mint);
+}
+
+.vl-key.step::before {
+  color: var(--amber);
+}
+
+.vl-key.leap::before {
+  color: var(--line-strong);
+  border-top-style: dashed;
+}
+
+/* Chord cards */
+.trainer-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px;
+}
+
+.trainer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 0 0;
+  border-top: 2px solid var(--line);
+  transition: border-color 0.12s ease;
+}
+
+.trainer-card.is-active {
+  border-top-color: var(--amber);
+}
+
+.trainer-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+
+.trainer-roman {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.trainer-symbol {
+  margin: 0;
+  font: 400 1.4rem/1.2 var(--display);
+}
+
+.trainer-card.is-active .trainer-symbol {
+  color: var(--amber);
+}
+
+.trainer-form {
+  color: var(--lilac);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: help;
+}
+
+.mini-keys {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+}
+
+.mini-white {
+  fill: #e9e3f2;
+  stroke: var(--night);
+}
+
+.mini-black {
+  fill: #2a2438;
+  stroke: var(--night);
+}
+
+.mini-white.is-on,
+.mini-black.is-on {
+  fill: var(--amber);
+}
+
+.mini-white.is-bass,
+.mini-black.is-bass {
+  fill: var(--lilac);
+}
+
+.mini-octave {
+  font: 500 7px var(--mono);
+  fill: #6c6480;
+}
+
+.mini-frets {
+  display: block;
+  width: 100%;
+  max-width: 170px;
+}
+
+.trainer-voices {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.trainer-voices li {
+  display: flex;
+  gap: 12px;
+}
+
+.trainer-voices li span {
+  min-width: 4ch;
+}
+
+.trainer-voices small,
+.trainer-move-notes small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.trainer-voices .is-bass {
+  margin-top: 4px;
+  color: var(--lilac);
+}
+
+.trainer-card-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trainer-card-foot .link-button {
+  text-decoration: none;
+}
+
+.trainer-card-foot .hint {
+  font-size: 0.78rem;
+}
+
+/* Move list */
+.trainer-moves {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 32px 40px;
+}
+
+.trainer-move h3 {
+  margin-bottom: 6px;
+}
+
+.trainer-move-summary {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.trainer-move ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.trainer-move li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trainer-move li.is-held .trainer-move-size {
+  color: var(--mint);
+}
+
+.trainer-move-notes small {
+  margin-left: 4px;
+}
+
+.trainer-move-size {
+  color: var(--amber);
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .trainer-cards {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+}
+
+@media (max-width: 700px) {
+  .trainer-panel {
+    margin-top: 40px;
+    gap: 36px;
+  }
+
+  .trainer-key {
+    font-size: 1.5rem;
+  }
+
+  .trainer-transport-settings {
+    gap: 24px 40px;
+  }
+
+  .trainer-transport-settings select,
+  .trainer-controls select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .trainer-transport-settings .selector-group,
+  .trainer-controls .selector-group {
+    flex: 1 1 100%;
+  }
+}
+
 /* Jazz standards library (Find a progression → Jazz standards) */
 .jazz-key {
   margin: 14px 0 4px;
