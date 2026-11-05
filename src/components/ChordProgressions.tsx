@@ -74,6 +74,8 @@ import {
 import type { Song } from "../data/songs";
 import ChordBuilder from "./ChordBuilder";
 import ProgressionScaleHints from "./ProgressionScaleHints";
+import BackingBand, { type BandChordInfo } from "./BackingBand";
+import { useBackingBand } from "../hooks/useBackingBand";
 import SubstitutionPanel from "./SubstitutionPanel";
 import { WhyChordPanel } from "./WhyThisChord";
 import {
@@ -592,6 +594,41 @@ function ChordProgressions({
     });
   };
 
+  // Play-along band: loops the builder's chords with a
+  // walking bass, comping and drums for soloing practice.
+  const band = useBackingBand();
+
+  const bandChords: BandChordInfo[] = builderChords.map((chord) => {
+    const shape =
+      chord.type === "chord" && chord.rootNote
+        ? chord.build
+          ? buildChord(chord.build)
+          : chordTypes[chord.chordTypeIndex ?? -1]
+        : undefined;
+
+    if (!shape || !chord.rootNote) {
+      return {
+        label: "(rest)",
+        root: null,
+        rootPc: null,
+        pcs: [],
+        intervals: [],
+        beats: chord.beats,
+      };
+    }
+
+    const rootPc = getPitchClass(chord.rootNote);
+
+    return {
+      label: resolveSnapshot(chord).chordLabel,
+      root: convertRootNote(chord.rootNote, accidentalPreference),
+      rootPc,
+      pcs: shape.intervals.map((interval) => (rootPc + interval) % 12),
+      intervals: shape.intervals,
+      beats: chord.beats,
+    };
+  });
+
   const handlePlayChord = (chord: ScaleChord) => {
     stopLoop();
     playChordOn(chord.rawNotes, sound);
@@ -632,6 +669,7 @@ function ChordProgressions({
     chords: ProgressionChord[]
   ) => {
     stopLoop();
+    band.stop();
     const pattern = getPattern(patternId);
     const style = getStyle(getDefaultStyleId());
     playTimedProgression(toTimedChords(chords), secondsPerBeat, {
@@ -652,6 +690,7 @@ function ChordProgressions({
       return;
     }
 
+    band.stop();
     const pattern = getPattern(patternId);
     const style = getStyle(getDefaultStyleId());
 
@@ -2120,6 +2159,9 @@ function ChordProgressions({
                   if (isRest) slotClasses.push("rest-slot");
                   if (endsBar) slotClasses.push("bar-end");
                   if (isEditing || isSubbing || isExplaining) slotClasses.push("editing");
+                  if (band.isPlaying && band.activeIndex === index) {
+                    slotClasses.push("is-playing");
+                  }
 
                   return (
                     <li
@@ -2506,6 +2548,24 @@ function ChordProgressions({
             </select>
           </label>
         </div>
+
+        <BackingBand
+          band={band}
+          chords={bandChords}
+          beatsPerBar={timeSignature.beatsPerBar}
+          instrument={sound}
+          bpm={Math.round(60 / chordSeconds)}
+          minBpm={40}
+          maxBpm={200}
+          onBpmChange={(value) => setChordSeconds(60 / value)}
+          onBeforeStart={stopLoop}
+          accidentalPreference={accidentalPreference}
+          songKey={{
+            pitchClasses: scaleIntervals[scaleType].map(
+              (step) => (getPitchClass(rootNote) + step) % 12
+            ),
+          }}
+        />
 
         <div className="builder-save-row">
           <input

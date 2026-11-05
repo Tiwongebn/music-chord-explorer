@@ -2,7 +2,14 @@ import { useState } from "react";
 
 import { useMetronome } from "../hooks/useMetronome";
 import { timeSignatures } from "../data/rhythm";
-import { beatLevels, MAX_BPM, MIN_BPM } from "../utils/metronome";
+import {
+  beatLevels,
+  clicksOnBeat,
+  MAX_BPM,
+  MIN_BPM,
+  SWING_FEELS,
+  type SwingFeel,
+} from "../utils/metronome";
 
 // Compact metronome that lives in the header so it is one tap
 // away on every tab. The header button shows the tempo and
@@ -19,6 +26,10 @@ function Metronome() {
     setBeatsPerBar,
     accentOn,
     setAccentOn,
+    swing,
+    setSwing,
+    backbeat,
+    setBackbeat,
     isRunning,
     toggle,
     tap,
@@ -168,6 +179,42 @@ function Metronome() {
               <span>Accent beat 1</span>
             </label>
 
+            <label className="metronome-select">
+              <span className="selector-label">8ths</span>
+              <select
+                value={swing}
+                aria-label="Eighth notes and swing feel"
+                title={
+                  SWING_FEELS.find((item) => item.id === swing)?.hint
+                }
+                onChange={(event) =>
+                  setSwing(event.target.value as SwingFeel)
+                }
+              >
+                {SWING_FEELS.map((feel) => (
+                  <option key={feel.id} value={feel.id}>
+                    {feel.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label
+              className="metronome-accent"
+              title="Jazz players practise with the click on the backbeat and feel 1 and 3 themselves"
+            >
+              <input
+                type="checkbox"
+                checked={backbeat}
+                onChange={(event) =>
+                  setBackbeat(event.target.checked)
+                }
+              />
+              <span>
+                {beatsPerBar === 4 ? "Click on 2 & 4" : "Click off-beats only"}
+              </span>
+            </label>
+
             <div
               className="metronome-beats"
               aria-hidden="true"
@@ -177,6 +224,7 @@ function Metronome() {
                   key={index}
                   className={
                     `metronome-beat is-${level}` +
+                    (clicksOnBeat(index, backbeat) ? "" : " is-silent") +
                     (index === currentBeat ? " is-on" : "")
                   }
                 />
