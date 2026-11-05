@@ -7,6 +7,7 @@
 // ============================================================
 
 import { songs, type Song } from "../data/songs";
+import { jazzStandards, type JazzStandard } from "../data/jazzStandards";
 import { parseChordName, romansToChords } from "./progressionSearch";
 import type { ProgressionChord } from "./savedProgressions";
 
@@ -71,7 +72,15 @@ function wordMatch(word: string, words: string[]): number {
   return best;
 }
 
-function scoreSong(song: Song, query: string, artistHint: string | null): number {
+// The fields scoring looks at, so jazz standards (with a
+// composer instead of an artist) are searched the same way.
+interface Searchable {
+  title: string;
+  artist: string;
+  aliases?: string[];
+}
+
+function scoreSong(song: Searchable, query: string, artistHint: string | null): number {
   const titles = [song.title, ...(song.aliases ?? [])].map(normalize);
   const artist = normalize(song.artist);
   const q = normalize(query);
@@ -136,18 +145,52 @@ function splitQuery(raw: string): Array<{ title: string; artist: string | null }
   return readings;
 }
 
-export function searchSongs(raw: string, limit = 6): SongMatch[] {
+function rank<T>(
+  items: T[],
+  raw: string,
+  limit: number,
+  fields: (item: T) => Searchable
+): Array<{ item: T; score: number }> {
   if (!normalize(raw)) return [];
   const readings = splitQuery(raw);
 
-  return songs
-    .map((song) => ({
-      song,
-      score: Math.max(...readings.map((r) => scoreSong(song, r.title, r.artist))),
+  return items
+    .map((item) => ({
+      item,
+      score: Math.max(
+        ...readings.map((r) => scoreSong(fields(item), r.title, r.artist))
+      ),
     }))
     .filter((match) => match.score >= 50)
-    .sort((a, b) => b.score - a.score || a.song.title.localeCompare(b.song.title))
+    .sort(
+      (a, b) =>
+        b.score - a.score || fields(a.item).title.localeCompare(fields(b.item).title)
+    )
     .slice(0, limit);
+}
+
+export function searchSongs(raw: string, limit = 6): SongMatch[] {
+  return rank(songs, raw, limit, (song) => song).map(({ item, score }) => ({
+    song: item,
+    score,
+  }));
+}
+
+// Jazz standards (data/jazzStandards.ts) by title or composer,
+// so "autumn leaves" in the song search finds the chart too.
+export interface StandardMatch {
+  standard: JazzStandard;
+  score: number;
+}
+
+export function searchStandards(raw: string, limit = 3): StandardMatch[] {
+  return rank(jazzStandards, raw, limit, (standard) => ({
+    title: standard.title,
+    artist: [standard.composer, standard.famousVersion]
+      .filter(Boolean)
+      .join(" "),
+    aliases: standard.aliases,
+  })).map(({ item, score }) => ({ standard: item, score }));
 }
 
 export const songKeyPitchClass = (song: Song): number =>
@@ -171,3 +214,6 @@ export const webChordSearchUrl = (query: string): string =>
   `https://www.google.com/search?q=${encodeURIComponent(`${query.trim()} chords`)}`;
 
 export const songCount = songs.length;
+
+export const standardKeyPitchClass = (standard: JazzStandard): number =>
+  parseChordName(standard.key)?.pitchClass ?? 0;

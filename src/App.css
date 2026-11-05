@@ -679,7 +679,8 @@ select optgroup {
   order: 2;
 }
 
-.guitar-panel {
+.guitar-panel,
+.jazz-panel {
   order: 2;
 }
 
@@ -1254,6 +1255,143 @@ select optgroup {
 }
 
 
+/* Substitution ideas: same framed sheet as the chord
+   builder, one row per idea, each led by its new chord. */
+.sub-btn {
+  color: var(--amber-deep);
+}
+
+.sub-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.sub-intro p {
+  flex: 1 1 280px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.sub-original {
+  color: var(--fg);
+}
+
+.sub-applied {
+  margin: 16px 0 0;
+  color: var(--mint);
+  font-size: 0.85rem;
+}
+
+.sub-undo {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sub-empty {
+  margin: 20px 0 0;
+}
+
+.sub-list {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sub-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 28px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.sub-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sub-kind {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sub-kind-tritone {
+  color: var(--rose);
+}
+
+.sub-kind-relative {
+  color: var(--lilac);
+}
+
+.sub-kind-passing {
+  color: var(--mint);
+}
+
+.sub-chord {
+  color: var(--amber);
+  font: 500 1.6rem/1.1 var(--display);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.sub-notes {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.sub-explanation {
+  margin: 0;
+  color: var(--fg);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.sub-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .sub-card {
+    grid-template-columns: 1fr;
+  }
+
+  .sub-card-head {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+  }
+
+  .sub-kind {
+    flex-basis: 100%;
+  }
+
+  .sub-actions {
+    justify-content: flex-start;
+  }
+}
+
 /* =========================
     PROGRESSIONS
 ========================= */
@@ -1825,6 +1963,85 @@ select optgroup {
   color: var(--amber);
 }
 
+/* Beginner jazz standards (Jazz standards → Tunes to learn,
+   and in the song search): a bar-by-bar chord chart. */
+.jazz-view {
+  margin: 14px 0 4px;
+}
+
+.standard-level {
+  margin-top: 22px;
+}
+
+.standard-level-title {
+  margin: 0;
+  color: var(--muted);
+  font: 500 0.7rem/1.4 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.standard-results {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+}
+
+.standard-card .song-key {
+  margin-top: 10px;
+}
+
+.standard-chart {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--line-strong);
+}
+
+.standard-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  min-height: 3.1rem;
+  padding: 6px 6px 6px 8px;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
+}
+
+.standard-chord {
+  display: flex;
+  flex-direction: column;
+}
+
+.standard-chord-name {
+  white-space: nowrap;
+  font: 500 0.95rem/1.25 var(--display);
+}
+
+.standard-chord-roman {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.standard-built-on {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .standard-bar {
+    padding: 5px 4px 5px 5px;
+  }
+
+  .standard-chord-name {
+    font-size: 0.8rem;
+  }
+}
+
 .song-missing {
   max-width: 62ch;
   margin-top: 18px;
@@ -2330,6 +2547,139 @@ button.builder-slot-chord:hover,
 .fretboard-clickable:focus-visible {
   outline: 1px solid var(--amber);
   outline-offset: 2px;
+}
+
+
+/* =========================
+    JAZZ VOICINGS
+    Same open stage as the guitar section: a mono label
+    header, then piano and guitar side by side.
+========================= */
+
+.jazz-voicings h2 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.jazz-intro,
+.jazz-borrowed {
+  max-width: 68ch;
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.jazz-intro strong {
+  color: var(--amber);
+  font-weight: 500;
+}
+
+.jazz-borrowed {
+  color: var(--lilac);
+  font-size: 0.85rem;
+}
+
+.jazz-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px 64px;
+  margin-top: 36px;
+}
+
+.jazz-instrument {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.jazz-instrument > .fretboard-hint {
+  margin: 0;
+}
+
+.jazz-instrument-name {
+  margin: 0;
+  font: 300 1.6rem/1 var(--display);
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+.jazz-keys-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding: 6px 2px 10px;
+}
+
+.jazz-keyboard {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  height: 160px;
+}
+
+.jazz-keyboard .piano-key.white {
+  padding-bottom: 12px;
+}
+
+.jazz-keyboard .piano-key.black {
+  padding-bottom: 8px;
+}
+
+.jazz-keyboard .octave-label {
+  bottom: 12px;
+}
+
+/* The root is the anchor note: give it a ring so it reads
+   apart from the other amber keys. */
+.jazz-keyboard .piano-key.jazz-root {
+  box-shadow:
+    inset 0 0 0 3px var(--night),
+    0 0 24px rgba(255, 181, 71, 0.6);
+}
+
+.jazz-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.jazz-degree {
+  color: var(--amber);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.jazz-guitar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px 36px;
+  width: 100%;
+}
+
+.jazz-guitar svg {
+  width: 100%;
+  max-width: 220px;
+  flex: 0 0 auto;
+}
+
+.jazz-guitar .fretboard-controls {
+  flex: 1 1 160px;
+}
+
+@media (max-width: 900px) {
+  .jazz-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 56px;
+  }
 }
 
 
@@ -3003,4 +3353,21 @@ button.builder-slot-chord:hover,
   .trainer-controls .selector-group {
     flex: 1 1 100%;
   }
+}
+
+/* Jazz standards library (Find a progression → Jazz standards) */
+.jazz-key {
+  margin: 14px 0 4px;
+}
+
+.jazz-card .search-description {
+  margin: 0 0 2px;
+}
+
+.jazz-heard-in {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-style: italic;
+  line-height: 1.5;
 }
