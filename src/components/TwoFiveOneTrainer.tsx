@@ -135,7 +135,12 @@ function TwoFiveOneTrainer() {
   const itemId = (keyIndex: number, chordIndex: number) =>
     `${keyIndex}:${chordIndex}`;
 
-  const active = player.activeId?.split(":").map(Number) ?? null;
+  // The sounding item, if it is still part of the run on screen
+  // (turning the cycle off mid-run shrinks the run before the
+  // stop lands, so an old index can point past the end).
+  const parsed = player.activeId?.split(":").map(Number) ?? null;
+  const active =
+    parsed && voiced[parsed[0]]?.chords[parsed[1]] ? parsed : null;
 
   // While playing, follow the sounding key; otherwise show the
   // picked one.
@@ -197,9 +202,9 @@ function TwoFiveOneTrainer() {
           </span>
         </h2>
         <p className="hint">
-          The most common move in jazz. Watch the 3rds and 7ths: the
-          7th of each chord slips down a half step to become the 3rd of
-          the next, so the whole progression moves with tiny steps.
+          {mode === "major"
+            ? "The most common move in jazz. Watch the 3rds and 7ths: the 7th of each chord slips down a half step to become the 3rd of the next, so the whole progression moves with tiny steps."
+            : "The minor version of jazz's most common move. Watch the 3rds and 7ths: the ii's 7th slips down a half step to the V's 3rd, then the V's 7th steps down a whole step to the minor 3rd of the i."}
         </p>
       </header>
 

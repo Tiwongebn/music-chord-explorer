@@ -190,6 +190,7 @@ export function useVoicingPlayer(): UseVoicingPlayerReturn {
   useEffect(() => {
     return () => {
       halt();
+      silenceVoicings();
     };
   }, [halt]);
 
