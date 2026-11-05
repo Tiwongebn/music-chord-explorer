@@ -80,6 +80,54 @@ export function bpmFromTaps(taps: number[]): number | null {
   return clampBpm(60000 / average);
 }
 
+// ---- Swing -------------------------------------------------
+//
+// Swing stretches the first eighth of each beat and shortens
+// the second. The ratio is long:short, so 2 is the classic
+// triplet swing (the "and" lands on the last triplet) and 1 is
+// straight eighths. "off" means no eighth-note clicks at all.
+
+export type SwingFeel = "off" | "straight" | "light" | "medium" | "hard";
+
+export const SWING_FEELS: {
+  id: SwingFeel;
+  label: string;
+  ratio: number;
+  hint: string;
+}[] = [
+  { id: "off", label: "Off", ratio: 1, hint: "Quarter notes only" },
+  { id: "straight", label: "Straight 8ths", ratio: 1, hint: "Even eighths, rock and Latin" },
+  { id: "light", label: "Light swing", ratio: 1.5, hint: "3:2, relaxed and fast tempos" },
+  { id: "medium", label: "Swing (triplet)", ratio: 2, hint: "2:1, the classic jazz feel" },
+  { id: "hard", label: "Hard swing", ratio: 3, hint: "3:1, dotted-eighth shuffle" },
+];
+
+export function swingRatio(feel: SwingFeel): number {
+  return SWING_FEELS.find((item) => item.id === feel)?.ratio ?? 1;
+}
+
+// Where the "and" of a beat falls, as a fraction of the beat:
+// 0.5 straight, 2/3 for triplet swing, 0.75 for hard swing.
+export function offbeatFraction(ratio: number): number {
+  const safe = Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
+
+  return safe / (safe + 1);
+}
+
+// Moves a position given in straight beats (1.5 = the "and"
+// of beat 2) to where it falls under swing. Only eighth-note
+// off-beats move; downbeats and other subdivisions stay put.
+export function swingBeat(position: number, ratio: number): number {
+  const whole = Math.floor(position);
+  const fraction = position - whole;
+
+  if (Math.abs(fraction - 0.5) > 1e-6) {
+    return position;
+  }
+
+  return whole + offbeatFraction(ratio);
+}
+
 // ---- Engine ------------------------------------------------
 
 const LOOKAHEAD_SECONDS = 0.12;
@@ -94,10 +142,27 @@ const CLICK: Record<
   weak: { frequency: 990, gain: 0.45 },
 };
 
+// The swung "and" between beats: lower and softer than a beat.
+const OFFBEAT_CLICK = { frequency: 760, gain: 0.28 };
+
 export interface MetronomeSettings {
   bpm: number;
   beatsPerBar: number;
   accentOn: boolean;
+  // Eighth-note clicks between the beats, straight or swung.
+  swing?: SwingFeel;
+  // Jazz practice: only beats 2 and 4 click (every other beat
+  // in other meters); the others still flash on screen.
+  backbeat?: boolean;
+}
+
+// Beats that sound when "click on 2 & 4" is on. In 4/4 that
+// is 2 and 4; in other meters every other beat after the 1.
+export function clicksOnBeat(
+  beatIndex: number,
+  backbeat: boolean
+): boolean {
+  return !backbeat || beatIndex % 2 === 1;
 }
 
 export interface MetronomeEngine {
@@ -126,9 +191,11 @@ export function createMetronome(
   let beatIndex = 0;
   const pendingVisuals = new Set<number>();
 
-  function scheduleClick(time: number, level: BeatLevel) {
+  function scheduleClick(
+    time: number,
+    { frequency, gain }: { frequency: number; gain: number }
+  ) {
     const context = Tone.getContext();
-    const { frequency, gain } = CLICK[level];
 
     const oscillator = context.createOscillator();
     const envelope = context.createGain();
@@ -189,10 +256,28 @@ export function createMetronome(
         settings.accentOn
       )[beatIndex];
 
-      scheduleClick(nextBeatTime, level);
+      const secondsPerBeat = 60 / settings.bpm;
+      const swing = settings.swing ?? "off";
+
+      if (clicksOnBeat(beatIndex, settings.backbeat ?? false)) {
+        // With clicks on 2 & 4 the backbeat carries the accent.
+        scheduleClick(
+          nextBeatTime,
+          CLICK[settings.backbeat ? "medium" : level]
+        );
+      }
+
+      if (swing !== "off") {
+        scheduleClick(
+          nextBeatTime +
+            secondsPerBeat * offbeatFraction(swingRatio(swing)),
+          OFFBEAT_CLICK
+        );
+      }
+
       scheduleVisual(nextBeatTime, beatIndex);
 
-      nextBeatTime += 60 / settings.bpm;
+      nextBeatTime += secondsPerBeat;
       beatIndex += 1;
     }
   }

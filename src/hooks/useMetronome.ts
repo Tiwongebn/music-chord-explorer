@@ -7,6 +7,7 @@ import {
   clampBpm,
   createMetronome,
   type MetronomeEngine,
+  type SwingFeel,
 } from "../utils/metronome";
 
 export interface UseMetronomeReturn {
@@ -16,6 +17,10 @@ export interface UseMetronomeReturn {
   setBeatsPerBar: (beats: number) => void;
   accentOn: boolean;
   setAccentOn: (on: boolean) => void;
+  swing: SwingFeel;
+  setSwing: (feel: SwingFeel) => void;
+  backbeat: boolean;
+  setBackbeat: (on: boolean) => void;
   isRunning: boolean;
   toggle: () => void;
   stop: () => void;
@@ -28,6 +33,8 @@ export function useMetronome(): UseMetronomeReturn {
   const [bpm, setBpmState] = useState(DEFAULT_BPM);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
   const [accentOn, setAccentOn] = useState(true);
+  const [swing, setSwing] = useState<SwingFeel>("off");
+  const [backbeat, setBackbeat] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(-1);
 
@@ -47,8 +54,8 @@ export function useMetronome(): UseMetronomeReturn {
 
   // Keep the running engine in step with the controls.
   useEffect(() => {
-    getEngine().update({ bpm, beatsPerBar, accentOn });
-  }, [bpm, beatsPerBar, accentOn, getEngine]);
+    getEngine().update({ bpm, beatsPerBar, accentOn, swing, backbeat });
+  }, [bpm, beatsPerBar, accentOn, swing, backbeat, getEngine]);
 
   // Never leave a click track running after unmount.
   useEffect(() => {
@@ -110,6 +117,10 @@ export function useMetronome(): UseMetronomeReturn {
     setBeatsPerBar,
     accentOn,
     setAccentOn,
+    swing,
+    setSwing,
+    backbeat,
+    setBackbeat,
     isRunning,
     toggle,
     stop,

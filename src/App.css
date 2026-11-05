@@ -631,6 +631,17 @@ select optgroup {
   box-shadow: 0 0 10px var(--amber);
 }
 
+/* Beats that don't click under "Click on 2 & 4": hollow. */
+.metronome-beat.is-silent {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+
+.metronome-beat.is-silent.is-on {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--lilac);
+}
+
 
 /* =========================
     OPEN SECTIONS (formerly panels)
@@ -3815,4 +3826,163 @@ button.builder-slot-chord:hover,
   font-size: 0.75rem;
   font-style: italic;
   line-height: 1.5;
+}
+
+/* =========================
+    PLAY-ALONG BAND
+========================= */
+
+/* The chord the band is on: its dot and name light up. */
+.builder-slot.is-playing::before {
+  background: var(--mint);
+  box-shadow: 0 0 16px var(--mint);
+}
+
+.builder-slot.is-playing .builder-slot-chord {
+  color: var(--mint);
+  text-shadow: 0 0 18px rgba(126, 224, 176, 0.35);
+}
+
+.band {
+  margin: 0 0 36px;
+  padding: 22px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.band-head h3 {
+  margin: 0 0 4px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.band-head .hint {
+  margin: 0 0 18px;
+  max-width: 62ch;
+}
+
+.band-main,
+.band-parts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 26px;
+}
+
+.band-parts {
+  margin-top: 16px;
+}
+
+.band-start.is-on {
+  background: var(--mint);
+  box-shadow: 0 0 28px rgba(126, 224, 176, 0.4);
+}
+
+.band-tempo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.band-tempo-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 4.5ch;
+  font: 500 1.25rem/1 var(--display);
+}
+
+.band-tempo-value small {
+  color: var(--muted);
+  font: 400 0.65rem/1 var(--mono);
+  letter-spacing: 0.12em;
+}
+
+.band-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.band-select select {
+  min-width: 0;
+}
+
+.band-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 32px;
+  margin-top: 22px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--night-raised);
+}
+
+.band-beats {
+  display: flex;
+  gap: 8px;
+  flex-basis: 100%;
+}
+
+.band-chord {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.band-chord strong {
+  font: 500 2rem/1.1 var(--display);
+  color: var(--mint);
+  overflow-wrap: anywhere;
+}
+
+.band-chord.is-next strong {
+  font-size: 1.25rem;
+  color: var(--muted);
+}
+
+.band-label,
+.band-chorus {
+  color: var(--muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.band-scale {
+  font-size: 0.85rem;
+}
+
+.band-scale small {
+  color: var(--muted);
+}
+
+.band-chorus {
+  margin-left: auto;
+}
+
+.band-count {
+  margin: 0;
+  color: var(--muted);
+}
+
+.band-count strong {
+  margin-left: 8px;
+  color: var(--amber);
+  font: 500 2rem/1 var(--display);
+}
+
+@media (max-width: 700px) {
+  .band-chord strong {
+    font-size: 1.6rem;
+  }
+
+  .band-chorus {
+    margin-left: 0;
+  }
 }
