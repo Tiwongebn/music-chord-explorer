@@ -61,6 +61,12 @@ import {
 } from "../utils/songSearch";
 import type { Song } from "../data/songs";
 import ChordBuilder from "./ChordBuilder";
+import SubstitutionPanel from "./SubstitutionPanel";
+import {
+  applySubstitution,
+  suggestSubstitutions,
+  type Substitution,
+} from "../utils/substitutions";
 import {
   buildChord,
   catalogIndexFor,
@@ -358,6 +364,33 @@ function ChordProgressions({
   const [builderTarget, setBuilderTarget] =
     useState<BuilderTarget | null>(null);
   const chordBuilderRef = useRef<HTMLDivElement>(null);
+
+  // The "Try a substitution" sheet: the slot it is open on,
+  // or null while closed. Only one of it and the chord
+  // builder is open at a time.
+  const [subIndex, setSubIndex] = useState<number | null>(null);
+  const [subOpenCount, setSubOpenCount] = useState(0);
+  const subPanelRef = useRef<HTMLDivElement>(null);
+
+  // The progression just before and just after the last
+  // substitution was used, so it can be undone while nothing
+  // else has changed the progression since.
+  const [subUndo, setSubUndo] = useState<{
+    before: ProgressionChord[];
+    after: ProgressionChord[];
+    label: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (subOpenCount === 0) {
+      return;
+    }
+
+    subPanelRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [subOpenCount]);
 
   // Bring the builder into view whenever it opens on a new
   // chord (it sits below the slots, which can be long).
@@ -729,6 +762,7 @@ function ChordProgressions({
   // chord tapped in the row above, if any, so "tap a chord,
   // then tweak it" works; otherwise from the key's root.
   const handleOpenNewChord = () => {
+    setSubIndex(null);
     const highlighted = highlightedDegree
       ? chordByDegree(highlightedDegree)
       : null;
@@ -748,6 +782,7 @@ function ChordProgressions({
   // Opens the chord builder on a slot already in the
   // progression (a rest opens as a plain major chord).
   const handleEditSlot = (index: number) => {
+    setSubIndex(null);
     const chord = builderChords[index];
 
     setBuilderTarget((current) => ({
@@ -798,7 +833,93 @@ function ChordProgressions({
     setBuilderTarget((current) =>
       current?.index === null ? current : null
     );
+    setSubIndex(null);
   }
+
+  // Opens (or closes, when tapped again) the substitution
+  // ideas for one slot.
+  const handleToggleSubstitutions = (index: number) => {
+    if (subIndex === index) {
+      setSubIndex(null);
+      return;
+    }
+
+    setBuilderTarget(null);
+    setSubIndex(index);
+    setSubOpenCount((count) => count + 1);
+  };
+
+  const substitutionContext = {
+    label: (chord: ProgressionChord) => resolveSnapshot(chord).chordLabel,
+    noteName: (pitchClass: number) =>
+      formatNoteForDisplay(notes[((pitchClass % 12) + 12) % 12]),
+  };
+
+  const substitutionCards =
+    subIndex === null
+      ? []
+      : suggestSubstitutions(
+          builderChords,
+          subIndex,
+          substitutionContext
+        ).map((substitution) => {
+          const resolved = resolveSnapshot(substitution.featured);
+          return {
+            substitution,
+            label: resolved.chordLabel,
+            notes: resolved.rawNotes.map(formatNoteForDisplay),
+          };
+        });
+
+  // The chord before and after a slot (not wrapping round),
+  // so a substitution is heard in context.
+  const neighboursOf = (index: number) => {
+    const before = builderChords[index - 1];
+    const after = builderChords[index + 1];
+    return {
+      before: before?.type === "chord" ? [before] : [],
+      after: after?.type === "chord" ? [after] : [],
+    };
+  };
+
+  const handleHearOriginal = () => {
+    if (subIndex === null) return;
+    const { before, after } = neighboursOf(subIndex);
+    handlePlaySnapshotList([
+      ...before,
+      builderChords[subIndex],
+      ...after,
+    ]);
+  };
+
+  const handleHearSubstitution = (substitution: Substitution) => {
+    if (subIndex === null) return;
+    const { before, after } = neighboursOf(subIndex);
+    handlePlaySnapshotList([
+      ...before,
+      ...substitution.replacement,
+      ...after,
+    ]);
+  };
+
+  const handleApplySubstitution = (substitution: Substitution) => {
+    if (subIndex === null) return;
+    stopLoop();
+    const next = applySubstitution(builderChords, subIndex, substitution);
+    setSubUndo({
+      before: builderChords,
+      after: next,
+      label: resolveSnapshot(substitution.featured).chordLabel,
+    });
+    setBuilderChords(next);
+  };
+
+  const handleUndoSubstitution = () => {
+    if (!subUndo) return;
+    stopLoop();
+    setBuilderChords(subUndo.before);
+    setSubUndo(null);
+  };
 
   const handleSaveBuilder = () => {
     const name = progressionName.trim();
@@ -1629,6 +1750,13 @@ function ChordProgressions({
                 (or its ✎ button) to edit it the same way.
               </li>
               <li>
+                Tap <strong>✦</strong> on a chord for
+                substitution ideas (tritone subs, relative
+                minor/major swaps and passing diminished
+                chords). Hear each one in context, then use
+                it if you like it.
+              </li>
+              <li>
                 Reorder, resize or remove chords with the
                 buttons on each one.
               </li>
@@ -1679,11 +1807,12 @@ function ChordProgressions({
 
                   const isRest = chord.type === 'rest';
                   const isEditing = builderTarget?.index === index;
+                  const isSubbing = subIndex === index;
 
                   const slotClasses = ["builder-slot"];
                   if (isRest) slotClasses.push("rest-slot");
                   if (endsBar) slotClasses.push("bar-end");
-                  if (isEditing) slotClasses.push("editing");
+                  if (isEditing || isSubbing) slotClasses.push("editing");
 
                   return (
                     <li
@@ -1775,6 +1904,19 @@ function ChordProgressions({
                       </div>
 
                       <div className="builder-slot-actions">
+                        {!isRest && (
+                          <button
+                            type="button"
+                            className={isSubbing ? "slot-btn sub-btn active" : "slot-btn sub-btn"}
+                            title="Try a substitution"
+                            aria-label={`Substitution ideas for chord ${index + 1}`}
+                            aria-pressed={isSubbing}
+                            onClick={() => handleToggleSubstitutions(index)}
+                          >
+                            ✦
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           className={isEditing ? "slot-btn active" : "slot-btn"}
@@ -1858,6 +2000,26 @@ function ChordProgressions({
               {timeSignature.beatsPerBar} beats
             </p>
           </>
+        )}
+
+        {subIndex !== null && builderChords[subIndex]?.type === "chord" && (
+          <div ref={subPanelRef}>
+            <SubstitutionPanel
+              chordNumber={subIndex + 1}
+              chordLabel={resolveSnapshot(builderChords[subIndex]).chordLabel}
+              cards={substitutionCards}
+              appliedLabel={
+                subUndo && subUndo.after === builderChords
+                  ? subUndo.label
+                  : null
+              }
+              onHearOriginal={handleHearOriginal}
+              onHear={handleHearSubstitution}
+              onApply={handleApplySubstitution}
+              onUndo={handleUndoSubstitution}
+              onClose={() => setSubIndex(null)}
+            />
+          </div>
         )}
 
         {builderTarget && (
