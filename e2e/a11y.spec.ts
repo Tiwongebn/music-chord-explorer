@@ -109,3 +109,23 @@ test("Escape closes the metronome and returns focus", async ({ page }) => {
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(toggle).toBeFocused();
 });
+
+test("slot panels take focus, close on Escape and hand focus back", async ({
+  page,
+}) => {
+  await page.goto("/#/progressions?p=C.0.4_G.0.4");
+  for (const name of [
+    "Why chord 1?",
+    "Substitution ideas for chord 1",
+    "Edit chord 1",
+  ]) {
+    const trigger = page.getByRole("button", { name, exact: true });
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.tagName))
+      .toMatch(/^H[2-6]$/);
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
+  }
+});

@@ -48,6 +48,7 @@ import ChordBuilder from "./ChordBuilder";
 import ProgressionScaleHints from "./ProgressionScaleHints";
 import BackingBand, { type BandChordInfo } from "./BackingBand";
 import HelpTip from "./HelpTip";
+import { usePanel } from "../hooks/usePanel";
 import FindProgression from "./progressions/FindProgression";
 import {
   decodeProgression,
@@ -112,25 +113,6 @@ interface ChordProgressionsProps {
   onAccidentalPreferenceChange: (
     preference: AccidentalPreference
   ) => void;
-}
-
-// Moves focus into a panel that just opened (editor, Why?,
-// substitutions) so keyboard and screen reader users land in
-// it instead of staying back on the slot button. Prefers the
-// panel's heading; falls back to the panel itself.
-function focusPanel(panel: HTMLElement | null) {
-  if (!panel) {
-    return;
-  }
-
-  const target =
-    panel.querySelector<HTMLElement>("h2, h3, h4, h5, h6") ?? panel;
-
-  if (!target.hasAttribute("tabindex")) {
-    target.setAttribute("tabindex", "-1");
-  }
-
-  target.focus({ preventScroll: true });
 }
 
 const functionClass: Record<string, string> = {
@@ -357,17 +339,12 @@ function ChordProgressions({
   const [whyOpenCount, setWhyOpenCount] = useState(0);
   const whyPanelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (whyOpenCount === 0) {
-      return;
-    }
-
-    whyPanelRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
-    focusPanel(whyPanelRef.current);
-  }, [whyOpenCount]);
+  // Every slot panel behaves the same way: it scrolls in and
+  // takes focus when it opens, Escape closes it, and closing
+  // hands focus back to the button that opened it.
+  usePanel(whyPanelRef, whyIndex === null ? null : whyOpenCount, () =>
+    setWhyIndex(null)
+  );
 
   // The progression just before and just after the last
   // substitution was used, so it can be undone while nothing
@@ -378,32 +355,15 @@ function ChordProgressions({
     label: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (subOpenCount === 0) {
-      return;
-    }
-
-    subPanelRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
-    focusPanel(subPanelRef.current);
-  }, [subOpenCount]);
+  usePanel(subPanelRef, subIndex === null ? null : subOpenCount, () =>
+    setSubIndex(null)
+  );
 
   // Bring the builder into view whenever it opens on a new
   // chord (it sits below the slots, which can be long).
-  const builderTargetId = builderTarget?.id;
-  useEffect(() => {
-    if (builderTargetId === undefined) {
-      return;
-    }
-
-    chordBuilderRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
-    focusPanel(chordBuilderRef.current);
-  }, [builderTargetId]);
+  usePanel(chordBuilderRef, builderTarget?.id ?? null, () =>
+    setBuilderTarget(null)
+  );
 
   // The progression the user is composing: a plain list of
   // frozen chord snapshots (root note + chord-type index).
