@@ -1,9 +1,12 @@
 import {
   useRef,
   useEffect,
+  useId,
   useState,
+  type MouseEvent,
   type PointerEvent,
 } from "react";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 import {
   formatNoteForDisplay,
   getPitchClass,
@@ -72,6 +75,10 @@ const flatNoteNames: Record<string, string> = {
   "G#": "Ab",
   "A#": "Bb",
 };
+
+const CHROMATIC = [
+  "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+];
 
 // Maps keyboard keys → note with octave
 const keyboardMap: Record<string, string> = {
@@ -291,8 +298,25 @@ function PianoKeyboard({
 
   const octaves = [3, 4, 5];
 
+  // Every key in pitch order, for arrow-key movement: the
+  // keyboard is one Tab stop and ←/→ walk up and down it.
+  const keyOrder = octaves.flatMap((octave) =>
+    CHROMATIC.map((note) => `${note}${octave}`)
+  );
+  const roving = useRovingFocus(keyOrder, "C4");
+  const hintId = useId();
+
   function makeKeyHandlers(noteWithOctave: string) {
     return {
+      ...roving.itemProps(noteWithOctave),
+      // Enter/Space on a focused key. Pointer presses are
+      // handled on pointerdown (for drag-to-play), so only
+      // keyboard clicks (detail 0) toggle here.
+      onClick: (e: MouseEvent<HTMLButtonElement>) => {
+        if (e.detail === 0) {
+          onNoteToggle(noteWithOctave);
+        }
+      },
       onPointerDown: (
         e: PointerEvent<HTMLButtonElement>
       ) => {
@@ -379,7 +403,20 @@ function PianoKeyboard({
         }
       >
       <div className="piano-wrapper">
-        <div className="piano-keyboard">
+        <p id={hintId} className="visually-hidden">
+          Use the left and right arrow keys to move between keys,
+          and Enter or Space to pick one.
+        </p>
+        {/* Arrow keys move focus between the keys (roving
+            tabindex); the keys themselves are the buttons. */}
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+        <div
+          className="piano-keyboard"
+          role="group"
+          aria-label="Piano keys, C3 to B5"
+          aria-describedby={hintId}
+          onKeyDown={roving.onKeyDown}
+        >
 
           {/* WHITE KEYS */}
           {octaves.map((octave) =>

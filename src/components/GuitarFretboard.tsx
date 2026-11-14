@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 import {
   STANDARD_TUNING,
   findGuitarVoicings,
@@ -84,6 +85,25 @@ function GuitarFretboard({
 
   const voicing = voicings[shapeIndex % (voicings.length || 1)];
 
+  // Each diagram is one Tab stop; arrow keys move between its
+  // strings (shape) or its dots, low string first (neck).
+  const shapeIds = (voicing?.frets ?? []).flatMap((fret, string) =>
+    fret < 0 ? [] : [`s${string}`]
+  );
+  const neckIds = STANDARD_TUNING.flatMap((open, string) =>
+    Array.from({ length: NECK_FRETS + 1 }, (_, fret) => fret).flatMap(
+      (fret) =>
+        spelling.has((open + fret) % 12) ? [`n${string}-${fret}`] : []
+    )
+  );
+  const shapeRoving = useRovingFocus(shapeIds);
+  const neckRoving = useRovingFocus(neckIds);
+
+  // Spoken role of a note, since root and guide tones are
+  // otherwise shown by dot color and outline.
+  const roleOf = (pc: number) =>
+    pc === rootPc ? ", root" : guideTones.includes(pc) ? ", guide tone" : "";
+
   const handlePlay = () => {
     if (voicing) {
       const speed = STRUM_SPEEDS.find((item) => item.id === speedId);
@@ -145,6 +165,7 @@ function GuitarFretboard({
             <svg
               viewBox={`0 0 ${width} ${height}`}
               role="group"
+              onKeyDown={shapeRoving.onKeyDown}
               aria-label={`${chordName} guitar shape, frets ${voicing.frets
                 .map((fret) => (fret < 0 ? "x" : fret))
                 .join(" ")}`}
@@ -261,8 +282,8 @@ function GuitarFretboard({
                     height={height}
                     className="fretboard-hit"
                     role="button"
-                    tabIndex={0}
-                    aria-label={`Pluck ${STRING_LABELS[string]} string, ${formatNoteForDisplay(noteAt(string, fret))}`}
+                    {...shapeRoving.itemProps(`s${string}`)}
+                    aria-label={`Pluck ${STRING_LABELS[string]} string, ${formatNoteForDisplay(noteAt(string, fret))}${roleOf((STANDARD_TUNING[string] + fret) % 12)}`}
                     onClick={() => pluck(string, fret)}
                     onKeyDown={pluckKeys(string, fret)}
                   />
@@ -354,6 +375,7 @@ function GuitarFretboard({
           <svg
             viewBox={`0 0 ${NECK_FRETS * 52 + 50} ${5 * 26 + 56}`}
             role="group"
+            onKeyDown={neckRoving.onKeyDown}
             aria-label={`Every ${chordName} note on the neck`}
           >
             {Array.from({ length: NECK_FRETS + 1 }, (_, fret) => (
@@ -419,8 +441,8 @@ function GuitarFretboard({
                         key={`neck-dot-${string}-${fret}`}
                         className="fretboard-clickable"
                         role="button"
-                        tabIndex={0}
-                        aria-label={`Pluck ${formatNoteForDisplay(noteAt(string, fret))}`}
+                        {...neckRoving.itemProps(`n${string}-${fret}`)}
+                        aria-label={`Pluck ${formatNoteForDisplay(noteAt(string, fret))}, ${STRING_LABELS[string]} string, fret ${fret}${roleOf(pc)}`}
                         onClick={() => pluck(string, fret)}
                         onKeyDown={pluckKeys(string, fret)}
                       >

@@ -86,7 +86,7 @@ export function WhyChordPanel({
   return (
     <section className="inline-builder why-panel" aria-label={`Why chord ${chordNumber}?`}>
       <div className="inline-builder-head">
-        <p className="eyebrow">WHY THIS CHORD? · CHORD {chordNumber}</p>
+        <h3 className="eyebrow">Why this chord? · chord {chordNumber}</h3>
 
         <button type="button" className="slot-btn" aria-label="Close the chord explainer" onClick={onClose}>
           ×

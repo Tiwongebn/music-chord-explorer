@@ -23,6 +23,33 @@
   --display: "Unbounded", "Futura", system-ui, sans-serif;
   --mono: "Azeret Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
+  /* Type scale. Nothing smaller than --text-2xs, which is
+     kept for the piano's black-key and octave labels where
+     space is tight; everything else starts at 12px. */
+  --text-2xs: 0.7rem;    /* 11.2px */
+  --text-xs: 0.75rem;    /* 12px: labels, chips, captions */
+  --text-sm: 0.8rem;     /* 12.8px: hints, secondary text */
+  --text-md: 0.875rem;   /* 14px: controls */
+  --text-base: 0.9375rem;/* 15px: body */
+
+  /* Semantic colors. Use these in new rules. --line and
+     --line-strong are for borders and dividers only: they
+     fail contrast as text (1.3:1 and 2.0:1). */
+  --text-primary: var(--fg);      /* 15.7:1 on --night */
+  --text-secondary: var(--muted); /* 6.3:1 on --night */
+  --text-accent: var(--amber);    /* 10.6:1 on --night */
+  --surface: var(--night);
+  --surface-raised: var(--night-raised);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --focus-ring: var(--amber);
+
+  /* Each musical state has a non-color cue too:
+     chord tone  = amber + dot          (piano)
+     guide tone  = mint + diamond       (piano), dashed ring (guitar)
+     your pick   = pink + inset ring    (piano)
+     root        = amber + double ring  (guitar) */
+
   color-scheme: dark;
 }
 
@@ -36,7 +63,7 @@ body {
   min-height: 100vh;
   background: var(--night);
   color: var(--fg);
-  font: 400 15px/1.6 var(--mono);
+  font: 400 var(--text-base)/1.6 var(--mono);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -57,7 +84,7 @@ input:focus-visible,
 summary:focus-visible,
 a:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -130,11 +157,11 @@ kbd {
 .builder-group h4 {
   margin: 0;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .eyebrow {
@@ -150,8 +177,8 @@ kbd {
 .prog-key-label,
 .progression-templates-hint,
 .builder-bar-hint {
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
   line-height: 1.6;
 }
 
@@ -166,7 +193,7 @@ kbd {
   border-radius: 999px;
   background: var(--amber);
   color: var(--night);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -205,8 +232,8 @@ kbd {
   border-radius: 0;
   background: none;
   box-shadow: none;
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -270,8 +297,8 @@ kbd {
   padding: 0.45rem 0.35rem;
   border: none;
   background: none;
-  color: var(--muted);
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
   transition:
     color 0.2s ease,
     text-shadow 0.2s ease;
@@ -298,7 +325,7 @@ kbd {
   border: none;
   border-bottom: 1px solid transparent;
   background: none;
-  color: var(--muted);
+  color: var(--text-secondary);
   transition:
     color 0.15s ease,
     border-color 0.15s ease;
@@ -351,7 +378,7 @@ select optgroup {
   border: none;
   border-radius: 50%;
   background: none;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 1rem;
   letter-spacing: 0;
   text-transform: none;
@@ -396,8 +423,8 @@ select optgroup {
   padding: 0.4rem 0;
   border: none;
   background: none;
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   transition:
@@ -421,8 +448,8 @@ select optgroup {
   padding: 0.4rem 0;
   border: none;
   background: none;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .sound-toggle::before {
@@ -462,8 +489,8 @@ select optgroup {
   padding: 0.4rem 0;
   border: none;
   background: none;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .metronome-toggle:hover,
@@ -523,7 +550,7 @@ select optgroup {
   border-radius: 999px;
   background: var(--amber);
   color: var(--night);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -563,9 +590,9 @@ select optgroup {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.16em;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .metronome-bpm-value input {
@@ -592,7 +619,7 @@ select optgroup {
   border-radius: 999px;
   background: none;
   color: var(--fg);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   touch-action: manipulation;
@@ -638,8 +665,8 @@ select optgroup {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8rem;
-  color: var(--muted);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -857,13 +884,13 @@ select optgroup {
 }
 
 .interval-name {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   color: var(--fg);
 }
 
 .semitone-value {
-  font-size: 0.72rem;
-  color: var(--muted);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .structure {
@@ -872,8 +899,8 @@ select optgroup {
   justify-content: center;
   gap: 6px 28px;
   margin-top: 36px;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   text-align: center;
 }
 
@@ -972,7 +999,7 @@ select optgroup {
   border-top: none;
   border-radius: 0 0 5px 5px;
   background: #0c0a12;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .piano-key.white:hover {
@@ -1017,18 +1044,18 @@ select optgroup {
 
 .key-label {
   pointer-events: none;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
 .piano-key.black .key-label {
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
 }
 
 .octave-label {
   position: absolute;
   bottom: 38px;
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
 }
 
 /* Chord tones get a dot and guide tones a diamond near the
@@ -1128,6 +1155,9 @@ select optgroup {
 
 .fretboard-dot.guide {
   fill: var(--mint);
+  stroke: var(--night);
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
 }
 
 .fretboard-open.guide {
@@ -1153,11 +1183,11 @@ select optgroup {
 .scale-hints-rows h2 {
   margin: 0;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .scale-hints-name {
@@ -1174,8 +1204,8 @@ select optgroup {
 
 .scale-hints-aka {
   font-family: var(--mono);
-  font-size: 0.9rem;
-  color: var(--muted);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
 }
 
 .scale-hints-sound {
@@ -1185,7 +1215,7 @@ select optgroup {
 }
 
 .scale-hints-picker .seg {
-  font-size: 0.85rem;
+  font-size: var(--text-md);
 }
 
 /* Role colours, shared by the note chips, the mini piano
@@ -1218,8 +1248,8 @@ select optgroup {
 }
 
 .scale-note-degree {
-  font-size: 0.75rem;
-  color: var(--muted);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .scale-note-name {
@@ -1264,8 +1294,8 @@ select optgroup {
   margin: -6px 0 0;
   padding: 0;
   list-style: none;
-  font-size: 0.8rem;
-  color: var(--muted);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .scale-hints-legend li {
@@ -1308,7 +1338,7 @@ select optgroup {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   font-weight: 500;
 }
 
@@ -1333,7 +1363,7 @@ select optgroup {
   border-radius: 0 0 4px 4px;
   background: #0c0a12;
   color: var(--fg);
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
 }
 
 .scale-piano-white.on.role-scale {
@@ -1439,7 +1469,7 @@ select optgroup {
 
 .scale-hints-tips p {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .scale-hints-tips strong {
@@ -1451,8 +1481,8 @@ select optgroup {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.85rem;
-  color: var(--muted);
+  font-size: var(--text-md);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -1497,7 +1527,7 @@ select optgroup {
 }
 
 .scale-row:hover {
-  border-color: var(--muted);
+  border-color: var(--text-secondary);
 }
 
 .scale-row.active {
@@ -1506,16 +1536,16 @@ select optgroup {
 
 .scale-row-chord {
   font-family: var(--display);
-  font-size: 0.95rem;
+  font-size: var(--text-base);
 }
 
 .scale-row-scale {
-  font-size: 0.8rem;
-  color: var(--muted);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .scale-row-guides {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--mint);
 }
 
@@ -1551,12 +1581,12 @@ select optgroup {
   margin-top: -48px;
   padding-top: 24px;
   border-top: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .chord-analyzer > p {
   margin: 10px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--text-md);
 }
 
 .detected-chord {
@@ -1587,7 +1617,7 @@ select optgroup {
 .inversion {
   margin: 0;
   color: var(--mint);
-  font-size: 0.85rem;
+  font-size: var(--text-md);
 }
 
 .analyzed-notes {
@@ -1622,8 +1652,8 @@ select optgroup {
   margin: 18px 0 0;
   padding: 0;
   list-style: none;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
   line-height: 1.6;
 }
 
@@ -1661,7 +1691,7 @@ select optgroup {
   align-items: center;
   gap: 8px;
   padding: 0.4rem 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: color 0.15s ease;
 }
@@ -1744,12 +1774,12 @@ select optgroup {
 
 .inline-builder-notes {
   color: var(--fg);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
 }
 
 .inline-builder-intervals {
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   line-height: 1.5;
 }
 
@@ -1809,8 +1839,8 @@ select optgroup {
 .sub-intro p {
   flex: 1 1 280px;
   margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 
@@ -1821,7 +1851,7 @@ select optgroup {
 .sub-applied {
   margin: 16px 0 0;
   color: var(--mint);
-  font-size: 0.85rem;
+  font-size: var(--text-md);
 }
 
 .sub-undo {
@@ -1863,7 +1893,7 @@ select optgroup {
 
 .sub-kind {
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1888,14 +1918,14 @@ select optgroup {
 }
 
 .sub-notes {
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 .sub-explanation {
   margin: 0;
   color: var(--fg);
-  font-size: 0.88rem;
+  font-size: var(--text-md);
   line-height: 1.55;
 }
 
@@ -1950,7 +1980,7 @@ select optgroup {
   align-items: center;
   gap: 6px;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1969,7 +1999,7 @@ select optgroup {
 .role-tension { color: var(--rose); }
 .role-detour { color: var(--amber); }
 .role-borrowed { color: var(--lilac); }
-.role-colour { color: var(--muted); }
+.role-colour { color: var(--text-secondary); }
 
 .why-head {
   display: flex;
@@ -1987,8 +2017,8 @@ select optgroup {
 
 .why-roman,
 .why-key {
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
 }
 
 .why-key strong {
@@ -2006,7 +2036,7 @@ select optgroup {
 .why-context {
   margin: 8px 0 0;
   color: var(--fg);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   line-height: 1.55;
 }
 
@@ -2019,13 +2049,13 @@ select optgroup {
 }
 
 .why-context {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .why-theory {
   margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
 }
 
@@ -2053,8 +2083,8 @@ select optgroup {
   align-items: center;
   gap: 6px 10px;
   margin: 16px 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 .why-foot .why-legend {
@@ -2166,7 +2196,7 @@ select optgroup {
 
 .tempo-value {
   min-width: 64px;
-  font-size: 0.85rem;
+  font-size: var(--text-md);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -2191,12 +2221,12 @@ select optgroup {
 }
 
 .scale-note-degree {
-  color: var(--muted);
-  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-size: var(--text-2xs);
 }
 
 .scale-note-name {
-  font-size: 0.95rem;
+  font-size: var(--text-base);
 }
 
 .glossary-toggle {
@@ -2221,8 +2251,8 @@ select optgroup {
 
 .glossary-entry dd {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
   line-height: 1.6;
 }
 
@@ -2260,8 +2290,8 @@ select optgroup {
 }
 
 .degree-roman {
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .degree-chord-name {
@@ -2273,13 +2303,13 @@ select optgroup {
 }
 
 .degree-notes {
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 .degree-function {
   margin-top: 4px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -2321,8 +2351,8 @@ select optgroup {
 .harmony-hint {
   max-width: 70ch;
   margin-bottom: 18px;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
   line-height: 1.7;
 }
 
@@ -2340,8 +2370,8 @@ select optgroup {
   flex-wrap: wrap;
   gap: 8px 24px;
   margin-bottom: 0;
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -2390,7 +2420,7 @@ select optgroup {
 }
 
 .template-play {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .relation-chip,
@@ -2401,7 +2431,7 @@ select optgroup {
   gap: 6px;
   margin-left: 4px;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2438,9 +2468,9 @@ select optgroup {
 
 .beats-chip {
   margin-left: 4px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   vertical-align: middle;
 }
 
@@ -2449,8 +2479,12 @@ select optgroup {
     SEARCH & FIND + SONG LOOKUP
 ========================= */
 
+/* Find a progression now opens the page: a starting point,
+   then the key picker and builder below it. */
 .search-panel {
-  margin-top: 112px;
+  margin-top: 48px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--line);
 }
 
 /* The progression sits right under the chords it is built
@@ -2470,7 +2504,7 @@ select optgroup {
   margin: 0 0 14px;
   color: var(--amber);
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -2484,14 +2518,14 @@ select optgroup {
   height: 22px;
   border: 1px solid var(--amber);
   border-radius: 50%;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0;
   box-shadow: 0 0 10px var(--amber-glow);
 }
 
 .search-panel h2 {
   margin: 10px 0 18px;
-  font: 300 clamp(2rem, 4.5vw, 3rem)/1.05 var(--display);
+  font: 300 clamp(1.5rem, 3vw, 2rem)/1.1 var(--display);
   letter-spacing: -0.03em;
 }
 
@@ -2531,7 +2565,7 @@ select optgroup {
 }
 
 .search-input::placeholder {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .search-input:focus-visible {
@@ -2550,8 +2584,8 @@ select optgroup {
   padding: 0.25rem 0;
   border: none;
   background: none;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   text-decoration: underline dotted var(--line-strong);
   text-underline-offset: 4px;
   transition: color 0.15s ease;
@@ -2600,14 +2634,14 @@ select optgroup {
 
 .search-romans {
   margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .search-description {
   margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
 
@@ -2617,16 +2651,16 @@ select optgroup {
 
 .song-artist {
   margin: 2px 0 8px;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .song-key {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -2634,7 +2668,7 @@ select optgroup {
 .song-key select {
   min-width: 0;
   padding: 0.2rem 1.6rem 0.2rem 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -2671,8 +2705,8 @@ select optgroup {
 
 .standard-level-title {
   margin: 0;
-  color: var(--muted);
-  font: 500 0.75rem/1.4 var(--mono);
+  color: var(--text-secondary);
+  font: 500 var(--text-xs)/1.4 var(--mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -2712,19 +2746,19 @@ select optgroup {
 
 .standard-chord-name {
   white-space: nowrap;
-  font: 500 0.95rem/1.25 var(--display);
+  font: 500 var(--text-base)/1.25 var(--display);
 }
 
 .standard-chord-roman {
   margin-top: 2px;
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 .standard-built-on {
   margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   line-height: 1.5;
 }
 
@@ -2734,15 +2768,15 @@ select optgroup {
   }
 
   .standard-chord-name {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
   }
 }
 
 .song-missing {
   max-width: 62ch;
   margin-top: 18px;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
 }
 
 .song-missing p {
@@ -2790,8 +2824,8 @@ select optgroup {
 }
 
 .saved-card-key {
-  color: var(--muted);
-  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-size: var(--text-2xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -2805,8 +2839,8 @@ select optgroup {
 
 .saved-card-time-signature {
   margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-size: var(--text-2xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -2831,15 +2865,15 @@ select optgroup {
 
 .builder-help {
   margin: 0 0 24px;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
 }
 
 .builder-help summary {
   width: fit-content;
   cursor: pointer;
   color: var(--fg);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -2913,8 +2947,8 @@ select optgroup {
   left: 18px;
   padding: 0 4px;
   background: var(--night);
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   z-index: 1;
 }
 
@@ -2954,8 +2988,8 @@ button.builder-slot-chord:hover,
 }
 
 .builder-slot-roman {
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 .builder-slot-actions,
@@ -2968,8 +3002,8 @@ button.builder-slot-chord:hover,
 
 .beats-value {
   min-width: 46px;
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   text-align: center;
   white-space: nowrap;
 }
@@ -2984,8 +3018,8 @@ button.builder-slot-chord:hover,
   border: none;
   border-radius: 50%;
   background: none;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   transition:
     color 0.15s ease,
     background 0.15s ease;
@@ -3017,13 +3051,13 @@ button.builder-slot-chord:hover,
 }
 
 .builder-slot-chord.rest {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 1.4rem;
 }
 
 .builder-bar-hint {
   margin: 0 0 24px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 .builder-actions {
@@ -3041,8 +3075,8 @@ button.builder-slot-chord:hover,
   margin-left: auto;
   align-items: center;
   gap: 10px;
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -3056,7 +3090,7 @@ button.builder-slot-chord:hover,
 .builder-sound select {
   min-width: 0;
   padding: 0.2rem 1.6rem 0.2rem 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -3067,7 +3101,7 @@ button.builder-slot-chord:hover,
   padding: 0.35rem 0;
   background: none;
   box-shadow: none;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .builder-actions .loop-btn:hover:not(:disabled) {
@@ -3115,7 +3149,7 @@ button.builder-slot-chord:hover,
 }
 
 .builder-save-input::placeholder {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .builder-save-input:focus {
@@ -3198,8 +3232,13 @@ button.builder-slot-chord:hover,
   transition: filter 0.15s ease;
 }
 
+/* Root and guide tones differ by outline as well as color:
+   a double ring for the root, a dashed ring for guide tones. */
 .fretboard-dot.root {
   fill: var(--amber);
+  stroke: var(--fg);
+  stroke-width: 2.5;
+  paint-order: stroke;
   filter: drop-shadow(0 0 6px rgba(255, 181, 71, 0.6));
 }
 
@@ -3254,18 +3293,18 @@ button.builder-slot-chord:hover,
 .jazz-voicings h2 {
   margin: 0;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .jazz-intro,
 .jazz-borrowed {
   max-width: 68ch;
   margin: 0 0 12px;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   line-height: 1.7;
 }
 
@@ -3276,7 +3315,7 @@ button.builder-slot-chord:hover,
 
 .jazz-borrowed {
   color: var(--lilac);
-  font-size: 0.85rem;
+  font-size: var(--text-md);
 }
 
 .jazz-grid {
@@ -3343,12 +3382,12 @@ button.builder-slot-chord:hover,
   flex-wrap: wrap;
   gap: 4px 18px;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
 }
 
 .jazz-degree {
   color: var(--amber);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
 }
 
@@ -3479,7 +3518,7 @@ button.builder-slot-chord:hover,
   }
 
   .degree-function {
-    font-size: 0.7rem;
+    font-size: var(--text-2xs);
     letter-spacing: 0.06em;
   }
 
@@ -3512,7 +3551,7 @@ button.builder-slot-chord:hover,
 
   .control-group-chevron {
     display: inline-block;
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
   }
 
   .control-group-content {
@@ -3577,7 +3616,7 @@ button.builder-slot-chord:hover,
 .tab.tab-roman {
   text-transform: none;
   letter-spacing: 0.08em;
-  font-size: 0.85rem;
+  font-size: var(--text-md);
 }
 
 .trainer-panel {
@@ -3595,7 +3634,7 @@ button.builder-slot-chord:hover,
 
 .trainer-intro .eyebrow {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   letter-spacing: 0.1em;
   text-transform: none;
 }
@@ -3615,7 +3654,7 @@ button.builder-slot-chord:hover,
 }
 
 .trainer-key-chords {
-  font: 400 0.95rem/1.4 var(--mono);
+  font: 400 var(--text-base)/1.4 var(--mono);
   color: var(--amber);
   white-space: pre-wrap;
 }
@@ -3708,7 +3747,7 @@ button.builder-slot-chord:hover,
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.85rem;
+  font-size: var(--text-md);
   cursor: pointer;
 }
 
@@ -3725,8 +3764,8 @@ button.builder-slot-chord:hover,
   margin: 0;
   padding: 0;
   list-style: none;
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
 }
 
 .trainer-run-key.is-current {
@@ -3812,8 +3851,8 @@ button.builder-slot-chord:hover,
   flex-wrap: wrap;
   gap: 6px 22px;
   margin-top: 10px;
-  color: var(--muted);
-  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .vl-key::before {
@@ -3867,8 +3906,8 @@ button.builder-slot-chord:hover,
 }
 
 .trainer-roman {
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
 }
 
 .trainer-symbol {
@@ -3882,7 +3921,7 @@ button.builder-slot-chord:hover,
 
 .trainer-form {
   color: var(--lilac);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: help;
@@ -3932,7 +3971,7 @@ button.builder-slot-chord:hover,
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
 }
 
 .trainer-voices li {
@@ -3946,8 +3985,8 @@ button.builder-slot-chord:hover,
 
 .trainer-voices small,
 .trainer-move-notes small {
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 .trainer-voices .is-bass {
@@ -3967,7 +4006,7 @@ button.builder-slot-chord:hover,
 }
 
 .trainer-card-foot .hint {
-  font-size: 0.78rem;
+  font-size: var(--text-sm);
 }
 
 /* Move list */
@@ -3983,8 +4022,8 @@ button.builder-slot-chord:hover,
 
 .trainer-move-summary {
   margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .trainer-move ul {
@@ -3994,7 +4033,7 @@ button.builder-slot-chord:hover,
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.88rem;
+  font-size: var(--text-md);
 }
 
 .trainer-move li {
@@ -4014,7 +4053,7 @@ button.builder-slot-chord:hover,
 .trainer-move-size {
   color: var(--amber);
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 900px) {
@@ -4061,8 +4100,8 @@ button.builder-slot-chord:hover,
 
 .jazz-heard-in {
   margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   font-style: italic;
   line-height: 1.5;
 }
@@ -4091,7 +4130,7 @@ button.builder-slot-chord:hover,
 .band-head h2 {
   margin: 0 0 4px;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -4135,8 +4174,8 @@ button.builder-slot-chord:hover,
 }
 
 .band-tempo-value small {
-  color: var(--muted);
-  font: 400 0.75rem/1 var(--mono);
+  color: var(--text-secondary);
+  font: 400 var(--text-xs)/1 var(--mono);
   letter-spacing: 0.12em;
 }
 
@@ -4182,23 +4221,23 @@ button.builder-slot-chord:hover,
 
 .band-chord.is-next strong {
   font-size: 1.25rem;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .band-label,
 .band-chorus {
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .band-scale {
-  font-size: 0.85rem;
+  font-size: var(--text-md);
 }
 
 .band-scale small {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .band-chorus {
@@ -4207,7 +4246,7 @@ button.builder-slot-chord:hover,
 
 .band-count {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .band-count strong {
@@ -4243,7 +4282,7 @@ button.builder-slot-chord:hover,
   max-width: 52ch;
   margin: 6px 0 4px;
   color: var(--fg);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -4256,11 +4295,68 @@ button.builder-slot-chord:hover,
   margin-top: 96px;
   padding-top: 20px;
   border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .site-footer p {
   max-width: 70ch;
   margin: 0;
+}
+
+
+/* =========================
+    EXPLORE "ON THIS PAGE" BAR
+    Sticks to the top while you scroll Explore. Section
+    targets get scroll-margin so the bar never covers the
+    heading (or the focused element, WCAG 2.4.11).
+========================= */
+
+.jump-bar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  margin: 28px -12px 0;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--night) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+
+.jump-bar ul {
+  display: flex;
+  gap: 4px 22px;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.jump-bar a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jump-bar a:hover {
+  color: var(--amber);
+}
+
+[id^="explore-"] {
+  scroll-margin-top: 64px;
+}
+
+html {
+  scroll-padding-top: 56px;
+}
+
+[id^="explore-"]:focus {
+  outline: none;
 }
