@@ -75,6 +75,7 @@ import type { Song } from "../data/songs";
 import ChordBuilder from "./ChordBuilder";
 import ProgressionScaleHints from "./ProgressionScaleHints";
 import BackingBand, { type BandChordInfo } from "./BackingBand";
+import HelpTip from "./HelpTip";
 import { useBackingBand } from "../hooks/useBackingBand";
 import SubstitutionPanel from "./SubstitutionPanel";
 import { WhyChordPanel } from "./WhyThisChord";
@@ -122,12 +123,35 @@ import {
 } from "../utils/savedProgressions";
 
 interface ChordProgressionsProps {
+  // False while another section is showing. The component
+  // stays mounted (so the progression survives) but stops
+  // anything it's playing.
+  active?: boolean;
   rootNote: string;
   accidentalPreference: AccidentalPreference;
   onRootChange: (note: string) => void;
   onAccidentalPreferenceChange: (
     preference: AccidentalPreference
   ) => void;
+}
+
+// Moves focus into a panel that just opened (editor, Why?,
+// substitutions) so keyboard and screen reader users land in
+// it instead of staying back on the slot button. Prefers the
+// panel's heading; falls back to the panel itself.
+function focusPanel(panel: HTMLElement | null) {
+  if (!panel) {
+    return;
+  }
+
+  const target =
+    panel.querySelector<HTMLElement>("h2, h3, h4, h5, h6") ?? panel;
+
+  if (!target.hasAttribute("tabindex")) {
+    target.setAttribute("tabindex", "-1");
+  }
+
+  target.focus({ preventScroll: true });
 }
 
 const functionClass: Record<string, string> = {
@@ -223,6 +247,7 @@ const relationClass: Record<ChordKeyRelation, string> = {
 };
 
 function ChordProgressions({
+  active = true,
   rootNote,
   accidentalPreference,
   onRootChange,
@@ -414,6 +439,7 @@ function ChordProgressions({
       behavior: "smooth",
       block: "nearest",
     });
+    focusPanel(whyPanelRef.current);
   }, [whyOpenCount]);
 
   // The progression just before and just after the last
@@ -434,6 +460,7 @@ function ChordProgressions({
       behavior: "smooth",
       block: "nearest",
     });
+    focusPanel(subPanelRef.current);
   }, [subOpenCount]);
 
   // Bring the builder into view whenever it opens on a new
@@ -448,6 +475,7 @@ function ChordProgressions({
       behavior: "smooth",
       block: "nearest",
     });
+    focusPanel(chordBuilderRef.current);
   }, [builderTargetId]);
 
   // The progression the user is composing: a plain list of
@@ -597,6 +625,20 @@ function ChordProgressions({
   // Play-along band: loops the builder's chords with a
   // walking bass, comping and drums for soloing practice.
   const band = useBackingBand();
+
+  // Hidden behind another section: stop the loop and the band
+  // so nothing keeps playing out of sight.
+  const stopBand = band.stop;
+  useEffect(() => {
+    if (!active) {
+      loopHandleRef.current?.stop();
+      // Clearing the handle is the point: the section is
+      // hidden and its Loop button must read as stopped.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoopHandle(null);
+      stopBand();
+    }
+  }, [active, stopBand]);
 
   const bandChords: BandChordInfo[] = builderChords.map((chord) => {
     const shape =
@@ -1382,7 +1424,7 @@ function ChordProgressions({
     <section className="panel progressions-panel">
       <div className="progressions-header">
         <p className="eyebrow">HARMONY MAP · SKETCHPAD</p>
-        <h2>Chord Progressions</h2>
+        <h1>Chord Progressions</h1>
         <p className="subtitle-left">
           Pick a key, tap <strong>+ Add</strong> on its
           chords (or build any chord you like), and your
@@ -1687,19 +1729,14 @@ function ChordProgressions({
             }
           >
           <div className="selector-group">
-            <label
-              className="selector-label"
-              htmlFor="prog-sound"
-            >
-              Sound
-              <span
-                className="help-icon"
-                tabIndex={0}
-                title="Which instrument plays your chords and progressions. Guitars play real chord shapes, so pair them with a Strum pattern below for a strummed feel."
-              >
-                ⓘ
-              </span>
-            </label>
+            <div className="label-row">
+              <label className="selector-label" htmlFor="prog-sound">
+                Sound
+              </label>
+              <HelpTip label="Sound">
+                {"Which instrument plays your chords and progressions. Guitars play real chord shapes, so pair them with a Strum pattern below for a strummed feel."}
+              </HelpTip>
+            </div>
 
             <select
               id="prog-sound"
@@ -1717,19 +1754,14 @@ function ChordProgressions({
           </div>
 
           <div className="selector-group tempo-group">
-            <label
-              className="selector-label"
-              htmlFor="prog-tempo"
-            >
-              Tempo
-              <span
-                className="help-icon"
-                tabIndex={0}
-                title="Controls how fast the progression plays, in beats per minute (BPM). Drag right for faster, left for slower."
-              >
-                ⓘ
-              </span>
-            </label>
+            <div className="label-row">
+              <label className="selector-label" htmlFor="prog-tempo">
+                Tempo
+              </label>
+              <HelpTip label="Tempo">
+                {"Controls how fast the progression plays, in beats per minute (BPM). Drag right for faster, left for slower."}
+              </HelpTip>
+            </div>
 
             <div className="tempo-control">
               <input
@@ -1780,19 +1812,14 @@ function ChordProgressions({
           </div>
 
           <div className="selector-group">
-            <span
-              className="selector-label"
-              id="prog-groove-label"
-            >
-              Groove
-              <span
-                className="help-icon"
-                tabIndex={0}
-                title="Swing adds a loose, shuffled triplet feel to the rhythm — like jazz or blues — instead of a straight, even beat."
-              >
-                ⓘ
+            <div className="label-row">
+              <span className="selector-label" id="prog-groove-label">
+                Groove
               </span>
-            </span>
+              <HelpTip label="Groove">
+                {"Swing adds a loose, shuffled triplet feel to the rhythm — like jazz or blues — instead of a straight, even beat."}
+              </HelpTip>
+            </div>
 
             <div
               className="segmented"
@@ -1813,19 +1840,14 @@ function ChordProgressions({
           </div>
 
           <div className="selector-group">
-            <label
-              className="selector-label"
-              htmlFor="prog-accents"
-            >
-              Accents
-              <span
-                className="help-icon"
-                tabIndex={0}
-                title="Emphasizes (plays louder) certain beats to create rhythmic variation — e.g. the first beat of every chord, or just the first beat of every bar."
-              >
-                ⓘ
-              </span>
-            </label>
+            <div className="label-row">
+              <label className="selector-label" htmlFor="prog-accents">
+                Accents
+              </label>
+              <HelpTip label="Accents">
+                {"Emphasizes (plays louder) certain beats to create rhythmic variation — e.g. the first beat of every chord, or just the first beat of every bar."}
+              </HelpTip>
+            </div>
 
             <select
               id="prog-accents"
@@ -1851,19 +1873,14 @@ function ChordProgressions({
           </div>
 
           <div className="selector-group">
-            <label
-              className="selector-label"
-              htmlFor="prog-pattern"
-            >
-              Pattern
-              <span
-                className="help-icon"
-                tabIndex={0}
-                title="Choose how notes within each chord are played — e.g. all at once, strummed, arpeggiated (one at a time), or syncopated — to change the rhythmic feel."
-              >
-                ⓘ
-              </span>
-            </label>
+            <div className="label-row">
+              <label className="selector-label" htmlFor="prog-pattern">
+                Pattern
+              </label>
+              <HelpTip label="Pattern">
+                {"Choose how notes within each chord are played — e.g. all at once, strummed, arpeggiated (one at a time), or syncopated — to change the rhythmic feel."}
+              </HelpTip>
+            </div>
 
             <select
               id="prog-pattern"
@@ -1883,10 +1900,10 @@ function ChordProgressions({
 
       </div>
 
-      <h3 className="step-label">
-        <span className="step-number">1</span>
+      <h2 className="step-label">
+        <span className="step-number" aria-hidden="true">1</span>
         Chords in this key
-      </h3>
+      </h2>
 
       <p className="prog-key-label">
         Key of <strong>{displayKeyRoot} {scaleType}</strong>
@@ -1902,6 +1919,7 @@ function ChordProgressions({
           scale degree, before any chords are built on them. */}
       <div
         className="scale-strip"
+        role="group"
         aria-label={`Notes of the ${displayKeyRoot} ${scaleType} scale`}
       >
         {scaleChords.map((chord) => (
@@ -2054,10 +2072,10 @@ function ChordProgressions({
       >
         <div className="builder-panel-header">
           <div className="builder-panel-header-top">
-            <h3 className="step-label">
-              <span className="step-number">2</span>
+            <h2 className="step-label">
+              <span className="step-number" aria-hidden="true">2</span>
               Your progression
-            </h3>
+            </h2>
 
             <button
               type="button"
@@ -2203,7 +2221,7 @@ function ChordProgressions({
                         <button
                           type="button"
                           className="slot-btn"
-                          aria-label="Fewer beats"
+                          aria-label={`Fewer beats for chord ${index + 1}`}
                           disabled={chord.beats <= minBeats}
                           onClick={() =>
                             handleSetChordBeats(
@@ -2232,7 +2250,7 @@ function ChordProgressions({
                         <button
                           type="button"
                           className="slot-btn"
-                          aria-label="More beats"
+                          aria-label={`More beats for chord ${index + 1}`}
                           disabled={chord.beats >= maxBeats}
                           onClick={() =>
                             handleSetChordBeats(
@@ -2298,6 +2316,11 @@ function ChordProgressions({
                               ? "Convert to chord"
                               : "Convert to rest"
                           }
+                          aria-label={
+                            isRest
+                              ? `Turn rest ${index + 1} back into a chord`
+                              : `Turn chord ${index + 1} into a rest`
+                          }
                           onClick={() =>
                             handleToggleRest(index)
                           }
@@ -2308,7 +2331,7 @@ function ChordProgressions({
                         <button
                           type="button"
                           className="slot-btn"
-                          aria-label="Move left"
+                          aria-label={`Move chord ${index + 1} left`}
                           disabled={index === 0}
                           onClick={() =>
                             handleMoveBuilderChord(
@@ -2323,7 +2346,7 @@ function ChordProgressions({
                         <button
                           type="button"
                           className="slot-btn"
-                          aria-label="Move right"
+                          aria-label={`Move chord ${index + 1} right`}
                           disabled={isLast}
                           onClick={() =>
                             handleMoveBuilderChord(
@@ -2338,7 +2361,7 @@ function ChordProgressions({
                         <button
                           type="button"
                           className="slot-btn slot-remove"
-                          aria-label="Remove chord"
+                          aria-label={`Remove chord ${index + 1}`}
                           onClick={() =>
                             handleRemoveFromBuilder(index)
                           }
@@ -2568,7 +2591,14 @@ function ChordProgressions({
         />
 
         <div className="builder-save-row">
+          <label
+            className="visually-hidden"
+            htmlFor="builder-save-name"
+          >
+            Progression name
+          </label>
           <input
+            id="builder-save-name"
             type="text"
             className="builder-save-input"
             placeholder="Name this progression…"
@@ -2593,7 +2623,7 @@ function ChordProgressions({
 
         {savedProgressions.length > 0 && (
           <div className="saved-progressions">
-            <h4>Your saved progressions</h4>
+            <h3>Your saved progressions</h3>
 
             <div className="saved-list">
               {savedProgressions.map((saved) => (
@@ -2694,7 +2724,7 @@ function ChordProgressions({
       {/* SEARCH & FIND */}
       <section className="panel search-panel">
         <p className="eyebrow">NEED A STARTING POINT?</p>
-        <h3>Find a progression</h3>
+        <h2>Find a progression</h2>
 
         <div
           className="segmented search-mode"
@@ -2767,7 +2797,7 @@ function ChordProgressions({
 
             {standardLevels.map((level) => (
               <div className="standard-level" key={level}>
-                <h4 className="standard-level-title">{level}</h4>
+                <h3 className="standard-level-title">{level}</h3>
                 <div className="saved-list search-results jazz-results standard-results">
                   {jazzStandards
                     .filter((standard) => standard.level === level)

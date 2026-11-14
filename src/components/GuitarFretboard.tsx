@@ -144,13 +144,13 @@ function GuitarFretboard({
           <div className="fretboard-shape">
             <svg
               viewBox={`0 0 ${width} ${height}`}
-              role="img"
+              role="group"
               aria-label={`${chordName} guitar shape, frets ${voicing.frets
                 .map((fret) => (fret < 0 ? "x" : fret))
                 .join(" ")}`}
             >
               {STRING_LABELS.map((label, string) => (
-                <text
+                <text aria-hidden="true"
                   key={`label-${string}`}
                   x={LEFT + string * STRING_GAP}
                   y={14}
@@ -188,7 +188,7 @@ function GuitarFretboard({
               ))}
 
               {voicing.baseFret > 1 && (
-                <text
+                <text aria-hidden="true"
                   x={LEFT - 12}
                   y={TOP + FRET_GAP / 2 + 5}
                   textAnchor="end"
@@ -239,7 +239,7 @@ function GuitarFretboard({
                             : "fretboard-dot"
                       }
                     />
-                    <text
+                    <text aria-hidden="true"
                       x={x}
                       y={TOP + row * FRET_GAP + FRET_GAP / 2 + 4}
                       textAnchor="middle"
@@ -353,7 +353,7 @@ function GuitarFretboard({
         <div className="fretboard-neck">
           <svg
             viewBox={`0 0 ${NECK_FRETS * 52 + 50} ${5 * 26 + 56}`}
-            role="img"
+            role="group"
             aria-label={`Every ${chordName} note on the neck`}
           >
             {Array.from({ length: NECK_FRETS + 1 }, (_, fret) => (
@@ -368,7 +368,7 @@ function GuitarFretboard({
                   }
                 />
                 {fret > 0 && (
-                  <text
+                  <text aria-hidden="true"
                     x={40 + fret * 52 - 26}
                     y={20 + 5 * 26 + 24}
                     textAnchor="middle"
@@ -387,7 +387,7 @@ function GuitarFretboard({
 
               return (
                 <g key={`neck-string-${string}`}>
-                  <text
+                  <text aria-hidden="true"
                     x={7}
                     y={y + 4}
                     textAnchor="middle"
@@ -436,7 +436,7 @@ function GuitarFretboard({
                                 : "fretboard-dot"
                           }
                         />
-                        <text
+                        <text aria-hidden="true"
                           x={x}
                           y={y + 4}
                           textAnchor="middle"

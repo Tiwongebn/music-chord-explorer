@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useMetronome } from "../hooks/useMetronome";
 import { timeSignatures } from "../data/rhythm";
@@ -18,6 +18,36 @@ import {
 function Metronome() {
   const metronome = useMetronome();
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  // The panel floats over the page, so let Escape and a
+  // click elsewhere close it, like any other popover.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [open]);
 
   const {
     bpm,
@@ -43,8 +73,9 @@ function Metronome() {
     ) ?? timeSignatures[0];
 
   return (
-    <div className="metronome">
+    <div className="metronome" ref={rootRef}>
       <button
+        ref={toggleRef}
         type="button"
         className={
           isRunning

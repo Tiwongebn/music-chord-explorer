@@ -98,9 +98,9 @@ function ChordBuilder({
       aria-label={isEditing ? `Edit chord ${editingNumber}` : "Build a chord"}
     >
       <div className="inline-builder-head">
-        <p className="eyebrow">
-          {isEditing ? `EDIT CHORD ${editingNumber}` : "BUILD A CHORD"}
-        </p>
+        <h3 className="eyebrow">
+          {isEditing ? `Edit chord ${editingNumber}` : "Build a chord"}
+        </h3>
 
         <button
           type="button"
@@ -114,7 +114,7 @@ function ChordBuilder({
 
       {/* ROOT */}
       <div className="builder-group">
-        <h3 id="builder-root-label">Root</h3>
+        <h4 id="builder-root-label">Root</h4>
 
         <div
           className="root-pills"
@@ -138,7 +138,7 @@ function ChordBuilder({
       <div className="inline-builder-options">
         {/* QUALITY */}
         <div className="builder-group">
-          <h3>Quality</h3>
+          <h4>Quality</h4>
 
           <div className="builder-options">
             {chordQualities.map((item) => (
@@ -159,7 +159,7 @@ function ChordBuilder({
 
         {/* EXTENSIONS */}
         <div className="builder-group">
-          <h3>Extensions</h3>
+          <h4>Extensions</h4>
 
           <div className="builder-options">
             {chordExtensions.map((item) => (
@@ -182,7 +182,7 @@ function ChordBuilder({
 
         {/* ALTERATIONS */}
         <div className="builder-group">
-          <h3>Alterations</h3>
+          <h4>Alterations</h4>
 
           <div className="builder-options">
             {chordAlterations.map((item) => (

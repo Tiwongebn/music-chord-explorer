@@ -194,9 +194,10 @@ function TwoFiveOneTrainer() {
   return (
     <section className="panel trainer-panel">
       <header className="trainer-intro">
-        <p className="eyebrow trainer-eyebrow">ii–V–I trainer</p>
+        <h1 className="eyebrow trainer-eyebrow">ii–V–I trainer</h1>
         <h2 className="trainer-key">
           {display(tonic)} {mode}
+          <span className="visually-hidden">, </span>
           <span className="trainer-key-chords">
             {shown.chords.map((chord) => display(chord.symbol)).join("  ·  ")}
           </span>
