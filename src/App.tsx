@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type MouseEvent,
+} from "react";
 import "./App.css";
 
 import PianoKeyboard from "./components/PianoKeyboard";
@@ -79,6 +84,33 @@ const modes: { id: Mode; label: string }[] = [
   { id: "progressions", label: "Progressions" },
   { id: "trainer", label: "ii–V–I" },
 ];
+
+// Explore is long, so it gets an "On this page" jump bar.
+const exploreSections = [
+  { id: "explore-chord", label: "Chord" },
+  { id: "explore-piano", label: "Piano" },
+  { id: "explore-why", label: "Why" },
+  { id: "explore-scales", label: "Scales" },
+  { id: "explore-guitar", label: "Guitar" },
+  { id: "explore-jazz", label: "Jazz" },
+];
+
+// The URL hash holds the route, so jump links scroll and move
+// focus themselves instead of changing the address.
+const jumpTo =
+  (id: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const target = document.getElementById(id);
+    if (!target) return;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    if (!target.hasAttribute("tabindex")) {
+      target.setAttribute("tabindex", "-1");
+    }
+    target.focus({ preventScroll: true });
+  };
 
 function App() {
   const [mode, setModeState] = useState<Mode>(currentSection);
@@ -239,7 +271,11 @@ function App() {
 
   return (
     <>
-      <a className="skip-link" href="#main-content">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={jumpTo("main-content")}
+      >
         Skip to content
       </a>
 
@@ -294,8 +330,20 @@ function App() {
           {/* =========================
               TOP: PICK A CHORD + CHORD CARD
           ========================== */}
-          <div className="explore-wrapper">
-            <section className="panel explore-controls">
+          <nav className="jump-bar" aria-label="On this page">
+            <ul>
+              {exploreSections.map((item) => (
+                <li key={item.id}>
+                  <a href={`#${item.id}`} onClick={jumpTo(item.id)}>
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="explore-wrapper" id="explore-chord">
+            <section className="panel explore-controls" aria-label="Pick a chord">
               <h2>Pick a chord</h2>
 
               <ChordSelector
@@ -310,7 +358,7 @@ function App() {
               />
             </section>
 
-            <section className="panel chord-display-panel">
+            <section className="panel chord-display-panel" aria-label="Chord card">
               <ChordDisplay
                 chordName={chordName}
                 notes={chordNotes}
@@ -328,7 +376,7 @@ function App() {
           ========================== */}
           <div className="explore-stage">
 
-            <section className="panel piano-panel">
+            <section className="panel piano-panel" id="explore-piano" aria-label="Piano">
               <PianoKeyboard
                 chordNotes={chordNotes}
                 accidentalPreference={accidentalPreference}
@@ -349,7 +397,7 @@ function App() {
 
             {/* Why this chord? Its job in the keys it
                 lives in, and where it likes to go. */}
-            <section className="panel why-explore-panel">
+            <section className="panel why-explore-panel" id="explore-why" aria-label="Why this chord">
               <ChordRoles
                 chordName={chordName}
                 rootPitchClass={getPitchClass(rootNote)}
@@ -364,7 +412,7 @@ function App() {
 
             {/* Which scale to improvise over this chord,
                 and its guide tones. */}
-            <section className="panel scale-panel">
+            <section className="panel scale-panel" id="explore-scales" aria-label="Scales to improvise with">
               <ScaleHints
                 chordName={chordName}
                 root={displayedRootNote}
@@ -375,7 +423,7 @@ function App() {
               />
             </section>
 
-            <section className="panel guitar-panel">
+            <section className="panel guitar-panel" id="explore-guitar" aria-label="Guitar">
               <GuitarFretboard
                 chordName={chordName}
                 rootNote={rootNote}
@@ -385,7 +433,7 @@ function App() {
               />
             </section>
 
-            <section className="panel jazz-panel">
+            <section className="panel jazz-panel" id="explore-jazz" aria-label="Jazz voicings">
               <JazzVoicings
                 chordName={chordName}
                 rootNote={rootNote}
@@ -394,7 +442,7 @@ function App() {
               />
             </section>
 
-            <aside className="panel tips-card">
+            <aside className="panel tips-card" aria-label="Quick theory bites">
               <h2>Quick theory bites</h2>
 
               <ul className="tip-list">
