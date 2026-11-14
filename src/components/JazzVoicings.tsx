@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 import {
   analyzeJazzChord,
   guitarJazzVoicings,
@@ -92,6 +93,13 @@ function JazzVoicings({
   const guitarVoicing = guitar.length
     ? guitar[guitarIndex % guitar.length]
     : null;
+
+  // The diagram is one Tab stop; arrow keys move between strings.
+  const guitarRoving = useRovingFocus(
+    (guitarVoicing?.frets ?? []).flatMap((fret, string) =>
+      fret < 0 ? [] : [`s${string}`]
+    )
+  );
 
   const switchLevel = (next: Level) => {
     setLevel(next);
@@ -302,6 +310,7 @@ function JazzVoicings({
                 <svg
                   viewBox={`0 0 ${width} ${height}`}
                   role="group"
+                  onKeyDown={guitarRoving.onKeyDown}
                   aria-label={`${chordName} ${shapeName(guitarIndex % guitar.length)}, frets ${guitarVoicing.frets
                     .map((fret) => (fret < 0 ? "x" : fret))
                     .join(" ")}`}
@@ -414,7 +423,7 @@ function JazzVoicings({
                         height={height}
                         className="fretboard-hit"
                         role="button"
-                        tabIndex={0}
+                        {...guitarRoving.itemProps(`s${string}`)}
                         aria-label={`Pluck ${STRING_LABELS[string]} string, ${formatNoteForDisplay(noteAt(string, fret))}`}
                         onClick={() => pluck(string, fret)}
                         onKeyDown={(event) => {

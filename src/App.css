@@ -1128,6 +1128,9 @@ select optgroup {
 
 .fretboard-dot.guide {
   fill: var(--mint);
+  stroke: var(--night);
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
 }
 
 .fretboard-open.guide {
@@ -3202,8 +3205,13 @@ button.builder-slot-chord:hover,
   transition: filter 0.15s ease;
 }
 
+/* Root and guide tones differ by outline as well as color:
+   a double ring for the root, a dashed ring for guide tones. */
 .fretboard-dot.root {
   fill: var(--amber);
+  stroke: var(--fg);
+  stroke-width: 2.5;
+  paint-order: stroke;
   filter: drop-shadow(0 0 6px rgba(255, 181, 71, 0.6));
 }
 
