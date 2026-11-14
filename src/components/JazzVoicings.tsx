@@ -301,13 +301,13 @@ function JazzVoicings({
               <div className="jazz-guitar">
                 <svg
                   viewBox={`0 0 ${width} ${height}`}
-                  role="img"
+                  role="group"
                   aria-label={`${chordName} ${shapeName(guitarIndex % guitar.length)}, frets ${guitarVoicing.frets
                     .map((fret) => (fret < 0 ? "x" : fret))
                     .join(" ")}`}
                 >
                   {STRING_LABELS.map((label, string) => (
-                    <text
+                    <text aria-hidden="true"
                       key={`label-${string}`}
                       x={LEFT + string * STRING_GAP}
                       y={14}
@@ -345,7 +345,7 @@ function JazzVoicings({
                   ))}
 
                   {guitarVoicing.baseFret > 1 && (
-                    <text
+                    <text aria-hidden="true"
                       x={LEFT - 12}
                       y={TOP + FRET_GAP / 2 + 5}
                       textAnchor="end"
@@ -392,7 +392,7 @@ function JazzVoicings({
                               : "fretboard-dot"
                           }
                         />
-                        <text
+                        <text aria-hidden="true"
                           x={x}
                           y={y + 4}
                           textAnchor="middle"

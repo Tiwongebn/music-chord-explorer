@@ -94,6 +94,19 @@ const keyboardMap: Record<string, string> = {
   o: "C#5",
 };
 
+// Whether the computer keyboard plays the piano. WCAG 2.1.4
+// asks for single-key shortcuts to be switchable off; the
+// choice is remembered per browser.
+const SHORTCUTS_STORAGE_KEY = "piano-shortcuts";
+
+function loadShortcutsOn(): boolean {
+  try {
+    return window.localStorage.getItem(SHORTCUTS_STORAGE_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
 function removeOctave(note: string): string {
   return note.replace(/\d+$/, "");
 }
@@ -169,6 +182,22 @@ function PianoKeyboard({
   // breakpoint).
   const [isPianoOpen, setIsPianoOpen] = useState(true);
 
+  const [shortcutsOn, setShortcutsOn] = useState(loadShortcutsOn);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const toggleShortcuts = () => {
+    const next = !shortcutsOn;
+    setShortcutsOn(next);
+    try {
+      window.localStorage.setItem(
+        SHORTCUTS_STORAGE_KEY,
+        next ? "on" : "off"
+      );
+    } catch {
+      // Storage blocked; the choice lasts for this visit.
+    }
+  };
+
   // Safety net: release the drag flag if the pointer is
   // released anywhere outside the piano keys.
   useEffect(() => {
@@ -192,6 +221,12 @@ function PianoKeyboard({
     const pressedKeys = new Set<string>();
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!shortcutsOn) return;
+
+      // A piano inside a hidden section (Progressions stays
+      // mounted while you're on Explore) must not answer.
+      if (sectionRef.current?.offsetParent == null) return;
+
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
@@ -231,7 +266,7 @@ function PianoKeyboard({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [onNoteToggle]);
+  }, [onNoteToggle, shortcutsOn]);
 
   const normalizedChordNotes = chordNotes.map(
     normalizeNote
@@ -239,6 +274,15 @@ function PianoKeyboard({
 
   const isGuide = (note: string) =>
     guideTones.includes(getPitchClass(note));
+
+  // Spoken alongside the key name, since the chord and guide
+  // tones are otherwise only shown by color and shape.
+  const keyState = (isChordNote: boolean, note: string) =>
+    isChordNote
+      ? isGuide(note)
+        ? ", chord tone, guide tone"
+        : ", chord tone"
+      : "";
 
   // Selection is per key (with octave), so tapping C4 only
   // lights C4 — not every C on the keyboard.
@@ -282,7 +326,7 @@ function PianoKeyboard({
   }
 
   return (
-    <section className="piano-section">
+    <section className="piano-section" ref={sectionRef}>
       <div className="piano-section-head">
         <h2>Tap the keys</h2>
 
@@ -304,13 +348,27 @@ function PianoKeyboard({
       </div>
 
       <p className="piano-description">
-        Amber keys are the chord ·{" "}
+        Keys with a dot are the chord (amber) ·{" "}
         {guideTones.length > 0 && (
-          <>mint keys are its guide tones (3rd &amp; 7th) · </>
+          <>a diamond marks its guide tones, the 3rd &amp; 7th (mint) · </>
         )}
-        pink keys are your picks · <kbd>A</kbd>–<kbd>L</kbd> &amp;{" "}
-        <kbd>W</kbd>/<kbd>E</kbd>/<kbd>T</kbd>/<kbd>Y</kbd>/<kbd>U</kbd> = keyboard
+        a ring marks your picks (pink)
+        {shortcutsOn && (
+          <>
+            {" "}· <kbd>A</kbd>–<kbd>L</kbd> &amp;{" "}
+            <kbd>W</kbd>/<kbd>E</kbd>/<kbd>T</kbd>/<kbd>Y</kbd>/<kbd>U</kbd> = keyboard
+          </>
+        )}
       </p>
+
+      <button
+        type="button"
+        className="clear-selection piano-shortcuts-toggle"
+        aria-pressed={shortcutsOn}
+        onClick={toggleShortcuts}
+      >
+        Computer keys play piano: {shortcutsOn ? "on" : "off"}
+      </button>
 
       <div
         id="piano-keys-content"
@@ -348,7 +406,7 @@ function PianoKeyboard({
                   aria-label={`${getDisplayNote(
                     note,
                     accidentalPreference
-                  )}${octave}`}
+                  )}${octave}${keyState(isChordNote, note)}`}
                   aria-pressed={isSelected}
                   {...makeKeyHandlers(`${note}${octave}`)}
                 >
@@ -413,7 +471,7 @@ function PianoKeyboard({
                   aria-label={`${getDisplayNote(
                     key.note,
                     accidentalPreference
-                  )}${octave}`}
+                  )}${octave}${keyState(isChordNote, key.note)}`}
                   aria-pressed={isSelected}
                   {...makeKeyHandlers(
                     `${key.note}${octave}`

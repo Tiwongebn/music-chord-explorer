@@ -51,7 +51,7 @@ function SubstitutionPanel({
       aria-label={`Substitution ideas for chord ${chordNumber}`}
     >
       <div className="inline-builder-head">
-        <p className="eyebrow">TRY A SUBSTITUTION · CHORD {chordNumber}</p>
+        <h3 className="eyebrow">Try a substitution · chord {chordNumber}</h3>
 
         <button
           type="button"

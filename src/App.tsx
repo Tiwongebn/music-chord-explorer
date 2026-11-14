@@ -69,6 +69,12 @@ function App() {
     preloadAudio();
   }, []);
 
+  // Name the current section in the browser tab too.
+  useEffect(() => {
+    const label = modes.find((item) => item.id === mode)?.label;
+    document.title = `${label} · Music Chord Explorer`;
+  }, [mode]);
+
   const selectedChord = chordTypes[selectedChordIndex];
 
   const pitchClasses = selectedNotes.map((note) =>
@@ -159,28 +165,31 @@ function App() {
   };
 
   return (
-    <main className="app">
+    <>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+
+      <div className="app">
 
       {/* =========================
-          HEADER + MODE TABS
-          One quiet row: name, tabs, sound.
+          HEADER + SECTION NAV
+          One quiet row: name, sections, sound.
       ========================== */}
       <header className="header">
-        <h1 aria-label="Music Chord Explorer">
-          chord<span aria-hidden="true">/</span>explorer
-        </h1>
+        <p className="brand">
+          <span aria-hidden="true">
+            chord<span className="brand-slash">/</span>explorer
+          </span>
+          <span className="visually-hidden">Music Chord Explorer</span>
+        </p>
 
-        <nav
-          className="mode-tabs"
-          role="tablist"
-          aria-label="App mode"
-        >
+        <nav className="mode-tabs" aria-label="Sections">
           {modes.map((item) => (
             <button
               key={item.id}
               type="button"
-              role="tab"
-              aria-selected={mode === item.id}
+              aria-current={mode === item.id ? "page" : undefined}
               className={`${mode === item.id ? "tab active" : "tab"}${
                 item.id === "trainer" ? " tab-roman" : ""
               }`}
@@ -203,9 +212,11 @@ function App() {
         <Metronome />
       </header>
 
+      <main id="main-content" tabIndex={-1}>
 
       {mode === "explore" ? (
         <>
+          <h1 className="visually-hidden">Explore chords</h1>
 
           {/* =========================
               TOP: PICK A CHORD + CHORD CARD
@@ -342,8 +353,12 @@ function App() {
         </>
       ) : null}
 
-      {mode === "progressions" && (
+      {/* Progressions stays mounted while hidden so the
+          progression you're building survives a trip to
+          another section. `active` stops its playback. */}
+      <div hidden={mode !== "progressions"}>
         <ChordProgressions
+          active={mode === "progressions"}
           rootNote={rootNote}
           accidentalPreference={accidentalPreference}
           onRootChange={setRootNote}
@@ -351,11 +366,23 @@ function App() {
             handleAccidentalPreferenceChange
           }
         />
-      )}
+      </div>
 
       {mode === "trainer" && <TwoFiveOneTrainer />}
 
-    </main>
+      </main>
+
+      <footer className="site-footer">
+        <p>
+          On Explore, your computer keys play the piano
+          (<kbd>A</kbd>–<kbd>L</kbd> for white keys,{" "}
+          <kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd>{" "}
+          <kbd>U</kbd> for black keys). You can switch this
+          off above the keyboard.
+        </p>
+      </footer>
+      </div>
+    </>
   );
 }
 

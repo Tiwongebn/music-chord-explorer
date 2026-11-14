@@ -111,7 +111,7 @@ function BackingBand({
   return (
     <section className="band" aria-label="Play-along band">
       <div className="band-head">
-        <h3>Play along</h3>
+        <h2>Play along</h2>
         <p className="hint">
           A walking bass, comping and a ride cymbal loop your progression
           so you can solo over it. Change the chords while it plays and the

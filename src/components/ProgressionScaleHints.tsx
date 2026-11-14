@@ -42,7 +42,7 @@ function ProgressionScaleHints({
 
   return (
     <section className="scale-hints-rows" aria-label="Improvise over this progression">
-      <h3>Improvise over it</h3>
+      <h2>Improvise over it</h2>
       <p className="hint">
         The scale to solo with over each chord, and its guide tones
         (3rd &amp; 7th) in mint. Tap a chord for the notes on piano and
