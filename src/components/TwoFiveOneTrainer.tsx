@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { routeParams, setRouteParams } from "../utils/route";
 
 import { useVoicingPlayer, type PlayerItem } from "../hooks/useVoicingPlayer";
 import {
@@ -73,14 +74,35 @@ const CYCLE_ORDERS: { id: CycleOrder; label: string }[] = [
 ];
 
 // Root pitch classes in the order the key picker shows them.
+// Pitch class → key name used in the URL (#/trainer?key=Bb).
+const URL_KEYS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+
 const KEY_ORDER = [0, 5, 10, 3, 8, 1, 6, 11, 4, 9, 2, 7];
 
 const display = (name: string) => formatNoteForDisplay(name);
 
 function TwoFiveOneTrainer() {
-  const [keyPc, setKeyPc] = useState(0);
-  const [mode, setMode] = useState<KeyMode>("major");
-  const [style, setStyle] = useState<VoicingStyle>("shell");
+  // Key, major/minor and voicing come from the URL when there,
+  // and are written back as they change (utils/route.ts).
+  const [keyPc, setKeyPc] = useState(() => {
+    const index = URL_KEYS.indexOf(routeParams("trainer").key ?? "");
+    return index === -1 ? 0 : index;
+  });
+  const [mode, setMode] = useState<KeyMode>(() =>
+    routeParams("trainer").mode === "minor" ? "minor" : "major"
+  );
+  const [style, setStyle] = useState<VoicingStyle>(() => {
+    const value = routeParams("trainer").voicing;
+    return STYLES.find((item) => item.id === value)?.id ?? "shell";
+  });
+
+  useEffect(() => {
+    setRouteParams("trainer", {
+      key: URL_KEYS[keyPc],
+      mode: mode === "minor" ? "minor" : undefined,
+      voicing: style === "shell" ? undefined : style,
+    });
+  }, [keyPc, mode, style]);
   const [sound, setSound] = useState<InstrumentId>(loadSound);
   const [bpm, setBpm] = useState(100);
   const [rhythmId, setRhythmId] = useState<RhythmId>("short");

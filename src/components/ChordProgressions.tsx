@@ -76,6 +76,12 @@ import ChordBuilder from "./ChordBuilder";
 import ProgressionScaleHints from "./ProgressionScaleHints";
 import BackingBand, { type BandChordInfo } from "./BackingBand";
 import HelpTip from "./HelpTip";
+import {
+  decodeProgression,
+  encodeProgression,
+  routeParams,
+  setRouteParams,
+} from "../utils/route";
 import { useBackingBand } from "../hooks/useBackingBand";
 import SubstitutionPanel from "./SubstitutionPanel";
 import { WhyChordPanel } from "./WhyThisChord";
@@ -253,8 +259,12 @@ function ChordProgressions({
   onRootChange,
   onAccidentalPreferenceChange,
 }: ChordProgressionsProps) {
-  const [scaleType, setScaleType] =
-    useState<ScaleType>("major");
+  // Scale, time signature and the progression itself come
+  // from the URL when the page was opened with them, and are
+  // written back as they change (see utils/route.ts).
+  const [scaleType, setScaleType] = useState<ScaleType>(() =>
+    routeParams("progressions").scale === "minor" ? "minor" : "major"
+  );
 
   // -1 means "use each degree's natural triad" (the default,
   // simplest view). Any other value is an index into
@@ -302,9 +312,12 @@ function ChordProgressions({
   // lines) — it does not change playback timing, which comes
   // purely from each chord's own beat count + chordSeconds
   // below. See data/rhythm.ts for why 6/8 isn't special-cased.
-  const [timeSignatureId, setTimeSignatureId] = useState(
-    defaultTimeSignatureId
-  );
+  const [timeSignatureId, setTimeSignatureId] = useState(() => {
+    const id = routeParams("progressions").ts;
+    return timeSignatures.some((option) => option.id === id)
+      ? (id as string)
+      : defaultTimeSignatureId;
+  });
 
   const timeSignature = getTimeSignature(timeSignatureId);
 
@@ -486,7 +499,26 @@ function ChordProgressions({
   // never rewrites a chord the user already placed here.
   const [builderChords, setBuilderChords] = useState<
     ProgressionChord[]
-  >([]);
+  >(() =>
+    decodeProgression(routeParams("progressions").p).filter(
+      (chord) =>
+        chord.type === "rest" ||
+        chord.build !== undefined ||
+        (chord.chordTypeIndex !== undefined &&
+          chord.chordTypeIndex < chordTypes.length)
+    )
+  );
+
+  useEffect(() => {
+    setRouteParams("progressions", {
+      scale: scaleType === "minor" ? "minor" : undefined,
+      ts:
+        timeSignatureId === defaultTimeSignatureId
+          ? undefined
+          : timeSignatureId,
+      p: encodeProgression(builderChords) || undefined,
+    });
+  }, [scaleType, timeSignatureId, builderChords]);
 
   const [progressionName, setProgressionName] =
     useState("");

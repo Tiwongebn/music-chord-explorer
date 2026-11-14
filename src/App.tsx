@@ -11,6 +11,14 @@ import ChordProgressions from "./components/ChordProgressions";
 import Metronome from "./components/Metronome";
 import TwoFiveOneTrainer from "./components/TwoFiveOneTrainer";
 import { chordTypes } from "./data/chords";
+import {
+  currentSection,
+  navigateTo,
+  routeParams,
+  setRouteParams,
+  syncFromLocation,
+  type Section,
+} from "./utils/route";
 import { analyzeChord } from "./utils/chordAnalyzer";
 import { catalogIndexFor } from "./utils/chordBuild";
 import { guidePitchClasses } from "./utils/scaleHints";
@@ -34,7 +42,37 @@ import {
 // The chord builder lives inside Progressions (build a chord
 // and drop it straight into a progression, or edit one that's
 // already there). The ii–V–I trainer has a tab of its own.
-type Mode = "explore" | "progressions" | "trainer";
+type Mode = Section;
+
+const ROOT_PATTERN = /^[A-G][#b]?$/;
+
+// Explore's chord in the URL: its symbol, with "major" for
+// the plain triad (whose symbol is empty).
+const chordParam = (index: number) =>
+  chordTypes[index]?.symbol || "major";
+
+const chordIndexFromParam = (value: string | undefined) => {
+  if (!value) return 0;
+  const symbol = value === "major" ? "" : value;
+  const index = chordTypes.findIndex((chord) => chord.symbol === symbol);
+  return index === -1 ? 0 : index;
+};
+
+// What the URL the page opened with says. Progressions calls
+// its key "key"; Explore calls it "root". They share one value.
+function initialSettings() {
+  const section = currentSection();
+  const params = routeParams(section);
+  const root =
+    section === "progressions" ? params.key : routeParams("explore").root;
+  const spellParam =
+    params.spell ?? routeParams("explore").spell;
+  return {
+    root: root && ROOT_PATTERN.test(root) ? root : "C",
+    chordIndex: chordIndexFromParam(routeParams("explore").chord),
+    spelling: (spellParam === "flats" ? "flats" : "sharps") as AccidentalPreference,
+  };
+}
 
 const modes: { id: Mode; label: string }[] = [
   { id: "explore", label: "Explore" },
@@ -43,13 +81,48 @@ const modes: { id: Mode; label: string }[] = [
 ];
 
 function App() {
-  const [mode, setMode] = useState<Mode>("explore");
+  const [mode, setModeState] = useState<Mode>(currentSection);
+  const [initial] = useState(initialSettings);
 
-  const [rootNote, setRootNote] = useState("C");
+  const [rootNote, setRootNote] = useState(initial.root);
   const [selectedChordIndex, setSelectedChordIndex] =
-    useState(0);
+    useState(initial.chordIndex);
   const [accidentalPreference, setAccidentalPreference] =
-    useState<AccidentalPreference>("sharps");
+    useState<AccidentalPreference>(initial.spelling);
+
+  // Switching section from the nav adds a history entry, so
+  // Back returns to the previous section.
+  const setMode = (next: Mode) => {
+    navigateTo(next);
+    setModeState(next);
+  };
+
+  // Back/Forward (or an edited address) changes the section.
+  useEffect(() => {
+    const handleLocation = () => {
+      const section = syncFromLocation();
+      if (section) {
+        setModeState(section);
+      } else {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("hashchange", handleLocation);
+    return () =>
+      window.removeEventListener("hashchange", handleLocation);
+  }, []);
+
+  // Keep the shared settings in the URL so a refresh or a
+  // shared link opens the same chord.
+  useEffect(() => {
+    const spell = accidentalPreference === "flats" ? "flats" : undefined;
+    setRouteParams("explore", {
+      root: rootNote,
+      chord: chordParam(selectedChordIndex),
+      spell,
+    });
+    setRouteParams("progressions", { key: rootNote, spell });
+  }, [rootNote, selectedChordIndex, accidentalPreference, mode]);
 
   // Notes selected by clicking the piano
   const [selectedNotes, setSelectedNotes] = useState<
