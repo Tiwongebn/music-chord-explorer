@@ -407,6 +407,9 @@ function PianoKeyboard({
           Use the left and right arrow keys to move between keys,
           and Enter or Space to pick one.
         </p>
+        {/* Arrow keys move focus between the keys (roving
+            tabindex); the keys themselves are the buttons. */}
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
         <div
           className="piano-keyboard"
           role="group"
